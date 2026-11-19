@@ -20,7 +20,7 @@ A colorful, chaotic multiplayer Roblox prototype: feed your ridiculous pet, trig
 1. Open the repository's **Actions** tab and select **Build Roblox place**.
 2. Open the latest completed run, download its `roblox-place` artifact (`.rbxlx` inside a zip).
 3. Open the place in Roblox Studio on Windows/macOS or a remote PC for an actual playtest. GitHub builds do not execute the game engine.
-4. For future publishing we can set up a *separate, gated* Open Cloud deployment workflow after a Roblox experience exists. Never place API keys in source files, issues or chat.
+4. An optional **manual**, Saved-by-default upload workflow now exists: see [docs/PUBLISHING.md](docs/PUBLISHING.md). It only updates an existing Roblox place after a secret API key and Place ID are configured. No GitHub push publishes to Roblox. Never put the key in source, issues or chat.
 
 ## Source layout
 
@@ -31,6 +31,7 @@ A colorful, chaotic multiplayer Roblox prototype: feed your ridiculous pet, trig
 - `src/client/HUD.client.luau`: controls, notifications, noise and survival UI.
 - `src/client/Collection.client.luau`: pet inventory, shop and quest tracking.
 - `scripts/validate_project.py`: offline source-structure and economy checks.
+- `scripts/publish_roblox.py` and `.github/workflows/upload-roblox.yml`: optional, manually triggered place upload (not currently connected).
 - `default.project.json`: Rojo build manifest.
 - `.github/workflows/build.yml`: safe build-only CI pipeline.
 

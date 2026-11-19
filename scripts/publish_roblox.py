@@ -65,6 +65,8 @@ def main():
         try:
             with urllib.request.urlopen(request_obj, timeout=30) as response:
                 operation = json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            raise SystemExit("Roblox operation status failed with HTTP " + str(exc.code)) from exc
         except (urllib.error.URLError, TimeoutError) as exc:
             print("Operation status not yet available:", type(exc).__name__)
             time.sleep(5)
