@@ -1,45 +1,61 @@
-# Original music & comedy sounds — v0.9
+# Original music & comedy sound effects — v1.0
 
-The source repository contains **13 original WAV files**:
-- **calm-garden-theme.wav** — soft original ~18-second looping music for the sunny island.
-- **SeedFind.wav** — gentle three-step bell pickup.
-- **RareDiscovery.wav** — more elaborate magical rare-seed discovery.
-- **WeatherChime.wav** — short weather transition cue.
-- **Boing.wav** — exaggerated, original springy "meme" reaction.
-- **MonsterWake.wav** — funny low-pitched monster warning.
-- **Victory.wav** — short survival celebration.
-- **Festival.wav** — friendly cooperative seed-festival fanfare.
-- **SillyStorm.wav** — comical warbling weather/garden mishap.
-- **HarvestPop.wav** — happy crop-harvest pop.
-- **MutationSparkle.wav** — shiny mutation reward.
-- **CatSwat.wav** — comical hiss/swipe response.
-- **original-cat-purr-loop.wav** — original ~4-second synthetic cat purring loop, authored earlier.
+**Implementation status (2026-11-19):** Source code and all **19 original WAVs**
+are committed to this repository. They pass audio-integrity checks and the
+Roblox source bundle builds. **They will not play inside Roblox until the
+experience owner uploads them as Roblox audio assets and configures IDs.**
 
-All sounds are original synthetic compositions/effects authored for this project; no copyrighted songs or meme samples have been copied. WAVs are mono, 16-bit PCM at 9 kHz (garden theme and new effects) or 12 kHz (cat purr), so Roblox may resample/compress them on import.
+## Files included in `assets/audio/`
 
-**Important: audio playback in Roblox is currently disabled.** WAV files placed in GitHub **are not Roblox audio assets**. They cannot play simply because a project builds successfully.
+| File | Intended use |
+|---|---|
+| `calm-garden-theme.wav` | Gentle 18-second background music on the island |
+| `monster-chase-theme.wav` | Faster 9-second loop while the giant is awake |
+| `sleepy-forest-ambience.wav` | Quiet 9-second breeze/birds ambience |
+| `original-cat-purr-loop.wav` | Original 4-second sound for a contented cat, with dynamic 3D volume |
+| `SeedFind.wav` | Picking up a seed cache |
+| `RareDiscovery.wav` | Rare seed found |
+| `WeatherChime.wav` | Weather shift / pet helping |
+| `Boing.wav` | Cartoon bounce |
+| `MonsterWake.wav` | Giggles wakes |
+| `Victory.wav` | Round survival |
+| `Festival.wav` | Cooperative seed festival |
+| `SillyStorm.wav` | Magical weather surprise |
+| `HarvestPop.wav` | Harvesting |
+| `MutationSparkle.wav` | Special crop mutation |
+| `CatSwat.wav` | Grumpy cat reaction |
+| `tiny-violin-fail.wav` | Dramatic vegetable incident |
+| `suspicious-meow.wav` | Unexpected pet/crop reaction |
+| `cartoon-record-scratch.wav` | Pranks, sudden embarrassing moments |
+| `comedy-drum-sting.wav` | Silly harvests and social dance scenes |
 
-## Enabling legitimate playback
+All are synthesized for this game, not excerpts from commercial meme sounds.
+The project does not claim that Roblox moderation has approved these assets.
 
-1. Create your Roblox experience/place and configure ownership in Creator Dashboard.
-2. Upload each WAV from `assets/audio/` to Roblox's official audio asset manager; check your account's permissions and moderation outcome.
-3. Copy the actual numeric audio asset ID for each uploaded file.
-4. Open `src/shared/AudioConfig.luau`, insert the relevant IDs for `MusicAssetId` and the 11 entries in `Cues`.
-5. For the cat's spatial purr, set `Config.PurrSoundId` in `src/shared/Config.luau`.
-6. Rebuild and test in an authenticated Roblox Studio session. Sound IDs need permission for the game/universe; inspect output logs if a cue doesn't play.
+## Activate playback
 
-No account password, login cookie or 2FA code should go in this repo or chat.
+1. Create an experience using the account that will own the game.
+2. Open Roblox Creator Dashboard / asset manager and upload the individual WAV files.
+3. Check Roblox moderation, audio availability and experience permissions.
+4. In `src/shared/AudioConfig.luau` replace **only** the numeric `0`
+   values with the actual allowed asset IDs: `MusicAssetId`,
+   `ChaseMusicAssetId`, `AmbienceAssetId`, and the **15** `Cues`.
+5. Set `Config.PurrSoundId` in `src/shared/Config.luau` to the separately
+   uploaded `original-cat-purr-loop.wav` audio ID.
+6. Rebuild the place file and check real playback in an authorized Roblox
+   Studio session. Never post a Roblox password, login cookie or security code.
 
-## In-game playback controls
+## In-game mix
 
-- **MUSIC ON/OFF** and **EFFECTS ON/OFF** buttons appear on the right.
-- The theme fades to a quieter volume during monster attacks.
-- Triggered sounds have short client-side repetition cooldowns and independent volumes.
-- Sounds occur on seed finds, rare discoveries, weather changes, festival completion, crop harvest, mutation, pet-food combos, funny garden incidents, giant wake-up, survival and angry cat swats.
-- The HUD and physical animations still work if the user mutes sounds or audio IDs are not yet configured.
-- The system does **not** auto-load or play arbitrary asset IDs from remote users.
+- Calm garden music plays while the monster sleeps, and crossfades into the
+  chase loop when it wakes. Forest ambience is most audible while sleeping.
+- The user can turn **music** and **sound effects** on/off independently.
+- Audio includes client-side repetition protection for event cues.
+- Sounds and visuals continue to work even if no audio ID is available, but
+  the game remains *silent* until the uploads are configured.
+- Sound assets have not been listened to or quality-tested in Roblox Studio.
+  Loop seams, levels, mobile speaker mix and permissions require real tests.
 
-References:
+Roblox references:
 - https://create.roblox.com/docs/sound/objects
 - https://create.roblox.com/docs/audio/assets
-- https://create.roblox.com/docs/production/monetization/virtual-items
