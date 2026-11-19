@@ -1,7 +1,10 @@
 --!strict
--- Pure server-owned farming state. All input is validated on the server.
+-- Server-only, deterministic gardening rules.
+-- Recipe ingredients are defined in ServerScriptService/RecipeCatalog and
+-- only recipes actually discovered by this player are sent to the client.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local G = require(ReplicatedStorage:WaitForChild("GardenConfig"))
+local Catalog = require(script.Parent:WaitForChild("RecipeCatalog"))
 local Garden = {}
 
 local function clampCount(value: any): number
@@ -14,8 +17,45 @@ local function plotNumber(value: any): number?
     return value
 end
 
-local function validSeed(key: any): boolean
-    return type(key) == "string" and G.Crops[key] ~= nil
+local function validSeed(value: any): boolean
+    return type(value) == "string" and G.Crops[value] ~= nil
+end
+
+local function recipeOutput(g: any, id: string)
+    local recipe = Catalog.Recipes[id]
+    if recipe.type == "fertilizer" then return g.fertilizer end
+    return g.crafted
+end
+
+local function matchesRecipe(ingredients: {[string]: number}, counts: {[string]: number}): boolean
+    for key, count in pairs(ingredients) do
+        if counts[key] ~= count then return false end
+    end
+    for key, count in pairs(counts) do
+        if ingredients[key] ~= count then return false end
+    end
+    return true
+end
+
+local function availableCrops(g: any, counts: {[string]: number}): boolean
+    for key, count in pairs(counts) do
+        if not validSeed(key) or count < 1 or (g.crops[key] or 0) < count then return false end
+    end
+    return true
+end
+
+local function subtract(g: any, counts: {[string]: number})
+    for key, count in pairs(counts) do g.crops[key] -= count end
+end
+
+local function addProduct(g: any, id: string): (boolean, string)
+    local recipe = Catalog.Recipes[id]
+    local target = recipeOutput(g, id)
+    if (target[id] or 0) > G.MAX_STACK - recipe.produces then
+        return false, "Your crafted storage is full"
+    end
+    target[id] = (target[id] or 0) + recipe.produces
+    return true, "CRAFTED " .. recipe.produces .. "× " .. recipe.name
 end
 
 function Garden.new()
@@ -23,13 +63,21 @@ function Garden.new()
     for i = 1, G.PLOT_COUNT do plots[i] = false end
     local seeds = {}
     for key, count in pairs(G.DEFAULT_SEEDS) do seeds[key] = count end
-    return {plots = plots, seeds = seeds, crops = {}, crafted = {}, fertilizer = {Compost = 1}}
+    return {
+        plots = plots,
+        seeds = seeds,
+        crops = {},
+        crafted = {},
+        fertilizer = {Compost = 1},
+        known = {},
+        experiments = 0,
+        flops = 0,
+    }
 end
 
 function Garden.load(raw: any)
     local g = Garden.new()
     if type(raw) ~= "table" then return g end
-    -- The first save overrides starting seeds only when previous seed data exists.
     for _, field in ipairs({"seeds", "crops", "crafted", "fertilizer"}) do
         if type(raw[field]) == "table" then
             if field == "seeds" then g.seeds = {} end
@@ -40,7 +88,7 @@ function Garden.load(raw: any)
                 elseif field == "fertilizer" then
                     allowed = G.Fertilizers[key] ~= nil
                 else
-                    allowed = G.Recipes[key] ~= nil and G.Recipes[key].type ~= "fertilizer"
+                    allowed = Catalog.Recipes[key] ~= nil and Catalog.Recipes[key].type ~= "fertilizer"
                 end
                 if allowed then g[field][key] = clampCount(value) end
             end
@@ -59,6 +107,17 @@ function Garden.load(raw: any)
             end
         end
     end
+    -- Existing v0.3 players had a visible recipe list. After upgrading, the
+    -- book intentionally starts empty unless discoveries were saved in v0.4.
+    if type(raw.knownRecipes) == "table" then
+        for _, key in ipairs(raw.knownRecipes) do
+            if type(key) == "string" and Catalog.Recipes[key] and key ~= "MysterySlop" then
+                g.known[key] = true
+            end
+        end
+    end
+    g.experiments = clampCount(raw.experiments)
+    g.flops = clampCount(raw.flops)
     return g
 end
 
@@ -68,11 +127,52 @@ function Garden.serialize(g: any)
         local p = g.plots[i]
         plots[i] = if p then {seed = p.seed, plantedAt = p.plantedAt, readyAt = p.readyAt, fertilized = p.fertilized} else false
     end
-    return {plots = plots, seeds = table.clone(g.seeds), crops = table.clone(g.crops), crafted = table.clone(g.crafted), fertilizer = table.clone(g.fertilizer)}
+    local knownRecipes = {}
+    for _, id in ipairs(Catalog.Order) do
+        if g.known[id] then table.insert(knownRecipes, id) end
+    end
+    return {
+        plots = plots,
+        seeds = table.clone(g.seeds),
+        crops = table.clone(g.crops),
+        crafted = table.clone(g.crafted),
+        fertilizer = table.clone(g.fertilizer),
+        knownRecipes = knownRecipes,
+        experiments = math.min(G.MAX_STACK, g.experiments),
+        flops = math.min(G.MAX_STACK, g.flops),
+    }
 end
 
 function Garden.snapshot(g: any)
     local result = Garden.serialize(g)
+    -- Only transmit recipe ingredients that the player has ACTUALLY discovered.
+    -- Other ingredient combinations never leave the server.
+    local book = {}
+    for _, id in ipairs(Catalog.Order) do
+        if g.known[id] then
+            local recipe = Catalog.Recipes[id]
+            table.insert(book, {
+                id = id,
+                name = recipe.name,
+                icon = recipe.icon,
+                produces = recipe.produces,
+                ingredients = table.clone(recipe.ingredients),
+                type = recipe.type,
+            })
+        end
+    end
+    local products = {}
+    for id, count in pairs(g.crafted) do
+        if count > 0 and Catalog.Recipes[id] then
+            local recipe = Catalog.Recipes[id]
+            table.insert(products, {id = id, name = recipe.name, icon = recipe.icon, type = recipe.type, amount = count})
+        end
+    end
+    table.sort(products, function(a, b) return a.name < b.name end)
+    result.book = book
+    result.products = products
+    result.knownRecipes = nil -- do not expose internal saved format to the UI
+    result.totalRecipes = #Catalog.Order
     result.serverTime = os.time()
     return result
 end
@@ -109,9 +209,7 @@ function Garden.harvest(g: any, index: any): (boolean, string)
         return false, "Not ripe! " .. math.max(1, p.readyAt - os.time()) .. " seconds left"
     end
     local amount = G.Crops[p.seed].yield
-    if (g.crops[p.seed] or 0) > G.MAX_STACK - amount then
-        return false, "Crop storage is full"
-    end
+    if (g.crops[p.seed] or 0) > G.MAX_STACK - amount then return false, "Crop storage is full" end
     g.crops[p.seed] = (g.crops[p.seed] or 0) + amount
     g.plots[n] = false
     return true, "+" .. amount .. " " .. G.Crops[p.seed].name
@@ -132,26 +230,70 @@ function Garden.fertilize(g: any, index: any, key: any): (boolean, string)
     return true, G.Fertilizers[key].name .. " sped up growth!"
 end
 
-function Garden.craft(g: any, id: any): (boolean, string)
-    if type(id) ~= "string" or not G.Recipes[id] then return false, "Unknown recipe" end
-    local recipe = G.Recipes[id]
-    local output = if recipe.type == "fertilizer" then g.fertilizer else g.crafted
-    if (output[id] or 0) > G.MAX_STACK - recipe.produces then return false, "Crafting storage full" end
-    for ingredient, amount in pairs(recipe.ingredients) do
-        if (g.crops[ingredient] or 0) < amount then
-            return false, "Need " .. amount .. " " .. G.Crops[ingredient].name
+-- The client submits 2-3 crop IDs ONLY; the server resolves an exact recipe.
+-- Failures cost the ingredients, but ALWAYS create a funny Oops Soup, so
+-- experimentation provides something useful instead of an empty punishment.
+function Garden.experiment(g: any, slots: any): (boolean, string, string?, boolean)
+    if type(slots) ~= "table" then return false, "Select 2 or 3 crops to mix", nil, false end
+    local count = #slots
+    if count < 2 or count > 3 then return false, "Mix 2 or 3 ingredients", nil, false end
+    for key in pairs(slots) do
+        if type(key) ~= "number" or key < 1 or key > count or key ~= math.floor(key) then
+            return false, "Invalid mixing ingredients", nil, false
         end
     end
-    for ingredient, amount in pairs(recipe.ingredients) do g.crops[ingredient] -= amount end
-    output[id] = (output[id] or 0) + recipe.produces
-    return true, "CRAFTED " .. recipe.produces .. "x " .. recipe.name
+    local counts: {[string]: number} = {}
+    for i = 1, count do
+        local key = slots[i]
+        if not validSeed(key) then return false, "Unknown ingredient", nil, false end
+        counts[key] = (counts[key] or 0) + 1
+    end
+    if not availableCrops(g, counts) then return false, "Harvest the selected ingredients first!", nil, false end
+    local matched = "MysterySlop"
+    for _, id in ipairs(Catalog.Order) do
+        if matchesRecipe(Catalog.Recipes[id].ingredients, counts) then
+            matched = id
+            break
+        end
+    end
+    local recipe = Catalog.Recipes[matched]
+    local output = recipeOutput(g, matched)
+    if (output[matched] or 0) > G.MAX_STACK - recipe.produces then
+        return false, "Crafted inventory is full!", nil, false
+    end
+    subtract(g, counts)
+    g.experiments = math.min(G.MAX_STACK, g.experiments + 1)
+    output[matched] = (output[matched] or 0) + recipe.produces
+    if matched == "MysterySlop" then
+        g.flops = math.min(G.MAX_STACK, g.flops + 1)
+        return true, "OH NO! Your mixture turned into OOPS SOUP! Feed it to your pet!", matched, false
+    end
+    if not g.known[matched] then
+        g.known[matched] = true
+        return true, "NEW RECIPE DISCOVERED: " .. recipe.name .. "! Added to your book!", matched, true
+    end
+    return true, "You made " .. recipe.produces .. "× " .. recipe.name .. " again!", matched, false
+end
+
+function Garden.craft(g: any, id: any): (boolean, string)
+    if type(id) ~= "string" or not Catalog.Recipes[id] or not g.known[id] then
+        return false, "Discover the recipe through mixing first!"
+    end
+    local recipe = Catalog.Recipes[id]
+    local output = recipeOutput(g, id)
+    if (output[id] or 0) > G.MAX_STACK - recipe.produces then return false, "Crafting storage full" end
+    if not availableCrops(g, recipe.ingredients) then return false, "Not enough harvested ingredients!" end
+    subtract(g, recipe.ingredients)
+    return addProduct(g, id)
 end
 
 function Garden.consume(g: any, id: any, wantedType: string): (boolean, string)
-    if type(id) ~= "string" or not G.Recipes[id] or G.Recipes[id].type ~= wantedType then return false, "Invalid crafted item" end
+    if type(id) ~= "string" or not Catalog.Recipes[id] or Catalog.Recipes[id].type ~= wantedType then
+        return false, "Invalid crafted item"
+    end
     if (g.crafted[id] or 0) < 1 then return false, "Craft this first!" end
     g.crafted[id] -= 1
-    return true, G.Recipes[id].name
+    return true, Catalog.Recipes[id].name
 end
 
 return Garden
