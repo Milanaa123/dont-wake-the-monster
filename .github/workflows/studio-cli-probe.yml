@@ -1,0 +1,37 @@
+name: Experimental Studio CLI smoke test
+
+on:
+  push:
+    paths:
+      - .github/workflows/studio-cli-probe.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  studio-cli-probe:
+    runs-on: windows-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build project with official Rojo
+        shell: pwsh
+        run: |
+          $ProgressPreference = 'SilentlyContinue'
+          Invoke-WebRequest 'https://github.com/rojo-rbx/rojo/releases/download/v7.7.1/rojo-7.7.1-windows-x86_64.zip' -OutFile "$env:RUNNER_TEMP\rojo.zip"
+          Expand-Archive "$env:RUNNER_TEMP\rojo.zip" "$env:RUNNER_TEMP\rojo" -Force
+          New-Item -ItemType Directory -Path dist -Force | Out-Null
+          & "$env:RUNNER_TEMP\rojo\rojo.exe" build default.project.json --output dist/dont-wake-the-monster.rbxlx
+          if ($LASTEXITCODE -ne 0) {throw "Build failed"}
+      - name: Probe documented Roblox Studio RunScript CLI without credentials
+        shell: pwsh
+        run: ./scripts/studio_cli_probe.ps1
+      - name: Upload evidence including blockers
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: studio-cli-probe-evidence
+          path: capture/
+          if-no-files-found: warn
+          retention-days: 7
