@@ -5,6 +5,8 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local G = require(ReplicatedStorage:WaitForChild("GardenConfig"))
 local Catalog = require(script.Parent:WaitForChild("RecipeCatalog"))
+local Hunt = require(script.Parent:WaitForChild("SeedHunt"))
+local X = require(ReplicatedStorage:WaitForChild("ExpeditionConfig"))
 local Garden = {}
 
 local function clampCount(value: any): number
@@ -72,6 +74,7 @@ function Garden.new()
         known = {},
         experiments = 0,
         flops = 0,
+        hunt = Hunt.new(),
     }
 end
 
@@ -102,7 +105,7 @@ function Garden.load(raw: any)
                 local readyTime = if type(p.readyAt) == "number" then math.floor(p.readyAt) else 0
                 local now = os.time()
                 if plantTime >= 0 and plantTime <= now + 60 and readyTime >= plantTime and readyTime <= now + 86400 * 4 then
-                    g.plots[i] = {seed = p.seed, plantedAt = plantTime, readyAt = readyTime, fertilized = p.fertilized == true}
+                    g.plots[i] = {seed = p.seed, plantedAt = plantTime, readyAt = readyTime, fertilized = p.fertilized == true, weatherBoosted = p.weatherBoosted == true, assistUsed = p.assistUsed == true, mutation = if type(p.mutation) == "string" and (p.mutation == "Golden" or p.mutation == "Dewy" or p.mutation == "Moonlit" or p.mutation == "Giggly") then p.mutation else nil}
                 end
             end
         end
@@ -118,6 +121,7 @@ function Garden.load(raw: any)
     end
     g.experiments = clampCount(raw.experiments)
     g.flops = clampCount(raw.flops)
+    g.hunt = Hunt.load(raw.hunt)
     return g
 end
 
@@ -125,7 +129,7 @@ function Garden.serialize(g: any)
     local plots = {}
     for i = 1, G.PLOT_COUNT do
         local p = g.plots[i]
-        plots[i] = if p then {seed = p.seed, plantedAt = p.plantedAt, readyAt = p.readyAt, fertilized = p.fertilized} else false
+        plots[i] = if p then {seed = p.seed, plantedAt = p.plantedAt, readyAt = p.readyAt, fertilized = p.fertilized, mutation = p.mutation, weatherBoosted = p.weatherBoosted, assistUsed = p.assistUsed} else false
     end
     local knownRecipes = {}
     for _, id in ipairs(Catalog.Order) do
@@ -140,6 +144,7 @@ function Garden.serialize(g: any)
         knownRecipes = knownRecipes,
         experiments = math.min(G.MAX_STACK, g.experiments),
         flops = math.min(G.MAX_STACK, g.flops),
+        hunt = Hunt.snapshot(g.hunt),
     }
 end
 
@@ -174,6 +179,12 @@ function Garden.snapshot(g: any)
     result.knownRecipes = nil -- do not expose internal saved format to the UI
     result.totalRecipes = #Catalog.Order
     result.serverTime = os.time()
+    -- Collection album: only discovered seeds and mutations, no secret recipes.
+    result.seedAlbum = table.clone(g.hunt.discovered)
+    result.mutationAlbum = table.clone(g.hunt.mutations)
+    result.forageTotal = g.hunt.totalFinds
+    result.forageToday = g.hunt.questFinds
+    result.forageClaimed = g.hunt.questClaimed
     return result
 end
 
@@ -196,7 +207,7 @@ function Garden.plant(g: any, index: any, key: any): (boolean, string)
     if (g.seeds[key] or 0) < 1 then return false, "No seeds. Buy or craft more!" end
     local now = os.time()
     g.seeds[key] -= 1
-    g.plots[n] = {seed = key, plantedAt = now, readyAt = now + G.Crops[key].seconds, fertilized = false}
+    g.plots[n] = {seed = key, plantedAt = now, readyAt = now + G.Crops[key].seconds, fertilized = false, weatherBoosted = false, assistUsed = false}
     return true, G.Crops[key].name .. " is growing!"
 end
 
@@ -208,11 +219,12 @@ function Garden.harvest(g: any, index: any): (boolean, string)
     if os.time() < p.readyAt then
         return false, "Not ripe! " .. math.max(1, p.readyAt - os.time()) .. " seconds left"
     end
-    local amount = G.Crops[p.seed].yield
+    local amount = G.Crops[p.seed].yield * (if p.mutation then X.MutationBonus else 1)
     if (g.crops[p.seed] or 0) > G.MAX_STACK - amount then return false, "Crop storage is full" end
     g.crops[p.seed] = (g.crops[p.seed] or 0) + amount
+    if p.mutation then g.hunt.mutations[p.mutation] = true end
     g.plots[n] = false
-    return true, "+" .. amount .. " " .. G.Crops[p.seed].name
+    return true, "+" .. amount .. " " .. (if p.mutation then p.mutation .. " " else "") .. G.Crops[p.seed].name
 end
 
 function Garden.fertilize(g: any, index: any, key: any): (boolean, string)
@@ -294,6 +306,32 @@ function Garden.consume(g: any, id: any, wantedType: string): (boolean, string)
     if (g.crafted[id] or 0) < 1 then return false, "Craft this first!" end
     g.crafted[id] -= 1
     return true, Catalog.Recipes[id].name
+end
+
+-- Apply the current weather only to living plants, at most once per plot.
+function Garden.weather(g: any, weatherId: string, makeRoll: () -> number): number
+    if not X.Weather[weatherId] then return 0 end
+    local changed = 0
+    local now = os.time()
+    for i = 1, G.PLOT_COUNT do
+        local plot = g.plots[i]
+        if plot and Hunt.mutatePlot(plot, weatherId, makeRoll(), now) then changed += 1 end
+    end
+    return changed
+end
+
+function Garden.assist(g: any, plotNumberValue: any, curiosity: number): (boolean, string)
+    local index = plotNumber(plotNumberValue)
+    if not index then return false, "Invalid garden plot" end
+    local plot = g.plots[index]
+    if not plot then return false, "Plant something first!" end
+    if plot.assistUsed then return false, "Your pet already helped this plant!" end
+    local now = os.time()
+    if now >= plot.readyAt then return false, "Already ripe!" end
+    local boost = math.clamp(0.12 + math.clamp(curiosity, 0, 100) / 100 * 0.18, 0.12, 0.30)
+    plot.readyAt = now + math.max(1, math.floor((plot.readyAt - now) * (1 - boost)))
+    plot.assistUsed = true
+    return true, "Your pet helped the plant grow " .. math.floor(boost * 100) .. "% faster!"
 end
 
 return Garden
