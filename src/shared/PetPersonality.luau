@@ -227,7 +227,11 @@ Personality.EncounterNames = {
 function Personality.meet(a: any, b: any)
     local first, second = a.temperament, b.temperament
     local pair = first .. ":" .. second
-    local roll = (a.seed * 19 + b.seed * 37 + a.interactions * 7 + b.interactions * 11) % 12 + 1
+    -- Mix both genetic seeds multiplicatively. A simple sum modulo 12
+    -- correlated same-step seeds and made certain social outcomes unreachable.
+    local mixed = (a.seed % 100003) * (b.seed % 100019)
+        + (a.interactions + 1) * 71 + (b.interactions + 1) * 97
+    local roll = (math.floor(mixed / 31) % 12) + 1
     local kind = Personality.EncounterNames[roll]
     if (first == "Kind" and second == "Kind") or (first == "Clingy" and second == "Kind") then
         kind = "Besties"
