@@ -9,6 +9,7 @@ local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Config"))
 local World = require(script.Parent:WaitForChild("World"))
+local Progression = require(script.Parent:WaitForChild("Progression"))
 
 World.build()
 local remote = Instance.new("RemoteEvent")
@@ -31,8 +32,16 @@ end
 local function sendStats(player: Player)
     local profile = profiles[player]
     if profile then
-        remote:FireClient(player, {type = "stats", coins = profile.coins, pet = Config.Pets[profile.petIndex].name})
+        remote:FireClient(player, {type = "stats", coins = profile.coins, pet = Config.Pets[profile.petIndex].name, hearts = profile.hearts, knockedOut = profile.knockedOut})
     end
+end
+
+local function sendCollection(player: Player)
+    local profile = profiles[player]
+    if not profile then return end
+    local catalog = Progression.catalog(profile)
+    catalog.type = "collection"
+    remote:FireClient(player, catalog)
 end
 
 local function sendState(player: Player?)
@@ -69,28 +78,59 @@ local function nearbyKnock(center: Vector3, radius: number, strength: number)
     end
 end
 
+local function monsterStrike(center: Vector3, radius: number, strength: number, jumpAvoids: boolean)
+    if phase ~= "AWAKE" then return end
+    for _, player in ipairs(Players:GetPlayers()) do
+        local profile = profiles[player]
+        local root = rootFor(player)
+        if profile and root and not profile.knockedOut and (root.Position - center).Magnitude <= radius then
+            if jumpAvoids and root.Position.Y > 15 then continue end
+            if os.clock() - profile.lastHit < 2.5 then continue end
+            profile.lastHit = os.clock()
+            profile.hearts = math.max(0, profile.hearts - 1)
+            knock(root, center, strength)
+            remote:FireClient(player, {type = "shake", amount = 1})
+            sendStats(player)
+            if profile.hearts <= 0 then
+                profile.knockedOut = true
+                remote:FireClient(player, {type = "notice", text = "OOPS! YOU GOT BONKED! Watch until next round.", color = Color3.fromRGB(255, 150, 158)})
+                task.delay(0.2, function()
+                    if root.Parent and profiles[player] == profile then
+                        root.CFrame = CFrame.new(0, 17, 74)
+                        root.AssemblyLinearVelocity = Vector3.zero
+                    end
+                end)
+            else
+                remote:FireClient(player, {type = "notice", text = "BONK! " .. profile.hearts .. " hearts left!", color = Color3.fromRGB(255, 150, 158)})
+            end
+        end
+    end
+end
+
 local function addCoins(player: Player, amount: number)
     local profile = profiles[player]
     if not profile then return end
     profile.coins += math.max(0, math.floor(amount))
-    if profile.loaded then profile.dirty = true end
+    if profile.loaded then
+        profile.dirty = true
+        profile.revision += 1
+    end
     sendStats(player)
 end
 
 local function save(player: Player)
     local profile = profiles[player]
     if not profile or not profile.loaded or not profile.dirty then return end
-    local coins = profile.coins
-    local petIndex = profile.petIndex
+    local snapshot = Progression.serialize(profile)
+    local revision = profile.revision
     local ok, err = pcall(function()
-        store:UpdateAsync("player_" .. player.UserId, function(previous: any)
-            local previousCoins = if type(previous) == "table" and type(previous.coins) == "number" then previous.coins else 0
-            -- In this prototype coins only increase; max protects against simultaneous/stale server overwrites.
-            return {coins = math.max(previousCoins, coins), petIndex = petIndex}
+        store:UpdateAsync("player_" .. player.UserId, function(_previous: any)
+            -- Prototype: no cross-server session lock yet. Do not connect paid purchases until hardened.
+            return snapshot
         end)
     end)
     if ok then
-        profile.dirty = false
+        if profile.revision == revision then profile.dirty = false end
     else
         warn("DWTM: data save failed for " .. player.UserId .. ": " .. tostring(err))
     end
@@ -104,17 +144,19 @@ local function movePetNearPlayer(player: Player)
 end
 
 local function onPlayerAdded(player: Player)
-    local profile = {
-        coins = 0,
-        petIndex = rng:NextInteger(1, #Config.Pets),
-        lastFeed = -100,
-        lastFood = "",
-        loaded = false,
-        dirty = false,
-        effectUntil = 0,
-        effect = "",
-        pet = nil,
-    }
+    local profile = Progression.new()
+    profile.lastFeed = -100
+    profile.lastSync = -100
+    profile.lastFood = ""
+    profile.loaded = false
+    profile.dirty = false
+    profile.revision = 0
+    profile.effectUntil = 0
+    profile.effect = ""
+    profile.pet = nil
+    profile.hearts = 3
+    profile.knockedOut = false
+    profile.lastHit = -100
     profiles[player] = profile
 
     local ok, result = pcall(function()
@@ -122,14 +164,7 @@ local function onPlayerAdded(player: Player)
     end)
     if ok then
         profile.loaded = true
-        if type(result) == "table" then
-            if type(result.coins) == "number" then
-                profile.coins = math.max(0, math.floor(result.coins))
-            end
-            if type(result.petIndex) == "number" then
-                profile.petIndex = math.clamp(math.floor(result.petIndex), 1, #Config.Pets)
-            end
-        end
+        Progression.load(profile, result)
     else
         warn("DWTM: data load unavailable for " .. player.UserId .. ". Progress is session-only.")
     end
@@ -144,6 +179,7 @@ local function onPlayerAdded(player: Player)
         movePetNearPlayer(player)
     end)
     sendStats(player)
+    sendCollection(player)
     sendState(player)
     remote:FireClient(player, {type = "notice", text = "Meet " .. petDefinition.name .. "! Feed it. Nothing can go wrong... right?", color = Color3.fromRGB(252, 205, 255)})
 end
@@ -300,19 +336,71 @@ local function feed(player: Player, food: any)
     petEffect(profile, reaction, food)
     local earnedNoise = foodInfo.noise + reaction.noise + (if combo then 7 else 0)
     noise = math.min(Config.NOISE_MAX, noise + earnedNoise)
-    addCoins(player, Config.FEED_REWARD + (if combo then 3 else 0))
+    local bonus, discoveries = Progression.recordFeed(profile, reaction.id)
+    addCoins(player, Config.FEED_REWARD + (if combo then 3 else 0) + bonus)
+    sendCollection(player)
+    if #discoveries > 0 then
+        remote:FireClient(player, {type = "questToast", text = table.concat(discoveries, " | ")})
+    end
     local text = player.DisplayName .. "'s " .. Config.Pets[profile.petIndex].name .. ": " .. reaction.title
     if combo then text ..= " + COMBO!" end
     notice(text, foodInfo.color)
     sendState()
 end
 
+local function switchPet(player: Player, rawId: any, isPurchase: boolean)
+    local profile = profiles[player]
+    if not profile then return end
+    if not profile.loaded then
+        remote:FireClient(player, {type = "notice", text = "Saving is unavailable. Pet purchases are temporarily disabled.", color = Color3.fromRGB(255, 184, 125)})
+        return
+    end
+    local ok, message
+    if isPurchase then
+        ok, message = Progression.buy(profile, rawId)
+    else
+        ok, message = Progression.equip(profile, rawId)
+    end
+    if ok then
+        profile.dirty = true
+        profile.revision += 1
+        -- Buying does not auto-equip: avoids charging again when a user just switches pets.
+        if not isPurchase then
+            if profile.pet then profile.pet:Destroy() end
+            local definition = Config.Pets[profile.petIndex]
+            profile.pet = World.makePet(definition.name .. "_" .. player.UserId, definition.color, definition.ear == "pointy")
+            movePetNearPlayer(player)
+        end
+        sendStats(player)
+        sendCollection(player)
+    end
+    remote:FireClient(player, {type = "notice", text = message, color = if ok then Color3.fromRGB(162, 255, 201) else Color3.fromRGB(255, 182, 151)})
+end
+
 remote.OnServerEvent:Connect(function(player: Player, command: any, arg: any)
+    local profile = profiles[player]
+    if not profile or typeof(command) ~= "string" then return end
     if command == "Feed" then
         feed(player, arg)
+    elseif command == "BuyPet" or command == "EquipPet" then
+        switchPet(player, arg, command == "BuyPet")
+    elseif command == "ClaimDaily" then
+        if not profile.loaded then
+            remote:FireClient(player, {type = "notice", text = "Daily reward unavailable: saving is offline.", color = Color3.fromRGB(255, 180, 153)})
+            return
+        end
+        local ok, message = Progression.claimDaily(profile)
+        if ok then
+            addCoins(player, Config.DAILY_REWARD)
+            sendCollection(player)
+        end
+        remote:FireClient(player, {type = "notice", text = message, color = if ok then Color3.fromRGB(154, 255, 207) else Color3.fromRGB(255, 216, 147)})
     elseif command == "Sync" then
+        if os.clock() - profile.lastSync < 0.8 then return end
+        profile.lastSync = os.clock()
         sendState(player)
         sendStats(player)
+        sendCollection(player)
     end
 end)
 
@@ -322,22 +410,24 @@ local function monsterAction()
         notice("GIGGLES STOMPS! JUMP AWAY!", Color3.fromRGB(255, 113, 146))
         local spot = Vector3.new(rng:NextNumber(-35, 35), 9, rng:NextNumber(-35, 35))
         World.wave(spot, 30, Color3.fromRGB(255, 116, 178))
-        task.delay(0.8, function() nearbyKnock(spot, 28, 55) end)
+        task.delay(0.8, function() monsterStrike(spot, 28, 55, true) end)
     elseif choice == 2 then
         notice("GIANT SNEEZE! HOLD ON!", Color3.fromRGB(136, 229, 255))
         World.wave(Vector3.new(0, 14, 0), 88, Color3.fromRGB(122, 213, 255))
-        task.delay(0.9, function() nearbyKnock(Vector3.new(0, 12, 0), 86, 72) end)
+        task.delay(0.9, function() monsterStrike(Vector3.new(0, 12, 0), 86, 72, false) end)
     elseif choice == 3 then
         notice("THE SKY IS RAINING JELLY!", Color3.fromRGB(255, 223, 114))
         for _ = 1, 3 do
             local spot = Vector3.new(rng:NextNumber(-70, 70), 11, rng:NextNumber(-70, 70))
             World.burst(spot, Color3.fromRGB(252, rng:NextInteger(130, 240), 192), 12, 12)
+            World.wave(spot, 14, Color3.fromRGB(255, 214, 130))
+            task.delay(0.7, function() monsterStrike(spot, 12, 24, false) end)
         end
     else
         notice("MONSTER FART TORNADO! RUN!", Color3.fromRGB(183, 244, 154))
         local spot = Vector3.new(rng:NextNumber(-40, 40), 12, rng:NextNumber(-40, 40))
         World.wave(spot, 38, Color3.fromRGB(175, 255, 152))
-        task.delay(0.8, function() nearbyKnock(spot, 38, 38) end)
+        task.delay(0.8, function() monsterStrike(spot, 38, 38, false) end)
     end
 end
 
@@ -389,6 +479,12 @@ local function startWake()
     noise = Config.NOISE_MAX
     secondsLeft = Config.WAKE_SECONDS
     wakeCount += 1
+    for player, profile in pairs(profiles) do
+        profile.hearts = 3
+        profile.knockedOut = false
+        profile.lastHit = -100
+        sendStats(player)
+    end
     World.setMonsterAwake(true)
     notice("OH NO!!! YOU WOKE GIGGLES! SURVIVE!", Color3.fromRGB(255, 113, 145))
     World.wave(Vector3.new(0, 11, 0), 90, Color3.fromRGB(255, 104, 156))
@@ -401,11 +497,24 @@ local function endWake()
     secondsLeft = Config.COOLDOWN_SECONDS
     World.setMonsterAwake(false)
     for _, player in ipairs(Players:GetPlayers()) do
-        if profiles[player] and rootFor(player) then
-            addCoins(player, Config.SURVIVAL_REWARD)
+        local profile = profiles[player]
+        if profile then
+            if rootFor(player) and not profile.knockedOut then
+                local bonus = Progression.recordSurvival(profile)
+                addCoins(player, Config.SURVIVAL_REWARD + bonus)
+                if bonus > 0 then
+                    remote:FireClient(player, {type = "questToast", text = "SURVIVAL QUEST COMPLETE! +" .. bonus .. " coins"})
+                end
+            else
+                addCoins(player, 8) -- consolation so new players can still progress
+            end
+            profile.hearts = 3
+            profile.knockedOut = false
+            sendStats(player)
+            sendCollection(player)
         end
     end
-    notice("WE SURVIVED! +35 COINS! Giggles is sleepy again...", Color3.fromRGB(150, 255, 204))
+    notice("GIGGLES IS ASLEEP! Surviving players earned coins.", Color3.fromRGB(150, 255, 204))
     sendState()
 end
 
