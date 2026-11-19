@@ -22,6 +22,7 @@ required = [
     "src/client/Collection.client.luau",
     "src/shared/GardenConfig.luau",
     "src/server/Garden.luau",
+    "src/server/RecipeCatalog.luau",
     "src/client/Garden.client.luau",
 ]
 for path in required:
@@ -32,7 +33,7 @@ for path in required:
 cfg = read(required[0])
 pets = cfg.split("Config.Pets = {", 1)[1].split("Config.Reactions = {", 1)[0]
 pet_prices = re.findall(r'\{name = "([^"]+)".*?price = (\d+)\}', pets)
-assert len(pet_prices) == 10, f"Expected 10 pet definitions, got {len(pet_prices)}"
+assert len(pet_prices) == 30, f"Expected 30 pet definitions, got {len(pet_prices)}"
 names = [name for name, _ in pet_prices]
 prices = [int(price) for _, price in pet_prices]
 assert len(set(names)) == len(names), "Duplicated pet name"
@@ -60,18 +61,32 @@ assert "ProcessReceipt" not in server, "Real-money purchases should remain disab
 garden_cfg = read("src/shared/GardenConfig.luau")
 garden = read("src/server/Garden.luau")
 garden_ui = read("src/client/Garden.client.luau")
-assert garden_cfg.count('kind = "ordinary"') == 10, "Expected ten free-coin crops"
+assert garden_cfg.count('kind = "ordinary"') == 28, "Expected 28 free-coin crops"
 assert garden_cfg.count('kind = "premium"') == 3, "Expected two premium seeds + one fertilizer"
 assert garden_cfg.count("productId = 0") == 6, "A product ID may have been enabled without receipts"
-assert "G.PLOT_COUNT = 6" in garden_cfg, "Expected six plots per player"
+assert "G.PLOT_COUNT = 9" in garden_cfg, "Expected nine plots per player"
 assert "G.SLOT_COUNT = 12" in garden_cfg, "Expected twelve physical garden zones"
-for action in ("GardenBuySeed", "GardenPlant", "GardenHarvest", "GardenFertilize", "GardenCraft", "GardenFeed", "GardenLure", "GardenVisit"):
+for action in ("GardenBuySeed", "GardenPlant", "GardenHarvest", "GardenFertilize", "GardenCraft", "GardenExperiment", "GardenFeed", "GardenLure", "GardenVisit"):
     assert action in server and action in garden_ui, f"Missing garden client/server command: {action}"
-for method in ("Garden.buySeed", "Garden.plant", "Garden.harvest", "Garden.fertilize", "Garden.craft", "Garden.consume"):
+for method in ("Garden.buySeed", "Garden.plant", "Garden.harvest", "Garden.fertilize", "Garden.craft", "Garden.experiment", "Garden.consume"):
     assert method in garden and method in server, f"Missing server garden rule: {method}"
 assert "Garden.serialize" in progression and "Garden.load" in progression, "Garden data not saved"
 assert "PromptProductPurchase" not in garden_ui, "Premium products must remain disabled"
 assert "No teleporting away from Giggles" in server, "Garden escape during boss fight was enabled"
+catalog = read("src/server/RecipeCatalog.luau")
+assert garden_cfg.count("kind = \"premium\"") == 3
+assert "G.TOTAL_RECIPES = 26" in garden_cfg
+assert 'Catalog.Order = {' in catalog and 'MysterySlop = {' in catalog
+assert "Catalog.Recipes" not in garden_cfg and "G.Recipes" not in garden_cfg
+assert "G.RecipeOrder" not in garden_cfg and "G.RecipeOrder" not in garden_ui
+assert "G.Recipes" not in garden_ui and "RecipeCatalog" not in garden_ui
+assert "local RecipeCatalog = require(script.Parent:" in server
+assert "local Catalog = require(script.Parent:" in garden
+assert "Garden.snapshot" in garden and "result.book = book" in garden
+assert "knownRecipes = knownRecipes" in garden, "Discovered recipe book does not persist"
+assert "Garden.experiment" in server and "GardenExperiment" in garden_ui
+assert "table.sort(products" in garden, "Crafted product inventory missing"
 
 
-print(f"OK: {len(pet_prices)} pets, {len(reaction_defs)} reactions, 12 crops, 8 recipes, disabled premium products, Rojo paths and saved fields")
+
+print(f"OK: {len(pet_prices)} pets, {len(reaction_defs)} reactions, 30 plants, 26 hidden recipes, save fields and disabled premium products")
