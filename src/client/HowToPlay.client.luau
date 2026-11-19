@@ -66,36 +66,37 @@ local panel = Instance.new("Frame")
 panel.Name = "TutorialCard"
 panel.AnchorPoint = Vector2.new(0.5, 0.5)
 panel.Position = UDim2.fromScale(0.5, 0.5)
-panel.Size = UDim2.new(0.92, 0, 0, 389)
+panel.Size = UDim2.new(0.92, 0, 0, 444)
 panel.BackgroundColor3 = light
 panel.BorderSizePixel = 0
 panel.Parent = shade
 corner(panel, 22)
 
 local bounds = Instance.new("UISizeConstraint")
-bounds.MaxSize = Vector2.new(500, 389)
+bounds.MaxSize = Vector2.new(500, 444)
 bounds.Parent = panel
 
 line(panel, "👾 DON'T WAKE THE MONSTER!", UDim2.fromOffset(16, 12), 36, 20, true)
 line(panel, "A cute island. A sleepy giant. Terrible decisions.", UDim2.fromOffset(16, 49), 38, 14, false)
 
 local steps = {
-    {heading = "1  🌱  GROW & MIX", detail = "Plant seeds in MY GARDEN, harvest crops and experiment to discover secret recipes."},
-    {heading = "2  🐾  FEED & LAUGH", detail = "Feed your creature strange snacks. Every experiment makes noise and triggers silly surprises."},
-    {heading = "3  🚨  RESCUE & SURVIVE", detail = "When Giggles wakes, dodge attacks and save runaway pets for extra coin rewards."},
+    {heading = "1  🧭  HUNT SEEDS", detail = "Open FIND SEEDS, track a glowing cache in the forest and hold its SEARCH prompt."},
+    {heading = "2  🌱  GROW & EXPERIMENT", detail = "Plant discoveries in MY GARDEN. Weather and your pet can transform crops! Mix secret recipes."},
+    {heading = "3  🐱  FEED & CUDDLE", detail = "Feed wild snacks or hold PET to stroke your animal. Even a happy kitten's purr makes noise!"},
+    {heading = "4  🚨  RESCUE & SURVIVE", detail = "When Giggles wakes, dodge attacks, save runaway pets and earn coins for your collection."},
 }
 for i, step in ipairs(steps) do
     local block = Instance.new("Frame")
     block.Name = "Step" .. i
-    block.Size = UDim2.new(1, -30, 0, 73)
-    block.Position = UDim2.new(0, 15, 0, 90 + (i - 1) * 78)
+    block.Size = UDim2.new(1, -30, 0, 68)
+    block.Position = UDim2.new(0, 15, 0, 90 + (i - 1) * 72)
     block.BackgroundColor3 = if i % 2 == 1 then soft else Color3.fromRGB(227, 248, 227)
     block.BorderSizePixel = 0
     block.Parent = panel
     corner(block, 12)
-    local title = line(block, step.heading, UDim2.fromOffset(8, 2), 28, 15, true)
+    local title = line(block, step.heading, UDim2.fromOffset(8, 2), 25, 14, true)
     title.TextXAlignment = Enum.TextXAlignment.Left
-    local detail = line(block, step.detail, UDim2.fromOffset(8, 29), 39, 12, false)
+    local detail = line(block, step.detail, UDim2.fromOffset(8, 27), 37, 12, false)
     detail.TextXAlignment = Enum.TextXAlignment.Left
 end
 
