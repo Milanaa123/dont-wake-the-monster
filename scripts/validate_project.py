@@ -24,6 +24,8 @@ required = [
     "src/server/Garden.luau",
     "src/server/RecipeCatalog.luau",
     "src/client/Garden.client.luau",
+    "src/server/RescueObjective.luau",
+    "src/client/HowToPlay.client.luau",
 ]
 for path in required:
     text = read(path)
@@ -86,6 +88,21 @@ assert "Garden.snapshot" in garden and "result.book = book" in garden
 assert "knownRecipes = knownRecipes" in garden, "Discovered recipe book does not persist"
 assert "Garden.experiment" in server and "GardenExperiment" in garden_ui
 assert "table.sort(products" in garden, "Crafted product inventory missing"
+
+rescue = read("src/server/RescueObjective.luau")
+hud = read("src/client/HUD.client.luau")
+onboarding = read("src/client/HowToPlay.client.luau")
+assert 'RescueObjective.start' in server and 'RescueObjective.finish' in server, "Rescue round lifecycle missing"
+assert 'RescueObjective.participated(player)' in server, "Cooperative bonus requires participating"
+assert 'RescueObjective.status()' in server, "Rescue progress must sync to clients"
+assert 'ProximityPrompt' in rescue and 'prompt.Triggered:Connect' in rescue, "In-world rescue interactions missing"
+assert '(root.Position - primary.Position).Magnitude > 16' in rescue, "Rescue must validate server distance"
+assert 'humanoid.Health <= 0' in rescue, "Dead players must not collect rescues"
+assert 'used = true' in rescue and 'prompt.Enabled = false' in rescue, "Rescues must be one-time"
+assert 'rescueCard.Visible' in hud and 'rescueLabel.Text' in hud, "Rescue progress HUD missing"
+assert 'GROW & MIX' in onboarding and 'RESCUE & SURVIVE' in onboarding, "First-time tutorial missing"
+
+print("OK: co-op rescue prompts, server checks, objective HUD and first-time tutorial")
 
 
 
