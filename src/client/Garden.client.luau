@@ -235,7 +235,13 @@ local function drawPlots()
     selectorFert.Position = UDim2.new(0, 8, 0, 9)
     selectorFert.Size = UDim2.new(1, -16, 0, 48)
     selectorFert.MouseButton1Click:Connect(function()
-        fertilizerKey = if fertilizerKey == "Compost" then "Starlight" else "Compost"
+        if fertilizerKey == "Compost" then
+            fertilizerKey = "Starlight"
+        elseif fertilizerKey == "Starlight" then
+            fertilizerKey = "AuroraDust"
+        else
+            fertilizerKey = "Compost"
+        end
         tabs._render()
     end)
 
@@ -296,6 +302,18 @@ local function drawSeeds()
             if not premium then remote:FireServer("GardenBuySeed", seed) end
         end)
     end
+    local premiumFert = row(74, Color3.fromRGB(243, 230, 252))
+    local fertTitle = text(premiumFert, "✨ Aurora Dust Fertilizer", 15, INK, true)
+    fertTitle.Position = UDim2.new(0, 10, 0, 5)
+    fertTitle.Size = UDim2.new(0.58, 0, 0, 28)
+    local fertDetail = text(premiumFert, "80% faster remaining growth • stock: " .. productInventory("AuroraDust", true), 11, MUTED, false)
+    fertDetail.Position = UDim2.new(0, 10, 0, 32)
+    fertDetail.Size = UDim2.new(0.58, 0, 0, 33)
+    local comingSoon = button(premiumFert, "COMING SOON", Color3.fromRGB(219, 209, 228))
+    comingSoon.Position = UDim2.new(0.6, 0, 0.5, -18)
+    comingSoon.Size = UDim2.new(0.38, -8, 0, 36)
+    comingSoon.Active = false
+    comingSoon.AutoButtonColor = false
 end
 
 local function drawCraft()
