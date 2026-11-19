@@ -48,7 +48,7 @@ function Rescue.start(onRescue: (Player, boolean, number) -> (), allowed: (Playe
     completed = false
 
     local currentPlayers = #Players:GetPlayers()
-    goal = math.clamp(2 + math.floor(currentPlayers / 2), 3, 5)
+    goal = math.clamp(2 + math.floor(currentPlayers / 3), 2, 5)
     local phaseOffset = random:NextNumber(0, math.pi * 2)
 
     for i = 1, TOTAL_RUNAWAYS do
