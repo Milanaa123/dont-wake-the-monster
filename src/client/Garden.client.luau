@@ -293,7 +293,37 @@ local function drawPlots()
 end
 
 local function drawSeeds()
-    topHint("🌱 Buy packets of 3 ordinary seeds using game coins. Premium items are NOT on sale yet.")
+    topHint("🌱 FIND rare seeds in 3 forests • merchant restocks every 12 min • all for free coins.")
+    if state and typeof(state.merchantShop) == "table" then
+        local shop = state.merchantShop
+        local now = (state.serverTime or os.time()) + (os.clock() - latestAt)
+        local mins = math.max(0, math.ceil(((shop.nextRestock or 0) - now) / 60))
+        local header = row(56, Color3.fromRGB(255, 234, 188))
+        local title = text(header, "🛒 TRAVELING SEED MERCHANT", 16, INK, true)
+        title.Position = UDim2.fromOffset(10, 4)
+        title.Size = UDim2.new(1, -20, 0, 25)
+        local subtitle = text(header, "4 rotating discounts • restock in ~" .. mins .. " min • 1 pack each", 11, MUTED)
+        subtitle.Position = UDim2.fromOffset(10, 29)
+        subtitle.Size = UDim2.new(1, -20, 0, 23)
+        for _, offer in ipairs(shop.offers or {}) do
+            local claimed = shop.claimed and shop.claimed[offer.slot] == true
+            local entry = row(66, Color3.fromRGB(255, 247, 217))
+            local name = text(entry, offer.icon .. " " .. offer.name, 14, INK, true)
+            name.Position = UDim2.fromOffset(9, 6)
+            name.Size = UDim2.new(0.56, 0, 0, 26)
+            local info = text(entry, "+" .. offer.count .. " seeds • " .. offer.price .. " coins", 11, MUTED)
+            info.Position = UDim2.fromOffset(9, 32)
+            info.Size = UDim2.new(0.55, 0, 0, 24)
+            local buy = button(entry, if claimed then "SOLD OUT" else "BUY 🪙", if claimed then Color3.fromRGB(225, 218, 211) else Color3.fromRGB(255, 209, 144))
+            buy.Position = UDim2.new(0.6, 0, 0.5, -18)
+            buy.Size = UDim2.new(0.38, -8, 0, 36)
+            buy.Active = not claimed
+            buy.AutoButtonColor = not claimed
+            buy.MouseButton1Click:Connect(function()
+                if not claimed then remote:FireServer("GardenMerchantBuy", offer.slot) end
+            end)
+        end
+    end
     for _, seed in ipairs(G.Order) do
         local crop = G.Crops[seed]
         local premium = crop.kind == "premium"
