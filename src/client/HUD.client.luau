@@ -338,6 +338,8 @@ remote.OnClientEvent:Connect(function(event: any)
         statsLabel.Text = string.format("🪙 %d   •   PET: %s", event.coins or 0, event.pet or "???")
         local count = math.clamp(event.hearts or 3, 0, 3)
         healthLabel.Text = if event.knockedOut then "💫 BONKED!" else string.rep("❤️", count) .. string.rep("🖤", 3 - count)
+    elseif event.type == "petFeeling" then
+        showNotice(tostring(event.text or ""), Color3.fromRGB(255, 209, 231))
     elseif event.type == "questToast" then
         showNotice(tostring(event.text or ""), Color3.fromRGB(175, 255, 205))
     elseif event.type == "notice" then
