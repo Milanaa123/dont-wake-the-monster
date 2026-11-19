@@ -13,6 +13,7 @@ local Personality = require(ReplicatedStorage:WaitForChild("PetPersonality"))
 local Affection = require(ReplicatedStorage:WaitForChild("PetAffection"))
 local World = require(script.Parent:WaitForChild("World"))
 local Progression = require(script.Parent:WaitForChild("Progression"))
+local ProfileStore = require(script.Parent:WaitForChild("ProfileStore"))
 local Garden = require(script.Parent:WaitForChild("Garden"))
 local RecipeCatalog = require(script.Parent:WaitForChild("RecipeCatalog"))
 local RescueObjective = require(script.Parent:WaitForChild("RescueObjective"))
@@ -27,12 +28,15 @@ local remote = Instance.new("RemoteEvent")
 remote.Name = "MonsterRemote"
 remote.Parent = ReplicatedStorage
 
-local store = DataStoreService:GetDataStore(Config.DATASTORE_NAME)
+local persistence = ProfileStore.new(DataStoreService, Config.DATASTORE_NAME, Progression.serialize)
 local rng = Random.new()
 local noise = 0
 local phase = "SLEEP"
 local secondsLeft = Config.SLEEP_MAX_SECONDS
 local profiles: {[Player]: any} = {}
+local loading: {[Player]: boolean} = {}
+local closingProfiles: {[Player]: any} = {}
+local shuttingDown = false
 local totalActions = 0
 local wakeCount = 0
 local farmSlots: {[number]: Player} = {}
@@ -45,6 +49,7 @@ local festivalPlayers: {[Player]: boolean} = {}
 -- Official Roblox custom analytics; only meaningful in a published experience.
 -- Do not attach PII and never trust client-supplied event names/values.
 local function metric(player: Player, eventName: string, value: number?)
+    if RunService:IsStudio() then return end
     task.spawn(function()
         local ok, err = pcall(function()
             AnalyticsService:LogCustomEvent(player, eventName, value or 1)
@@ -169,20 +174,7 @@ end
 
 local function save(player: Player)
     local profile = profiles[player]
-    if not profile or not profile.loaded or not profile.dirty then return end
-    local snapshot = Progression.serialize(profile)
-    local revision = profile.revision
-    local ok, err = pcall(function()
-        store:UpdateAsync("player_" .. player.UserId, function(_previous: any)
-            -- Prototype: no cross-server session lock yet. Do not connect paid purchases until hardened.
-            return snapshot
-        end)
-    end)
-    if ok then
-        if profile.revision == revision then profile.dirty = false end
-    else
-        warn("DWTM: data save failed for " .. player.UserId .. ": " .. tostring(err))
-    end
+    if profile then persistence:save(player.UserId, profile) end
 end
 
 local function movePetNearPlayer(player: Player)
@@ -284,6 +276,8 @@ local function toggleCarry(player: Player)
 end
 
 local function onPlayerAdded(player: Player)
+    if shuttingDown or loading[player] or profiles[player] then return end
+    loading[player] = true
     local profile = Progression.new()
     profile.metricFlags = {}
     profile.lastFeed = -100
@@ -314,18 +308,18 @@ local function onPlayerAdded(player: Player)
     profile.hearts = 3
     profile.knockedOut = false
     profile.lastHit = -100
-    profiles[player] = profile
-
-    local ok, result = pcall(function()
-        return store:GetAsync("player_" .. player.UserId)
-    end)
+    local ok, result = persistence:load(player.UserId)
     if ok then
         profile.loaded = true
         Progression.load(profile, result)
     else
         warn("DWTM: data load unavailable for " .. player.UserId .. ". Progress is session-only.")
     end
-    if profiles[player] ~= profile then return end
+    loading[player] = nil
+    if shuttingDown or player.Parent ~= Players then return end
+    -- Publish only fully loaded state. Remotes/timers cannot mutate a temporary
+    -- starter garden while GetAsync yields and then overwrite or lose progress.
+    profiles[player] = profile
     onceMetric(player, profile, "JoinedGame")
     task.delay(600, function()
         if profiles[player] == profile then metric(player, "StayedTenMinutes") end
@@ -389,14 +383,17 @@ end
 
 local function onPlayerRemoving(player: Player)
     local profile = profiles[player]
+    if not profile then return end
+    closingProfiles[player] = profile
+    profiles[player] = nil
     if profile then stopPetting(player, profile) end
-    save(player)
     if profile and profile.pet then profile.pet:Destroy() end
     World.removeGarden(player.UserId)
     local slot = farmOfPlayer[player]
     if slot then farmSlots[slot] = nil end
     farmOfPlayer[player] = nil
-    profiles[player] = nil
+    persistence:save(player.UserId, profile)
+    closingProfiles[player] = nil
 end
 
 local function notifyBondMilestone(player: Player, profile: any, previous: string)
@@ -944,7 +941,7 @@ end
 
 remote.OnServerEvent:Connect(function(player: Player, command: any, arg: any)
     local profile = profiles[player]
-    if not profile or typeof(command) ~= "string" then return end
+    if shuttingDown or not profile or typeof(command) ~= "string" then return end
     if command == "Feed" then
         feed(player, arg)
     elseif command == "StartPetting" then
@@ -1462,7 +1459,13 @@ task.spawn(function()
 end)
 
 game:BindToClose(function()
+    shuttingDown = true
     for player in pairs(profiles) do
-        save(player)
+        task.spawn(onPlayerRemoving, player)
+    end
+    -- Save different players concurrently within Roblox's shutdown window.
+    local deadline = os.clock() + 25
+    while (next(profiles) or next(closingProfiles)) and os.clock() < deadline do
+        task.wait(0.05)
     end
 end)

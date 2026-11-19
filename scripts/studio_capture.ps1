@@ -13,6 +13,7 @@ $report = [ordered]@{
   play_key_sent = $false
   screenshots = 0
   video_generated = $false
+  gameplay_verified = $false
   blocker = $null
 }
 
@@ -116,14 +117,11 @@ public static class WindowFocus {
             Start-Sleep -Milliseconds 240
         }
     }
-    $ffmpeg = Get-Command ffmpeg -ErrorAction SilentlyContinue
-    if ($ffmpeg -and (Test-Path (Join-Path $out "frame-000.png"))) {
-        Push-Location $out
-        & $ffmpeg.Source -y -loglevel error -framerate 4 -i "frame-%03d.png" -c:v libx264 -pix_fmt yuv420p -t 13 "studio-attempt.mp4"
-        Pop-Location
-        if (Test-Path (Join-Path $out "studio-attempt.mp4")) {
-            $report.video_generated = $true
-        }
+    # A window and an F5 keypress do not prove that a play session started.
+    # Retain diagnostic screenshots only. Never turn login/error frames into
+    # footage that could be mistaken for gameplay.
+    if (-not $report.blocker) {
+        $report.blocker = "Gameplay has not been verified. Inspect screenshots on an authenticated interactive desktop."
     }
     if (-not $report.play_key_sent) {
         Write-Host "No interactive playtest was started. See screenshots and blocker in diagnostic report."
@@ -136,3 +134,6 @@ public static class WindowFocus {
     ($report | ConvertTo-Json -Depth 4) | Set-Content (Join-Path $out "diagnostics.json")
     Write-Host "STUDIO_CAPTURE_DIAGNOSTICS=$($report | ConvertTo-Json -Compress)"
 }
+
+# An unverified attempt must not appear as a passing gameplay check.
+if (-not $report.gameplay_verified) { exit 1 }

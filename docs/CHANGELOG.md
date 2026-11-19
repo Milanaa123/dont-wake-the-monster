@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.0.1 — Local playtest and save fixes (2026-11-19)
+- Catch DataStore initialization failures so an unpublished/local session can continue without saving; failed reads never authorize overwriting saved data.
+- Expose profiles to gameplay only after loading completes, and ignore disconnected players after a pending read returns.
+- Serialize autosave and leave writes per profile. A leave save waits and takes a fresh snapshot, preserving changes made while autosave was yielding.
+- Save different players concurrently at shutdown; stop accepting gameplay requests during shutdown.
+- Disable Studio analytics calls, which cannot provide meaningful published-game metrics.
+- Move the camera toggle below the audio controls, whose previous coordinates overlapped.
+- Studio diagnostic attempts now fail when execution is unverified; login/error screenshots are never encoded as gameplay.
+- Added deterministic Luau persistence tests. Engine, visual and multiplayer verification remain pending.
+
 ## v1.0 — Living Seed Merchant & Comedy Soundscape (2026-11-19)
 - Added four rotating merchant offers every 12 minutes, priced in regular coins only. One purchase per offer per player; purchased slots and rotation persist across rejoins.
 - Each offer contains two seeds. The merchant cycles through all 28 earnable crops across rotations, with no paid random loot.

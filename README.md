@@ -48,6 +48,8 @@ A colorful, chaotic multiplayer Roblox prototype: feed your ridiculous pet, trig
 - `src/server/CottageGardenStyle.luau`: original warm landscaping, orchard, berry patches, fencing, lighting and crop details.
 - `src/client/CottageCamera.client.luau`: 3/4 garden view with optional third-person toggle.
 - `src/server/Game.server.luau`: authoritative multiplayer game loop, hearts, boss damage, pet effects and saving.
+- `src/server/ProfileStore.luau`: guarded persistence initialization and per-profile save coordination; cross-server session locking remains pending.
+- `scripts/test_persistence.py`: deterministic Luau tests for failed loads, save retries and autosave/leave interleaving.
 - `src/server/Progression.luau`: catalog, buying/equipping pets, daily rewards, gardening persistence and per-pet personality save migration.
 - `src/shared/PetPersonality.luau`: unique seeded genetics, mood, individual preferences, social scenes and bonding.
 - `src/shared/ExpeditionConfig.luau`, `src/server/SeedHunt.luau`: 3 biomes, 9 caches, weather and foraging.

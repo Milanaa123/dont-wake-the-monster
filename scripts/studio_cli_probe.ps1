@@ -110,3 +110,6 @@ finally {
   $report|ConvertTo-Json|Set-Content (Join-Path $out "diagnostics.json")
   Write-Host ("DWTM_CLI_PROBE="+($report|ConvertTo-Json -Compress))
 }
+
+# Evidence collection completing is not a successful Studio execution.
+if (-not $report.cli_marker_found) { exit 1 }
