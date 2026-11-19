@@ -16,6 +16,9 @@ local Garden = require(script.Parent:WaitForChild("Garden"))
 local RecipeCatalog = require(script.Parent:WaitForChild("RecipeCatalog"))
 local RescueObjective = require(script.Parent:WaitForChild("RescueObjective"))
 local GardenConfig = require(ReplicatedStorage:WaitForChild("GardenConfig"))
+local X = require(ReplicatedStorage:WaitForChild("ExpeditionConfig"))
+local SeedHunt = require(script.Parent:WaitForChild("SeedHunt"))
+local ForestWorld = require(script.Parent:WaitForChild("ForestWorld"))
 
 World.build()
 local remote = Instance.new("RemoteEvent")
@@ -32,6 +35,10 @@ local totalActions = 0
 local wakeCount = 0
 local farmSlots: {[number]: Player} = {}
 local farmOfPlayer: {[Player]: number} = {}
+local currentWeather = "Sunny"
+local weatherEndsAt = os.time() + 95
+local festivalFinds = 0
+local festivalPlayers: {[Player]: boolean} = {}
 
 local function notice(message: string, color: Color3?)
     remote:FireAllClients({type = "notice", text = message, color = color or Color3.fromRGB(255, 255, 255)})
@@ -60,11 +67,15 @@ local function sendGarden(player: Player)
     snapshot.type = "garden"
     snapshot.slot = farmOfPlayer[player] or 0
     snapshot.saving = profile.loaded
+    snapshot.weather = currentWeather
+    snapshot.weatherEndsAt = weatherEndsAt
+    snapshot.festivalFinds = festivalFinds
+    snapshot.festivalGoal = X.FestivalGoal
     remote:FireClient(player, snapshot)
 end
 
 local function sendState(player: Player?)
-    local update = {type = "state", phase = phase, noise = noise, maxNoise = Config.NOISE_MAX, time = secondsLeft, wakes = wakeCount, rescue = RescueObjective.status()}
+    local update = {type = "state", phase = phase, noise = noise, maxNoise = Config.NOISE_MAX, time = secondsLeft, wakes = wakeCount, rescue = RescueObjective.status(), weather = currentWeather, festivalFinds = festivalFinds, festivalGoal = X.FestivalGoal}
     if player then
         remote:FireClient(player, update)
     else
@@ -260,6 +271,7 @@ local function onPlayerAdded(player: Player)
     profile.lastShopAction = -100
     profile.lastDailyRequest = -100
     profile.lastGardenAction = -100
+    profile.lastPetGardenAssist = -100
     profile.lastLure = -100
     profile.lastGardenVisit = -100
     profile.lastFood = ""
@@ -566,7 +578,10 @@ local function feed(player: Player, food: any, craftedId: string?)
     addCoins(player, Config.FEED_REWARD + (if combo then 3 else 0) + bonus)
     sendCollection(player)
     local text = player.DisplayName .. "'s " .. Config.Pets[profile.petIndex].name .. ": " .. reaction.title
-    if combo then text ..= " + COMBO!" end
+    if combo then
+        text ..= " + COMBO!"
+        remote:FireAllClients({type = "soundCue", cue = "Boing"})
+    end
     if craftedId then text ..= " (GARDEN RECIPE!)" end
     notice(text, foodInfo.color)
     remote:FireClient(player, {type = "petFeeling", text = Config.Pets[profile.petIndex].name .. ": " .. emotionText})
@@ -674,6 +689,7 @@ local function gardenAction(player: Player, command: string, arg: any)
     elseif command == "GardenPlant" then
         if typeof(arg) ~= "table" then return end
         ok, message = Garden.plant(g, arg.plot, arg.seed)
+        if ok then Garden.weather(g, currentWeather, function() return rng:NextNumber() end) end
     elseif command == "GardenHarvest" then
         ok, message = Garden.harvest(g, arg)
     elseif command == "GardenFertilize" then
@@ -681,6 +697,25 @@ local function gardenAction(player: Player, command: string, arg: any)
         ok, message = Garden.fertilize(g, arg.plot, arg.fertilizer)
     elseif command == "GardenCraft" then
         ok, message = Garden.craft(g, arg)
+    elseif command == "GardenAssist" then
+        local root = rootFor(player)
+        local home = World.gardenSpawn(player.UserId)
+        local personality = profile.personalities[profile.petIndex]
+        if not root or not home or not personality then return end
+        if (root.Position - home).Magnitude > 31 then
+            ok, message = false, "Visit your garden to ask your pet for help!"
+        elseif now - profile.lastPetGardenAssist < 9 then
+            ok, message = false, "Your pet needs a short break!"
+        else
+            ok, message = Garden.assist(g, arg, personality.traits.curiosity)
+            if ok then
+                profile.lastPetGardenAssist = now
+                if profile.pet and profile.pet.PrimaryPart then
+                    World.burst(profile.pet.PrimaryPart.Position, Color3.fromRGB(183, 246, 170), 12, 12)
+                    World.emotePet(profile.pet, Personality.mood(personality), "Helpful gardener")
+                end
+            end
+        end
     elseif command == "GardenExperiment" then
         local resultId
         ok, message, resultId, newlyDiscovered = Garden.experiment(g, arg)
@@ -749,6 +784,85 @@ local function useLure(player: Player, id: any)
     notice(player.DisplayName .. " used " .. message .. "! WILD VISITORS!", Color3.fromRGB(192, 255, 150))
 end
 
+-- The seed forest does not rely on trust in client coordinates. Players must
+-- walk to the physical cache and hold its built-in ProximityPrompt.
+local function gatherSeed(player: Player, id: string)
+    if phase ~= "SLEEP" then
+        remote:FireClient(player, {type = "notice", text = "Explore when Giggles is sleeping!", color = Color3.fromRGB(255, 184, 134)})
+        return
+    end
+    local profile = profiles[player]
+    local found = SeedHunt.node(id)
+    local root = rootFor(player)
+    if not profile or not found or not root then return end
+    local c = found.node
+    if (root.Position - Vector3.new(c.x, 9.8, c.z)).Magnitude > 16 then return end
+    local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+    if not hum or hum.Health <= 0 then return end
+    local pet = profile.personalities[profile.petIndex]
+    local assist = if pet then math.max(0, (pet.traits.curiosity - 50) / 1000) else 0
+    local ok, message, seedKey, rarity, discovered = SeedHunt.collect(profile.garden.hunt, profile.garden.seeds, id, rng:NextNumber(), assist, os.time())
+    if not ok then
+        remote:FireClient(player, {type = "notice", text = message, color = Color3.fromRGB(255, 207, 142)})
+        return
+    end
+    if profile.loaded then profile.dirty = true end
+    profile.revision += 1
+    festivalFinds += 1
+    festivalPlayers[player] = true
+    World.burst(root.Position + Vector3.new(0, 3, 0), GardenConfig.Crops[seedKey].color, if rarity == "rare" then 25 else 12, 12)
+    remote:FireClient(player, {type = "seedFound", text = message, rarity = rarity, discovered = discovered, seed = seedKey})
+    remote:FireClient(player, {type = "soundCue", cue = if rarity == "rare" then "RareDiscovery" else "SeedFind"})
+    if discovered then addCoins(player, 12) end
+    if SeedHunt.claimQuest(profile.garden.hunt, os.time()) then
+        addCoins(player, 45)
+        remote:FireClient(player, {type = "questToast", text = "EXPLORER QUEST! +45 COINS!"})
+    end
+    if festivalFinds >= X.FestivalGoal then
+        ForestWorld.festival()
+        notice("SEED FESTIVAL! THE WHOLE ISLAND FOUND ENOUGH SEEDS!", Color3.fromRGB(255, 230, 134))
+        remote:FireAllClients({type = "soundCue", cue = "Festival"})
+        for participating in pairs(festivalPlayers) do
+            if profiles[participating] then addCoins(participating, X.FestivalRewardCoins) end
+        end
+        festivalFinds = 0
+        table.clear(festivalPlayers)
+    end
+    sendGarden(player)
+    sendState()
+end
+
+ForestWorld.build(workspace:WaitForChild("MonsterIsland"), gatherSeed)
+ForestWorld.weather(currentWeather)
+
+local function changeWeather()
+    local nextId = X.WeatherOrder[rng:NextInteger(1, #X.WeatherOrder)]
+    if nextId == currentWeather then
+        nextId = X.WeatherOrder[(table.find(X.WeatherOrder, nextId) % #X.WeatherOrder) + 1]
+    end
+    currentWeather = nextId
+    weatherEndsAt = os.time() + 100
+    local weather = X.Weather[currentWeather]
+    ForestWorld.weather(currentWeather)
+    local affected = 0
+    for player, profile in pairs(profiles) do
+        local changed = Garden.weather(profile.garden, currentWeather, function()
+            return rng:NextNumber()
+        end)
+        if changed > 0 then
+            affected += changed
+            if profile.loaded then profile.dirty = true end
+            profile.revision += 1
+            World.updateGarden(player.UserId, profile.garden, GardenConfig)
+        end
+        sendGarden(player)
+    end
+    noise = math.min(Config.NOISE_MAX, noise + weather.noise)
+    notice(weather.icon .. " " .. weather.name .. "! " .. affected .. " growing plants affected!", weather.color)
+    remote:FireAllClients({type = "soundCue", cue = if currentWeather == "GiggleStorm" then "SillyStorm" else "WeatherChime"})
+    sendState()
+end
+
 remote.OnServerEvent:Connect(function(player: Player, command: any, arg: any)
     local profile = profiles[player]
     if not profile or typeof(command) ~= "string" then return end
@@ -771,7 +885,8 @@ remote.OnServerEvent:Connect(function(player: Player, command: any, arg: any)
             feed(player, recipe.baseFood, arg)
         end
     elseif command == "GardenBuySeed" or command == "GardenPlant" or command == "GardenHarvest"
-       or command == "GardenFertilize" or command == "GardenCraft" or command == "GardenExperiment" then
+       or command == "GardenFertilize" or command == "GardenCraft" or command == "GardenExperiment"
+       or command == "GardenAssist" then
         gardenAction(player, command, arg)
     elseif command == "GardenLure" then
         useLure(player, arg)
@@ -904,6 +1019,7 @@ local function startWake()
         sendStats(player)
     end
     World.setMonsterAwake(true)
+    remote:FireAllClients({type = "soundCue", cue = "MonsterWake"})
     notice("OH NO!!! YOU WOKE GIGGLES! SURVIVE!", Color3.fromRGB(255, 113, 145))
     World.wave(Vector3.new(0, 11, 0), 90, Color3.fromRGB(255, 104, 156))
     RescueObjective.start(function(player: Player, justCompleted: boolean, reward: number)
@@ -928,6 +1044,7 @@ local function endWake()
     noise = 0
     secondsLeft = Config.COOLDOWN_SECONDS
     World.setMonsterAwake(false)
+    remote:FireAllClients({type = "soundCue", cue = "Victory"})
     local teamCompleted = RescueObjective.completed()
     for _, player in ipairs(Players:GetPlayers()) do
         local profile = profiles[player]
@@ -1023,6 +1140,13 @@ RunService.Heartbeat:Connect(function(dt: number)
                 World.tintPet(pet, Config.Pets[profile.petIndex].color)
             end
         end
+    end
+end)
+
+task.spawn(function()
+    while true do
+        task.wait(3)
+        if os.time() >= weatherEndsAt then changeWeather() end
     end
 end)
 
