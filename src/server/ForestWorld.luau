@@ -70,6 +70,26 @@ local function decorate(parent: Instance, zoneId: string, center: Vector3, color
             end
         end
     end
+    -- Storybook floor details: petal trails and little stone footsteps guide
+    -- explorers toward the seed caches without adding any invisible barriers.
+    for i = 1, 18 do
+        local a = i * 2.399963
+        local distance = 5 + (i % 6) * 2.5
+        local spot = center + Vector3.new(math.cos(a) * distance, 0.28, math.sin(a) * distance)
+        if i % 3 == 0 then
+            local stone = shape(parent, "MossySteppingStone", spot, Vector3.new(2.4, 0.42, 1.7),
+                Color3.fromRGB(211, 202, 180), Enum.Material.Slate, true)
+            stone.Orientation = Vector3.new(0, i * 27, 0)
+        else
+            local flower = shape(parent, "StorybookFlower", spot + Vector3.new(0, 0.32, 0),
+                Vector3.new(0.78, 0.72, 0.78),
+                if i % 2 == 0 then Color3.fromRGB(255, 229, 188) else Color3.fromRGB(255, 195, 221),
+                Enum.Material.SmoothPlastic, true)
+            flower.CanQuery = false
+            shape(parent, "FlowerCenter", spot + Vector3.new(0, 0.65, 0),
+                Vector3.new(0.34, 0.26, 0.34), Color3.fromRGB(255, 235, 141), Enum.Material.SmoothPlastic, true)
+        end
+    end
     for i = 1, 5 do
         local a = i * 2.4
         local spot = center + Vector3.new(math.cos(a) * 11, 10 + i % 3, math.sin(a) * 11)
@@ -112,6 +132,15 @@ function ForestWorld.build(parent: Instance, onGather: (Player, string) -> ())
             prompt.Parent = seed
             prompt.Triggered:Connect(function(player: Player) onGather(player, node.id) end)
             sign(area, seed, "🌱 " .. node.label, 170)
+            -- Visible petals around the seed pod make the objective recognizable
+            -- even when billboard labels are too small on a phone.
+            for petal = 1, 5 do
+                local angle = petal * math.pi * 2 / 5
+                local tip = base + Vector3.new(math.cos(angle) * 1.5, 2.45, math.sin(angle) * 1.5)
+                local leaf = shape(area, "SeedPodPetal", tip, Vector3.new(1.1, 0.36, 1.7),
+                    Color3.fromRGB(179, 239, 175), Enum.Material.SmoothPlastic, true)
+                leaf.Orientation = Vector3.new(0, math.deg(angle), -16)
+            end
             for k = 1, 3 do
                 local angle = k / 3 * math.pi * 2
                 shape(area, "LeafCluster", base + Vector3.new(math.cos(angle) * 2.2, 1.5, math.sin(angle) * 2.2), Vector3.new(1.6, 0.8, 1.6), Color3.fromRGB(113, 203, 137), nil, true)
