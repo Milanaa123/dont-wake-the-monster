@@ -290,4 +290,116 @@ function World.wave(position: Vector3, radius: number, color: Color3)
     Debris:AddItem(b, 1.45)
 end
 
+-- Server-created personal farm zones. A player sees their six physical plots on the island.
+local farmModels: {[number]: Model} = {}
+local farmCenters: {[number]: CFrame} = {}
+
+function World.createGarden(userId: number, ownerName: string, slot: number): boolean
+    if slot < 1 or slot > 12 then return false end
+    if farmModels[userId] then farmModels[userId]:Destroy() end
+    local angle = (slot - 1) / 12 * math.pi * 2
+    local origin = Vector3.new(math.cos(angle) * 61, 8.3, math.sin(angle) * 61)
+    local center = CFrame.lookAt(origin, Vector3.new(0, 8.3, 0))
+    local model = Instance.new("Model")
+    model.Name = "Farm_" .. tostring(userId)
+    model.Parent = scenery
+    farmModels[userId] = model
+    farmCenters[userId] = center
+    local base = part(model, "GardenPlatform", Vector3.new(28, 0.8, 23), center, Color3.fromRGB(247, 213, 160), Enum.Material.WoodPlanks)
+    base.CanCollide = true
+    part(model, "GreenGrass", Vector3.new(26, 0.4, 21), center * CFrame.new(0, 0.5, 0), Color3.fromRGB(166, 234, 156), Enum.Material.Grass)
+    local labelPosition = (center * CFrame.new(0, 2.2, 12)).Position
+    billboard(model, "🌼 " .. string.sub(ownerName, 1, 16) .. "'S GARDEN", labelPosition, 260)
+
+    for index = 1, 6 do
+        local col = (index - 1) % 3
+        local row = math.floor((index - 1) / 3)
+        local plot = Instance.new("Model")
+        plot.Name = "Plot_" .. index
+        plot.Parent = model
+        plot:SetAttribute("StageKey", "EMPTY")
+        plot:SetAttribute("PlotIndex", index)
+        local place = center * CFrame.new((col - 1) * 8.2, 0.9, (row - 0.5) * 8.4)
+        plot:SetAttribute("PosX", place.Position.X)
+        plot:SetAttribute("PosY", place.Position.Y)
+        plot:SetAttribute("PosZ", place.Position.Z)
+        local bed = part(plot, "WoodFrame", Vector3.new(7.9, 0.8, 7.9), place, Color3.fromRGB(187, 121, 93), Enum.Material.Wood)
+        bed.CanCollide = true
+        local soil = part(plot, "SoftSoil", Vector3.new(6.9, 0.25, 6.9), place * CFrame.new(0, 0.54, 0), Color3.fromRGB(142, 97, 92), Enum.Material.Ground)
+        soil.CanCollide = true
+        local mini = part(plot, "NumberAnchor", Vector3.new(0.2, 0.2, 0.2), place * CFrame.new(0, 1.6, -2.9), Color3.new(1, 1, 1))
+        mini.Transparency = 1
+        local tag = Instance.new("BillboardGui")
+        tag.Size = UDim2.fromOffset(84, 24)
+        tag.MaxDistance = 75
+        tag.AlwaysOnTop = true
+        tag.Parent = mini
+        local t = Instance.new("TextLabel")
+        t.Size = UDim2.fromScale(1, 1)
+        t.BackgroundColor3 = Color3.fromRGB(255, 252, 224)
+        t.BackgroundTransparency = 0.1
+        t.TextColor3 = Color3.fromRGB(69, 43, 64)
+        t.Text = "PLOT " .. index
+        t.TextScaled = true
+        t.Font = Enum.Font.GothamBlack
+        t.Parent = tag
+        local rounded = Instance.new("UICorner")
+        rounded.CornerRadius = UDim.new(0, 7)
+        rounded.Parent = t
+    end
+    return true
+end
+
+function World.removeGarden(userId: number)
+    if farmModels[userId] then farmModels[userId]:Destroy() end
+    farmModels[userId] = nil
+    farmCenters[userId] = nil
+end
+
+function World.gardenSpawn(userId: number): Vector3?
+    local center = farmCenters[userId]
+    if not center then return nil end
+    return (center * CFrame.new(0, 4, 13)).Position
+end
+
+function World.updateGarden(userId: number, garden: any, cropConfig: any)
+    local model = farmModels[userId]
+    if not model then return end
+    local now = os.time()
+    for index = 1, 6 do
+        local plot = model:FindFirstChild("Plot_" .. index)
+        if not plot or not plot:IsA("Model") then continue end
+        local p = garden.plots[index]
+        local stage = 0
+        if p then
+            local total = math.max(1, p.readyAt - p.plantedAt)
+            local ratio = math.clamp((now - p.plantedAt) / total, 0, 1)
+            stage = if now >= p.readyAt then 3 elseif ratio > 0.48 then 2 else 1
+        end
+        local stageKey = if p then p.seed .. "_" .. stage else "EMPTY"
+        if plot:GetAttribute("StageKey") == stageKey then continue end
+        plot:SetAttribute("StageKey", stageKey)
+        local previous = plot:FindFirstChild("PlantVisual")
+        if previous then previous:Destroy() end
+        if p and cropConfig.Crops[p.seed] then
+            local visual = Instance.new("Model")
+            visual.Name = "PlantVisual"
+            visual.Parent = plot
+            local center = Vector3.new(plot:GetAttribute("PosX"), plot:GetAttribute("PosY"), plot:GetAttribute("PosZ"))
+            local crop = cropConfig.Crops[p.seed]
+            local height = 1.2 + stage * 1.0
+            part(visual, "Stem", Vector3.new(0.65, height, 0.65), CFrame.new(center + Vector3.new(0, 0.8 + height / 2, 0)), Color3.fromRGB(84, 173, 100))
+            for side = -1, 1, 2 do
+                local leaf = orb(visual, "Leaf", center + Vector3.new(side * 1.0, 0.8 + height * 0.6, 0), Vector3.new(2.2, 0.45, 1.1), Color3.fromRGB(98, 203, 118))
+                leaf.CFrame = leaf.CFrame * CFrame.Angles(0, 0, math.rad(side * 23))
+            end
+            local size = 0.75 + stage * 0.65
+            orb(visual, "HarvestFruit", center + Vector3.new(0, height + 0.8, 0), Vector3.new(size * 2, size * 1.5, size * 2), crop.color, if stage == 3 then Enum.Material.Neon else Enum.Material.SmoothPlastic)
+            if stage == 3 then
+                orb(visual, "HarvestGlow", center + Vector3.new(0, height + 2.4, 0), Vector3.new(0.8, 0.8, 0.8), Color3.fromRGB(255, 248, 187), Enum.Material.Neon)
+            end
+        end
+    end
+end
+
 return World
