@@ -184,6 +184,7 @@ local function petEffect(profile: any, reaction: any, food: string)
     profile.effect = id
     profile.effectUntil = os.clock() + 3.2
     pet:ScaleTo(1)
+    World.tintPet(pet, Config.Pets[profile.petIndex].color)
 
     if id == "Giant" then
         pet:ScaleTo(2.4)
@@ -200,6 +201,41 @@ local function petEffect(profile: any, reaction: any, food: string)
             Debris:AddItem(clone, 3)
         end
         World.burst(pos, Color3.fromRGB(255, 226, 121), 15)
+    elseif id == "Rainbow" or id == "Disco" then
+        local expiry = profile.effectUntil
+        task.spawn(function()
+            for step = 1, 17 do
+                if profile.effectUntil ~= expiry or not pet.Parent then break end
+                local hue = (step * (if id == "Disco" then 0.23 else 0.08)) % 1
+                local tint = Color3.fromHSV(hue, 0.55, 1)
+                World.tintPet(pet, tint)
+                if step % 4 == 0 and pet.PrimaryPart then
+                    World.burst(pet.PrimaryPart.Position, tint, 6, 8)
+                end
+                task.wait(if id == "Disco" then 0.14 else 0.19)
+            end
+        end)
+    elseif id == "Cloud" then
+        local bubbleParent = workspace:WaitForChild("MonsterIsland")
+        for i = 1, 9 do
+            local bubble = Instance.new("Part")
+            bubble.Name = "FloatingBubble"
+            bubble.Shape = Enum.PartType.Ball
+            bubble.Size = Vector3.new(2.5, 2.5, 2.5) * rng:NextNumber(0.7, 1.7)
+            bubble.Material = Enum.Material.Glass
+            bubble.Color = Color3.fromRGB(174, 239, 255)
+            bubble.Transparency = 0.35
+            bubble.Anchored = true
+            bubble.CanCollide = false
+            bubble.Position = pos + Vector3.new(rng:NextNumber(-5, 5), rng:NextNumber(0, 3), rng:NextNumber(-5, 5))
+            bubble.Parent = bubbleParent
+            TweenService:Create(bubble, TweenInfo.new(2.6, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
+                Position = bubble.Position + Vector3.new(0, rng:NextNumber(12, 20), 0),
+                Transparency = 1,
+                Size = Vector3.new(0.3, 0.3, 0.3),
+            }):Play()
+            Debris:AddItem(bubble, 3)
+        end
     elseif id == "Sneeze" then
         World.wave(pos, 21, Color3.fromRGB(130, 238, 255))
         nearbyKnock(pos, 22, 28)
@@ -223,8 +259,13 @@ local function petEffect(profile: any, reaction: any, food: string)
         end)
         Debris:AddItem(blob, 2)
     else
-        local count = if id == "Disco" then 28 elseif id == "Confetti" then 24 else 12
-        World.burst(pos, foodColor, count, if id == "Cloud" then 19 else 11)
+        if id == "Confetti" then
+            for i = 1, 5 do
+                World.burst(pos, Color3.fromHSV(i / 5, 0.5, 1), 7, 12)
+            end
+        else
+            World.burst(pos, foodColor, 15, 11)
+        end
         if id == "Hiccup" then
             World.wave(pos, 12, foodColor)
             nearbyKnock(pos, 14, 12)
@@ -406,6 +447,7 @@ RunService.Heartbeat:Connect(function(dt: number)
             if profile.effectUntil <= t and profile.effect ~= "" then
                 profile.effect = ""
                 pet:ScaleTo(1)
+                World.tintPet(pet, Config.Pets[profile.petIndex].color)
             end
         end
     end

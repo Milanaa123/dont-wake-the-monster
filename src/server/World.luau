@@ -214,6 +214,14 @@ function World.makePet(name: string, color: Color3, pointy: boolean): Model
     return pet
 end
 
+function World.tintPet(pet: Model, tint: Color3)
+    for _, item in ipairs(pet:GetDescendants()) do
+        if item:IsA("BasePart") and (item.Name == "SquishyBody" or item.Name == "Ear") then
+            item.Color = tint
+        end
+    end
+end
+
 function World.burst(position: Vector3, color: Color3, count: number, reach: number?)
     local rng = Random.new()
     local maxReach = reach or 11
