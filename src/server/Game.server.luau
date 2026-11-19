@@ -242,11 +242,21 @@ local function onPlayerRemoving(player: Player)
     profiles[player] = nil
 end
 
-local function weightedReaction(food: string, previousFood: string)
+local function weightedReaction(food: string, previousFood: string, petIndex: number)
     local total = 0
     local weights = {}
+    local quirk = Config.Pets[petIndex].quirk
+    local favorites = {
+        Trickster = {Clone = true, Spin = true, Hiccup = true},
+        Dreamer = {Mini = true, Cloud = true, Rainbow = true},
+        Bouncer = {Bounce = true, Giant = true, Sneeze = true},
+        Sparkle = {Confetti = true, Disco = true, Rainbow = true},
+        Storm = {Meteor = true, Sneeze = true, Hiccup = true},
+        Gremlin = {Giant = true, Clone = true, Meteor = true},
+    }
     for index, reaction in ipairs(Config.Reactions) do
         local weight = reaction.weight
+        if favorites[quirk] and favorites[quirk][reaction.id] then weight *= 1.6 end
         if food == "Candy" and (reaction.id == "Confetti" or reaction.id == "Clone" or reaction.id == "Giant") then weight *= 2 end
         if food == "Pepper" and (reaction.id == "Sneeze" or reaction.id == "Spin" or reaction.id == "Hiccup") then weight *= 2 end
         if food == "Bubble" and (reaction.id == "Cloud" or reaction.id == "Mini" or reaction.id == "Bounce") then weight *= 2 end
@@ -393,7 +403,7 @@ local function feed(player: Player, food: any, craftedId: string?)
         sendGarden(player)
     end
     profile.lastFeed = now
-    local reaction = weightedReaction(food, profile.lastFood)
+    local reaction = weightedReaction(food, profile.lastFood, profile.petIndex)
     local combo = profile.lastFood == food and rng:NextNumber() < 0.24
     profile.lastFood = food
     totalActions += 1
