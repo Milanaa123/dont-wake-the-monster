@@ -3,6 +3,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DataStoreService = game:GetService("DataStoreService")
+local AnalyticsService = game:GetService("AnalyticsService")
 local RunService = game:GetService("RunService")
 local Debris = game:GetService("Debris")
 local TweenService = game:GetService("TweenService")
@@ -39,6 +40,23 @@ local currentWeather = "Sunny"
 local weatherEndsAt = os.time() + 95
 local festivalFinds = 0
 local festivalPlayers: {[Player]: boolean} = {}
+
+-- Official Roblox custom analytics; only meaningful in a published experience.
+-- Do not attach PII and never trust client-supplied event names/values.
+local function metric(player: Player, eventName: string, value: number?)
+    task.spawn(function()
+        local ok, err = pcall(function()
+            AnalyticsService:LogCustomEvent(player, eventName, value or 1)
+        end)
+        if not ok then warn("Analytics temporarily unavailable: " .. tostring(err)) end
+    end)
+end
+
+local function onceMetric(player: Player, profile: any, eventName: string)
+    if profile.metricFlags[eventName] then return end
+    profile.metricFlags[eventName] = true
+    metric(player, eventName)
+end
 
 local function notice(message: string, color: Color3?)
     remote:FireAllClients({type = "notice", text = message, color = color or Color3.fromRGB(255, 255, 255)})
@@ -266,6 +284,7 @@ end
 
 local function onPlayerAdded(player: Player)
     local profile = Progression.new()
+    profile.metricFlags = {}
     profile.lastFeed = -100
     profile.lastSync = -100
     profile.lastShopAction = -100
@@ -306,6 +325,10 @@ local function onPlayerAdded(player: Player)
         warn("DWTM: data load unavailable for " .. player.UserId .. ". Progress is session-only.")
     end
     if profiles[player] ~= profile then return end
+    onceMetric(player, profile, "JoinedGame")
+    task.delay(600, function()
+        if profiles[player] == profile then metric(player, "StayedTenMinutes") end
+    end)
     for petId in pairs(profile.owned) do
         if Progression.ensurePersonality(profile, petId, player.UserId) then
             if profile.loaded then profile.dirty = true end
@@ -553,6 +576,7 @@ local function feed(player: Player, food: any, craftedId: string?)
         sendGarden(player)
     end
     profile.lastFeed = now
+    onceMetric(player, profile, "FirstPetFed")
     local activePersonality = profile.personalities[profile.petIndex]
     local reaction = weightedReaction(food, profile.lastFood, profile.petIndex, activePersonality)
     local earlierStage = Personality.bondStage(activePersonality)
@@ -729,6 +753,8 @@ local function gardenAction(player: Player, command: string, arg: any)
         return
     end
     if ok then
+        if command == "GardenPlant" then onceMetric(player, profile, "FirstSeedPlanted") end
+        if newlyDiscovered then metric(player, "SecretRecipeFound") end
         if profile.loaded then profile.dirty = true end
         profile.revision += 1
         World.updateGarden(player.UserId, g, GardenConfig)
@@ -821,6 +847,8 @@ local function gatherSeed(player: Player, id: string)
     end
     if profile.loaded then profile.dirty = true end
     profile.revision += 1
+    onceMetric(player, profile, "FirstSeedLocated")
+    if rarity == "rare" then metric(player, "RareSeedLocated") end
     festivalFinds += 1
     festivalPlayers[player] = true
     World.burst(root.Position + Vector3.new(0, 3, 0), GardenConfig.Crops[seedKey].color, if rarity == "rare" then 25 else 12, 12)
@@ -1067,6 +1095,7 @@ local function endWake()
                 local bonus = Progression.recordSurvival(profile)
                 local rescueBonus = if teamCompleted and RescueObjective.participated(player) then RescueObjective.status().bonus else 0
                 addCoins(player, Config.SURVIVAL_REWARD + bonus + rescueBonus)
+                onceMetric(player, profile, "FirstBossSurvived")
                 if rescueBonus > 0 then
                     remote:FireClient(player, {type = "questToast", text = "CO-OP HERO! +" .. rescueBonus .. " BONUS COINS!"})
                 end
