@@ -26,6 +26,12 @@ required = [
     "src/server/Garden.luau",
     "src/server/RecipeCatalog.luau",
     "src/client/Garden.client.luau",
+    "src/shared/ExpeditionConfig.luau",
+    "src/server/SeedHunt.luau",
+    "src/server/ForestWorld.luau",
+    "src/client/SeedExplorer.client.luau",
+    "src/shared/AudioConfig.luau",
+    "src/client/Soundscape.client.luau",
     "src/shared/PetPersonality.luau",
     "src/client/PetDiary.client.luau",
     "src/server/RescueObjective.luau",
@@ -106,7 +112,7 @@ assert '(root.Position - primary.Position).Magnitude > 16' in rescue, "Rescue mu
 assert 'humanoid.Health <= 0' in rescue, "Dead players must not collect rescues"
 assert 'used = true' in rescue and 'prompt.Enabled = false' in rescue, "Rescues must be one-time"
 assert 'rescueCard.Visible' in hud and 'rescueLabel.Text' in hud, "Rescue progress HUD missing"
-assert 'GROW & MIX' in onboarding and 'RESCUE & SURVIVE' in onboarding, "First-time tutorial missing"
+assert 'HUNT SEEDS' in onboarding and 'GROW & EXPERIMENT' in onboarding and 'RESCUE & SURVIVE' in onboarding, "First-time tutorial missing"
 
 print("OK: co-op rescue prompts, server checks, objective HUD and first-time tutorial")
 
@@ -171,3 +177,40 @@ with wave.open(str(sound_path), "rb") as wav:
     assert wav.getnchannels() == 1 and wav.getsampwidth() == 2 and wav.getframerate() >= 8000
     assert 2 <= wav.getnframes() / wav.getframerate() <= 12, "Purr file length is unreasonable"
 print("OK: server-owned cuddling, untrusted input bounds, purr-to-noise link, WAV source and mobile hold controls")
+
+# Seed-hunting and soundscape v0.9 checks.
+hunt = read("src/server/SeedHunt.luau")
+expedition = read("src/shared/ExpeditionConfig.luau")
+forest = read("src/server/ForestWorld.luau")
+explorer = read("src/client/SeedExplorer.client.luau")
+sounds = read("src/shared/AudioConfig.luau")
+soundscape = read("src/client/Soundscape.client.luau")
+for token in ("Meadow", "Marsh", "Ruins", "NodeCooldown", "FestivalGoal", "LootWeights", "WeatherOrder"):
+    assert token in expedition, f"Missing seed exploration: {token}"
+for token in ("Hunt.collect(", "Hunt.mutatePlot(", "Hunt.load(", "questClaimed"):
+    assert token in hunt, f"Missing server hunt rules: {token}"
+for token in ("function ForestWorld.build(", "ProximityPrompt", "prompt.Triggered", "SearchSeeds", "function ForestWorld.weather("):
+    assert token in forest, f"Missing actual world interactions: {token}"
+for token in ("GardenAssist", "SeedHunt.collect(", "ForestWorld.build(", "changeWeather(", "festivalPlayers", "garden.spawn"):
+    if token == "garden.spawn":
+        continue
+    assert token in server, f"Missing integrated gameplay: {token}"
+assert "SeedCache_" in explorer and "state.seedAlbum" in explorer and "TRACK" in explorer, "Mobile seed journal must be interactive"
+assert "function Garden.weather(" in garden and "function Garden.assist(" in garden, "Missing growing and tending rules"
+assert 'PremiumProducts' in garden_cfg and all(v in garden_cfg for v in ('productId = 0', 'G.PLOT_COUNT = 9')), "Robux source must remain disabled"
+audio_names = [
+    "calm-garden-theme", "SeedFind", "RareDiscovery", "WeatherChime", "Boing", "MonsterWake",
+    "Victory", "Festival", "SillyStorm", "HarvestPop", "MutationSparkle", "CatSwat"
+]
+import wave
+for name in audio_names:
+    path = ROOT / "assets/audio" / (name + ".wav")
+    assert path.exists(), f"Missing original audio: {name}"
+    with wave.open(str(path), "rb") as w:
+        assert w.getnchannels() == 1 and w.getsampwidth() == 2
+        assert w.getframerate() >= 8000
+        assert 0.5 <= w.getnframes() / w.getframerate() <= 30, "Audio duration out of bounds"
+assert "Audio.MusicAssetId = 0" in sounds, "Music must remain disabled until authorized asset upload"
+assert sounds.count(" = 0,") == 11, "Expected 11 muted SFX IDs"
+assert "playCue(" in soundscape and "MusicToggle" in soundscape and "EffectsToggle" in soundscape
+print("OK: 3 biomes, 9 physical seed caches, safe seed album, server weather, pet tending, original soundtrack and 11 sound effects")
