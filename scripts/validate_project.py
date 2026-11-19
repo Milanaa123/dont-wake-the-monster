@@ -30,6 +30,8 @@ required = [
     "src/client/PetDiary.client.luau",
     "src/server/RescueObjective.luau",
     "src/client/HowToPlay.client.luau",
+    "src/shared/PetAffection.luau",
+    "src/client/PetCare.client.luau",
 ]
 for path in required:
     text = read(path)
@@ -147,3 +149,25 @@ for token in ("CameraType.Scriptable", "CameraType.Custom", "BindToRenderStep", 
     assert token in camera, f"Missing optional camera behavior: {token}"
 assert "CanCollide = false" in styling and "CanTouch = false" in styling, "New foliage must not block gameplay"
 print("OK: cottage garden world/plots/crop art, warm lighting and optional three-quarter camera")
+
+# Continuous, server-owned pet affection and visual/audio asset integration.
+affection = read("src/shared/PetAffection.luau")
+care = read("src/client/PetCare.client.luau")
+for marker in ("StartPetting", "StopPetting", "PettingPulse", "ToggleCarry"):
+    assert marker in server and marker in care, f"Missing shared pet-care action: {marker}"
+for marker in ("Affection.step(", "World.carryPose(", "World.setPurr(", "PetDistance", "lastCarePulse", "KeepaliveSeconds"):
+    assert marker in server, f"Missing petting server bound or behavior: {marker}"
+for marker in ("function Affection.newSession(", "function Affection.step(", "function Affection.isCat("):
+    assert marker in affection, f"Missing pure pet-affection rules: {marker}"
+world = read("src/server/World.luau")
+for marker in ("function World.carryPose(", "function World.setPurr(", "RollOffMaxDistance", "Volume"):
+    assert marker in world, f"Missing purr/carry artwork: {marker}"
+assert "PetCareControls" in care and "InputEnded" in care and "WindowFocusReleased" in care
+assert "Config.PurrSoundId = 0" in cfg, "A live sound ID must be configured only after creator approval"
+import wave
+sound_path = ROOT / "assets/audio/original-cat-purr-loop.wav"
+assert sound_path.exists(), "Missing original Roblox purr sound source"
+with wave.open(str(sound_path), "rb") as wav:
+    assert wav.getnchannels() == 1 and wav.getsampwidth() == 2 and wav.getframerate() >= 8000
+    assert 2 <= wav.getnframes() / wav.getframerate() <= 12, "Purr file length is unreasonable"
+print("OK: server-owned cuddling, untrusted input bounds, purr-to-noise link, WAV source and mobile hold controls")

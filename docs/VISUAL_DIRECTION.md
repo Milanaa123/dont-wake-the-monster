@@ -16,7 +16,7 @@
 
 `src/server/CottageGardenStyle.luau` procedurally constructs ORIGINAL terrain-adjacent decoration:
 oranges and green canopies, red berry shrubs, golden wheat, melon patches, small daisies,
-warm garden soil paths, wood fences and occasional pebbles. It also defines Lighting
+warm garden soil paths, wood fences and occasional pebbles. The v0.8 style pass also adds small harvest baskets, watering cans and extra cottage flower edging beside real personal beds. It also defines Lighting
 ColorCorrection, warm Atmosphere, modest Bloom, SunRays and softer shadows.
 `src/server/World.luau` calls this on map generation, farm construction and crop-stage changes.
 `src/client/CottageCamera.client.luau` adds optional elevated 3/4 view, on by default,
@@ -75,3 +75,12 @@ account authentication. No valid in-engine gameplay video or screenshot has
 been obtained. The styles added here are code and should be assessed
 **inside Studio** for camera control, mobile FPS, light effects, plant contrast and
 clipping. Do not advertise these as fully visually validated.
+
+## November 19, 2026 competitor snapshot update (independent third-party trackers)
+
+- Roblox charts list **Steal An Egg and Collect Rare Pets** and **Adopt Me!** among the largest pet/collection-adjacent games. The pet-care loop remains a major adjacent audience: https://rivalducks.com/apps/radar/charts/top-playing-now
+- **Throw Food For Animals** appeared high in the November 9–15 Roblox weekly ranking; its immediate feed-to-animal interaction is a reference for clearly visible feedback, not a feature to clone: https://rblxstat.com/blog/roblox-weekly-report-2026-11-15
+- **Grow a Garden** remains an important category example for growing crops while offline, visual milestones and repeat visits: https://playsurge.gg/most-visited
+- Official Roblox documentation recommends a content-update cadence across connected systems such as pets: https://create.roblox.com/docs/production/game-design/content-updates
+
+**What we implemented instead of copying another hit:** individually temperamental purring/petting that accumulates shared noise, a cooperative consequence (monster wake), and personal garden ingredients that make the interaction loop genuinely different. These charts are time-stamped third-party observations, not proof of future virality.

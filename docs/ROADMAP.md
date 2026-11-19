@@ -33,6 +33,12 @@
 - Bond is earned through valid nearby interactions, cannot be increased by invalid remote commands, and survives a rejoin.
 - Social encounters only occur with two nearby players' pets; visual and noise effects are synchronized and rate-limited.
 - Mood bubbles, accessories, pet diary and actions are readable and usable on real mobile screens.
+- Mobile touch HOLD begins and releases strokes correctly; R keyboard key works, and refocus/respawn cancels actions.
+- Carrying presents a pet in the avatar's arms; shoulder pose resets after putting down or death (test both R15 and R6).
+- Long stroking of a happy cat raises the purr meter and global monster noise; sudden mood changes can end a stroke session.
+- Stop, timeout, switching pets, disconnect, boss wake and being too far away all terminate purring with no remote exploitation.
+- Synthesized creator-owned purr audio plays with increasing volume only after an authorized Roblox asset ID is configured; check asset permissions and distance attenuation.
+- On smaller mobile screens, care controls do not hide the HUD, feed buttons or rescue goals.
 - No purchases are charged before receipts and policy compliance are implemented.
 
 ## Next development targets

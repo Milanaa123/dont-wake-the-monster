@@ -13,6 +13,8 @@ A colorful, chaotic multiplayer Roblox prototype: feed your ridiculous pet, trig
 - Four earnable fertilizer types speed up growth; two premium seed types and one premium fertilizer remain disabled previews.
 - **Living Pets v0.6**: every owned animal receives its own saved personality, not merely a species-wide type. 12 temperaments (from Kind to Grumpy and Wild), 12 habits, 7 fears, 7 ways of showing affection, favorite/disliked foods and six numerical character traits.
 - Pets respond to snacks, petting, play, calming and the monster; their changing happiness, energy, hunger, friendship level and current mood affect reactions. Two kittens of the same species may act completely differently.
+- **Cuddle & Purr Panic v0.8**: pick up a pet in the avatar's arms, stroke by HOLDING a touch/mouse button, and watch individually tempered cats become louder and louder. A cat's escalating purr contributes real server noise and can wake Giggles. Moody felines may suddenly hiss, swat or wriggle out of the player's arms.
+- **Original purr WAV** is packaged in `assets/audio/original-cat-purr-loop.wav`. Audible playback is OFF until the creator uploads it to Roblox and configures `Config.PurrSoundId`; purring animations, gameplay noise and UI already work without it.
 - **12 social encounter types** when nearby animals from different players meet, including dance-offs, friendships, pranks, arguments, hide-and-seek and naps. Social meetings can increase the shared noise gauge.
 - Smartphone **PET DIARY** reveals character traits, trust, moods and unlockable food tastes. Temperament-based accessories and 3D idle behavior offer visible differences.
 - Four mobile-friendly feed buttons, **12 reaction types**, food combos, and six spontaneous island-wide surprises.
@@ -24,7 +26,7 @@ A colorful, chaotic multiplayer Roblox prototype: feed your ridiculous pet, trig
 - Responsive touchscreen controls and keyboard support.
 - Automatic Luau compilation, Rojo `.rbxlx` build and source/invariant checks through GitHub Actions.
 
-**Status: v0.7 source-code MVP. GitHub CI compiles, runs pure-Luau garden + personality tests and builds a .rbxlx; actual Roblox Studio runtime, appearance and multiplayer testing have NOT yet been performed.** Procedural art is a placeholder for final optimized meshes and animations. NO real Robux payments or marketplace product IDs are connected. In-game coin prices are not Robux prices. Cross-server persistence needs session-lock hardening before public release.
+**Status: v0.8 source-code MVP. GitHub CI compiles, runs pure-Luau garden + personality tests and builds a .rbxlx; actual Roblox Studio runtime, appearance and multiplayer testing have NOT yet been performed.** Procedural art is a placeholder for final optimized meshes and animations. NO real Robux payments or marketplace product IDs are connected. In-game coin prices are not Robux prices. Cross-server persistence needs session-lock hardening before public release.
 
 ## No-computer workflow
 
@@ -42,6 +44,10 @@ A colorful, chaotic multiplayer Roblox prototype: feed your ridiculous pet, trig
 - `src/server/Game.server.luau`: authoritative multiplayer game loop, hearts, boss damage, pet effects and saving.
 - `src/server/Progression.luau`: catalog, buying/equipping pets, daily rewards, gardening persistence and per-pet personality save migration.
 - `src/shared/PetPersonality.luau`: unique seeded genetics, mood, individual preferences, social scenes and bonding.
+- `src/shared/PetAffection.luau`: real-time cat purring, stroke tolerance, random overstimulation and global noise.
+- `src/client/PetCare.client.luau`: touch hold/pick-up controls, R/C shortcuts, purr volume meter and arms pose.
+- `assets/audio/original-cat-purr-loop.wav`: an original synthesized 4-second purr loop, pending authorized Roblox asset upload.
+- `scripts/test_affection.py`: real Luau runtime tests for cat stroking, purr noise, refusals and bounds.
 - `src/client/PetDiary.client.luau`: touch-friendly detailed personality journal and pet/play/comfort actions.
 - `scripts/test_personality.py`: real Luau execution tests for deterministic temperament variety, bonding, food preferences and social outcomes.
 - `src/shared/GardenConfig.luau`: crop catalog, recipes and disabled premium product definitions.
@@ -79,4 +85,4 @@ In Studio, select **Play** to test; enable Studio API services only for isolated
 - [ ] Monetization IDs, purchase receipt handling and age/regional compliance
 - [ ] Mobile performance profiling, moderation and public release
 
-See the [visual direction and competitor audit](docs/VISUAL_DIRECTION.md), [Living Pets character system](docs/PERSONALITIES.md), [Gardening guide](docs/GARDENING.md), [Changelog](docs/CHANGELOG.md) and [Roadmap](docs/ROADMAP.md).
+See the [cuddling and purring guide](docs/PET_CARE.md), [visual direction and competitor audit](docs/VISUAL_DIRECTION.md), [Living Pets character system](docs/PERSONALITIES.md), [Gardening guide](docs/GARDENING.md), [Changelog](docs/CHANGELOG.md) and [Roadmap](docs/ROADMAP.md).

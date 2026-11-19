@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.8 — Cuddle & Purr Panic (2026-11-19)
+- Added tap-to-carry companions in the avatar's arms and local raised-arm pose (for supported humanoid rigs).
+- Added hold-to-stroke input for mobile touch/mouse and R/C keyboard controls.
+- Cats Pip and Zuzu can gradually purr more loudly depending on individual temperament, mood, bond and stroke duration.
+- The louder a contented cat purrs, the more server-side noise accumulates; excessive purring may wake Giggles.
+- Cats can suddenly reject petting (hiss, swipe, hide or get the zoomies); carrying can be refused by grumpy or shy animals.
+- Added real-time purr volume bar, animated mood bubbles and soft particle effects; all controls validate distance, duration and action state on the server.
+- Generated an original `assets/audio/original-cat-purr-loop.wav` for creator upload. Audio ID deliberately remains 0 until ownership/permission is configured.
+- Added harvest baskets, watering cans and extra flowers to the cozy garden environment.
+- Added pure Luau affection/noise tests, automatic compilation and refreshed anti-exploit/source checks.
+- **No authenticated Roblox Studio playtest or recording yet**. Actual mobile animation/sound still need in-engine testing.
+
 ## v0.7 — Cottage Garden Art & Camera (2026-11-19)
 - Acted on the user's uploaded game-art reference **in the Roblox source**, not by producing a separate image.
 - Warm outdoor color grading, sunlight, gentle bloom, atmosphere and soft-shadow settings.
