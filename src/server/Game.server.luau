@@ -705,10 +705,12 @@ local function gardenAction(player: Player, command: string, arg: any)
     local ok, message, price
     local newlyDiscovered = false
     local harvestedMutation = false
+    local harvestedSeed: string? = nil
     if command == "GardenHarvest" and typeof(arg) == "number" and arg == math.floor(arg)
         and arg >= 1 and arg <= GardenConfig.PLOT_COUNT then
         local plot = g.plots[arg]
         harvestedMutation = plot and plot.mutation ~= nil or false
+        harvestedSeed = if plot then plot.seed else nil
     end
     if command == "GardenMerchantBuy" then
         if not profile.loaded then
@@ -775,6 +777,32 @@ local function gardenAction(player: Player, command: string, arg: any)
         sendStats(player)
         if command == "GardenHarvest" then
             remote:FireClient(player, {type = "soundCue", cue = if harvestedMutation then "MutationSparkle" else "HarvestPop"})
+            if phase == "SLEEP" and harvestedSeed then
+                -- Unpredictable but harmless harvest surprises: crops are safe in
+                -- inventory even when the monster wakes. No pay-to-win outcomes.
+                local pet = profile.personalities[profile.petIndex]
+                local mischief = if pet then pet.traits.mischief / 100 else 0
+                local chance = 0.12 + mischief * 0.1
+                if harvestedSeed == "WhisperWheat" or harvestedSeed == "GlowPumpkin"
+                    or harvestedSeed == "ThunderPlum" or harvestedSeed == "Pepper" then
+                    chance += 0.2
+                end
+                if rng:NextNumber() < chance then
+                    local reactions = {
+                        {text = "THE WHEAT STARTED SINGING OPERA!", cue = "ComedySting", noise = 7},
+                        {text = "A PUMPKIN JUST LAUGHED AT YOUR CAT!", cue = "SuspiciousMeow", noise = 6},
+                        {text = "YOUR PET SNEEZED INTO THE VEGETABLES!", cue = "RecordScratch", noise = 9},
+                        {text = "THE HARVEST MADE A TINY DRAMATIC SCENE!", cue = "TinyViolin", noise = 4},
+                    }
+                    local incident = reactions[rng:NextInteger(1, #reactions)]
+                    noise = math.min(Config.NOISE_MAX, noise + incident.noise)
+                    local root = rootFor(player)
+                    if root then World.burst(root.Position + Vector3.new(0, 2, 0), GardenConfig.Crops[harvestedSeed].color, 15, 10) end
+                    notice(incident.text, Color3.fromRGB(255, 216, 150))
+                    remote:FireAllClients({type = "soundCue", cue = incident.cue})
+                    sendState()
+                end
+            end
         elseif newlyDiscovered then
             remote:FireClient(player, {type = "soundCue", cue = "RareDiscovery"})
         elseif command == "GardenMerchantBuy" then
@@ -1011,7 +1039,7 @@ end
 
 local function surpriseWeather()
     local choice = rng:NextInteger(1, 6)
-    if choice == 4 or choice == 5 then remote:FireAllClients({type = "soundCue", cue = "Boing"}) end
+    if choice == 4 or choice == 5 then remote:FireAllClients({type = "soundCue", cue = "RecordScratch"}) end
     if choice == 1 then
         notice("SUGAR RAIN! IT'S RAINING SPRINKLES!", Color3.fromRGB(255, 164, 205))
         for i = 1, 5 do
@@ -1342,7 +1370,7 @@ task.spawn(function()
                 World.wave(pet.PrimaryPart.Position, 9, Color3.fromRGB(255, 177, 210))
             elseif outcome.event == "Swat" or outcome.event == "Hiss" or outcome.event == "Zoomies" or outcome.event == "Hides" then
                 notice(Config.Pets[profile.petIndex].name .. " says NO MORE PETTING! " .. string.upper(outcome.event) .. "!", Color3.fromRGB(255, 180, 122))
-                remote:FireAllClients({type = "soundCue", cue = "CatSwat"})
+                remote:FireAllClients({type = "soundCue", cue = "SuspiciousMeow"})
                 World.burst(pet.PrimaryPart.Position, Color3.fromRGB(251, 171, 142), 12, 9)
                 profile.carrying = false
                 profile.idleAction = if outcome.event == "Zoomies" then "Jumps" elseif outcome.event == "Hides" then "Hides" else "MakesFaces"
@@ -1406,6 +1434,13 @@ task.spawn(function()
                     World.burst(middle, Config.Pets[a.petIndex].color, 12, 12)
                     noise = math.min(Config.NOISE_MAX, noise + encounter.noise)
                     notice(Config.Pets[a.petIndex].name .. " & " .. Config.Pets[b.petIndex].name .. " " .. encounter.title, Color3.fromRGB(255, 210, 145))
+                    if encounter.kind == "Prank" or encounter.kind == "DramaDuel" then
+                        remote:FireAllClients({type = "soundCue", cue = "RecordScratch"})
+                    elseif encounter.kind == "Singing" or encounter.kind == "DanceOff" then
+                        remote:FireAllClients({type = "soundCue", cue = "ComedySting"})
+                    elseif encounter.kind == "NapTogether" then
+                        remote:FireAllClients({type = "soundCue", cue = "TinyViolin"})
+                    end
                     sendStats(pa)
                     sendStats(pb)
                     sendCollection(pa)
