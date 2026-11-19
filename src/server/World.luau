@@ -3,6 +3,7 @@
 local TweenService = game:GetService("TweenService")
 local Lighting = game:GetService("Lighting")
 local Debris = game:GetService("Debris")
+local CottageStyle = require(script.Parent:WaitForChild("CottageGardenStyle"))
 
 local World = {}
 local scenery: Folder
@@ -65,8 +66,13 @@ local function billboard(parent: Instance, label: string, position: Vector3, wid
 end
 
 local function lollipopTree(index: number, position: Vector3)
-    local hue = (index * 0.145) % 1
-    local treeColor = Color3.fromHSV(hue, 0.38, 1)
+    -- Cottage palette: muted greens and gently varied sunlit leaves.
+    local treeColors = {
+        Color3.fromRGB(107, 165, 93),
+        Color3.fromRGB(149, 195, 104),
+        Color3.fromRGB(188, 214, 121),
+    }
+    local treeColor = treeColors[index % #treeColors + 1]
     local height = 11 + index % 5
     local trunk = part(scenery, "CandyTreeTrunk", Vector3.new(3, height, 3), CFrame.new(position + Vector3.new(0, height / 2, 0)), Color3.fromRGB(180, 123, 116))
     trunk.CanCollide = false
@@ -103,6 +109,7 @@ function World.build()
     atmosphere.Color = Color3.fromRGB(208, 229, 255)
     atmosphere.Decay = Color3.fromRGB(255, 199, 217)
     atmosphere.Parent = Lighting
+    CottageStyle.applyLighting()
 
     local water = part(scenery, "CottonCandySea", Vector3.new(1700, 4, 1700), CFrame.new(0, -26, 0), Color3.fromRGB(127, 211, 255), Enum.Material.Glass)
     water.Transparency = 0.36
@@ -129,25 +136,25 @@ function World.build()
 
     local rng = Random.new(82041) -- stable decorative layout
     local colors = {PINK, BLUE, MINT, YELLOW, PURPLE}
-    for i = 1, 23 do
-        local a = (i / 23) * math.pi * 2
+    for i = 1, 14 do
+        local a = (i / 14) * math.pi * 2
         local r = rng:NextNumber(72, 104)
         lollipopTree(i, Vector3.new(math.cos(a) * r, 7, math.sin(a) * r))
     end
-    for i = 1, 30 do
+    for i = 1, 12 do
         local a = rng:NextNumber(0, math.pi * 2)
         local r = rng:NextNumber(44, 101)
         local pos = Vector3.new(math.cos(a) * r, 7, math.sin(a) * r)
         mushroom(pos, colors[i % #colors + 1], rng:NextNumber(0.8, 1.8))
     end
-    for i = 1, 17 do
+    for i = 1, 7 do
         local a = rng:NextNumber(0, math.pi * 2)
         local r = rng:NextNumber(43, 106)
         local base = Vector3.new(math.cos(a) * r, 8, math.sin(a) * r)
         local crystal = orb(scenery, "GlowCrystal", base + Vector3.new(0, 3.5, 0), Vector3.new(3, 7, 3), colors[(i % #colors) + 1], Enum.Material.Neon)
         crystal.CFrame = crystal.CFrame * CFrame.Angles(0, 0, math.rad(18))
     end
-    for i = 1, 18 do
+    for i = 1, 12 do
         local a = rng:NextNumber(0, math.pi * 2)
         local r = rng:NextNumber(125, 240)
         local height = rng:NextNumber(25, 85)
@@ -156,6 +163,8 @@ function World.build()
             orb(scenery, "SkyMarshmallow", center + Vector3.new(j * 5, j % 2 * 2, 0), Vector3.new(16, 8, 13), Color3.fromRGB(255, 246, 254))
         end
     end
+
+    CottageStyle.decorateWorld(scenery)
 
     monster = Instance.new("Model")
     monster.Name = "GigglesTheGiant"
@@ -452,6 +461,7 @@ function World.createGarden(userId: number, ownerName: string, slot: number): bo
         rounded.CornerRadius = UDim.new(0, 7)
         rounded.Parent = t
     end
+    CottageStyle.decorateFarm(model, center)
     return true
 end
 
@@ -535,6 +545,7 @@ function World.updateGarden(userId: number, garden: any, cropConfig: any)
                     end
                 end
             end
+            CottageStyle.decorateCrop(visual, center, seedType, stage)
             if stage == 3 then
                 orb(visual, "HarvestGlow", center + Vector3.new(0, height + 2.4, 0), Vector3.new(0.8, 0.8, 0.8), Color3.fromRGB(255, 248, 187), Enum.Material.Neon)
             end
