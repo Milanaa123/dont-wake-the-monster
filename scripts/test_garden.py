@@ -160,6 +160,63 @@ assert(not bad, "4 ingredient exploit rejected")
 bad, message = Garden.experiment(g, {"ThunderPlum", "ThunderPlum"})
 assert(not bad, "unowned harvested ingredient rejected")
 print("PASS: 30 crops, 26 secret recipes, empty book, discovery, failed mixes, repeat crafting, 30-plant support, saves and exploits")
+-- Real SeedHunt rules, including free rare seeds, cooldowns, albums and weather.
+local searchable = {}
+local count = 0
+for _, zoneId in ipairs(X.ZoneOrder) do
+    for _, node in ipairs(X.Zones[zoneId].nodes) do
+        assert(not searchable[node.id], "seed cache IDs unique")
+        searchable[node.id] = true
+        count += 1
+        for _, loot in ipairs(node.loot) do
+            assert(G.Crops[loot] and G.Crops[loot].kind == "ordinary", "wild caches never contain paid seeds")
+        end
+    end
+end
+assert(count == 9 and #X.ZoneOrder == 3, "nine caches in three locations")
+local h = Hunt.new()
+local now = os.time()
+local received, message, seedId, tier, first = Hunt.collect(h, g.seeds, "meadow_1", 0.99, 0, now)
+assert(received and tier == "rare" and seedId == "HoneyPear" and first, "rare free seed search")
+received, message = Hunt.collect(h, g.seeds, "meadow_1", 0.99, 0, now)
+assert(not received, "personal cooldown blocks repeated searches")
+received, message = Hunt.collect(h, g.seeds, "meadow_1", 0.1, 0, now + X.NodeCooldown)
+assert(received, "cache restores after expected cooldown")
+received, message, seedId, tier = Hunt.collect(h, g.seeds, "ruins_1", 0.98, 0, now)
+assert(received and seedId == "LavaMelon" and tier == "rare", "28th wild seed is obtainable")
+assert(not Hunt.claimQuest(h, now), "five finds required to claim quest")
+for _, id in ipairs({"marsh_1", "marsh_2"}) do
+    received = Hunt.collect(h, g.seeds, id, 0.2, 0, now)
+    assert(received, "valid zone can be searched")
+end
+received = Hunt.collect(h, g.seeds, "meadow_3", 0.2, 0, now)
+assert(received and h.questFinds == 5, "daily explorer count reaches goal")
+assert(Hunt.claimQuest(h, now) and not Hunt.claimQuest(h, now), "daily reward is one-time")
+local restoredH = Hunt.load(Hunt.snapshot(h))
+assert(restoredH.discovered.HoneyPear and restoredH.discovered.LavaMelon, "rare finds persist")
+assert(restoredH.totalFinds == h.totalFinds, "forage totals persist")
+local denied = Hunt.collect(h, g.seeds, "madeup-node", 0.8, 0, now)
+assert(not denied, "fake node rejected")
+local grow = Garden.new()
+local planted = Garden.plant(grow, 1, "Berry")
+assert(planted)
+local affected = Garden.weather(grow, "MoonFog", function() return 0.1 end)
+assert(affected == 1 and grow.plots[1].mutation == "Moonlit", "weather creates mutation")
+affected = Garden.weather(grow, "MoonFog", function() return 1 end)
+assert(affected == 0, "re-applying same weather does not duplicate a boost")
+local boosted, tip = Garden.assist(grow, 1, 90)
+assert(boosted and grow.plots[1].assistUsed, "curious pet speeds plant growth")
+boosted = Garden.assist(grow, 1, 90)
+assert(not boosted, "one assist per crop")
+grow.plots[1].readyAt = os.time() - 1
+local harvested = Garden.harvest(grow, 1)
+assert(harvested and grow.crops.Berry == G.Crops.Berry.yield * X.MutationBonus, "fixed mutated harvest bonus")
+assert(grow.hunt.mutations.Moonlit, "mutation recorded in album")
+local restoredGarden = Garden.load(Garden.serialize(grow))
+assert(restoredGarden.hunt.mutations.Moonlit, "mutation collection persists")
+assert(restoredGarden.crops.Berry == grow.crops.Berry, "mutated crop stock persists")
+print("PASS: forest discovery, nine cache cooldowns, free rare seeds, 28-plant book, weather mutations and pet tending")
+
 """
 source = (
     "Color3 = {fromRGB = function(r,g,b) return {r,g,b} end}\n"
