@@ -255,6 +255,22 @@ local function onPlayerRemoving(player: Player)
     profiles[player] = nil
 end
 
+local function notifyBondMilestone(player: Player, profile: any, previous: string)
+    local p = profile.personalities[profile.petIndex]
+    if not p then return end
+    local current = Personality.bondStage(p)
+    if previous ~= current then
+        task.delay(1.6, function()
+            if profiles[player] == profile then
+                remote:FireClient(player, {type = "petFeeling", text = "💖 " .. Config.Pets[profile.petIndex].name .. " friendship level: " .. current .. "!"})
+                if profile.pet and profile.pet.PrimaryPart then
+                    World.burst(profile.pet.PrimaryPart.Position, Color3.fromRGB(255, 163, 198), 16, 12)
+                end
+            end
+        end)
+    end
+end
+
 local function weightedReaction(food: string, previousFood: string, petIndex: number, personality: any)
     local total = 0
     local weights = {}
@@ -419,7 +435,9 @@ local function feed(player: Player, food: any, craftedId: string?)
     profile.lastFeed = now
     local activePersonality = profile.personalities[profile.petIndex]
     local reaction = weightedReaction(food, profile.lastFood, profile.petIndex, activePersonality)
+    local earlierStage = Personality.bondStage(activePersonality)
     local emotionText, personalityNoise = Personality.feed(activePersonality, food)
+    notifyBondMilestone(player, profile, earlierStage)
     if profile.loaded then profile.dirty = true end
     profile.revision += 1
     local combo = profile.lastFood == food and rng:NextNumber() < 0.24
@@ -505,8 +523,10 @@ local function interactWithPet(player: Player, rawAction: any)
     profile.lastPetInteraction = now
     local p = profile.personalities[profile.petIndex]
     if not p then return end
+    local earlierStage = Personality.bondStage(p)
     local success, message = Personality.interact(p, rawAction)
     if success then
+        notifyBondMilestone(player, profile, earlierStage)
         if profile.loaded then profile.dirty = true end
         profile.revision += 1
         profile.idleAction = if rawAction == "Play" then "Jumps" elseif rawAction == "Pet" then "Cuddles" else "Naps"
