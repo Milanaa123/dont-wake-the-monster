@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       place_id:
-        description: Existing Roblox Place ID (not Universe ID)
+        description: Existing Roblox Place ID (optional if ROBLOX_PLACE_ID variable is set)
         type: string
-        required: true
+        required: false
       upload_mode:
         description: Saved = private draft; Published = publish to Roblox
         type: choice
@@ -32,6 +32,23 @@ jobs:
       - name: Checkout main
         uses: actions/checkout@v4
 
+      - name: Preflight (never prints the secret)
+        env:
+          ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+          ROBLOX_PLACE_ID: ${{ inputs.place_id || vars.ROBLOX_PLACE_ID }}
+          UPLOAD_MODE: ${{ inputs.upload_mode }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "${ROBLOX_PLACE_ID}" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error::Place ID missing. Enter place_id when running workflow or set Settings > Secrets and variables > Actions > Variables > ROBLOX_PLACE_ID."
+            exit 1
+          fi
+          if [[ -z "${ROBLOX_API_KEY}" ]]; then
+            echo "::error::Secret ROBLOX_API_KEY missing. Create a Roblox Open Cloud Assets Read+Write key for THIS place, then save it under GitHub Actions repository Secrets."
+            exit 1
+          fi
+          echo "Preflight passed. Target Place ID: ${ROBLOX_PLACE_ID}, mode: ${UPLOAD_MODE}. The API key remains secret."
       - name: Validate source and economy
         run: python3 scripts/validate_project.py
 
@@ -72,6 +89,6 @@ jobs:
       - name: Upload to existing Roblox place (never automatic)
         env:
           ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
-          ROBLOX_PLACE_ID: ${{ inputs.place_id }}
+          ROBLOX_PLACE_ID: ${{ inputs.place_id || vars.ROBLOX_PLACE_ID }}
           UPLOAD_MODE: ${{ inputs.upload_mode }}
         run: python3 scripts/publish_roblox.py
