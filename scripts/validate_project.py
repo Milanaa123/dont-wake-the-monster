@@ -20,6 +20,9 @@ required = [
     "src/server/Progression.luau",
     "src/client/HUD.client.luau",
     "src/client/Collection.client.luau",
+    "src/shared/GardenConfig.luau",
+    "src/server/Garden.luau",
+    "src/client/Garden.client.luau",
 ]
 for path in required:
     text = read(path)
@@ -54,4 +57,21 @@ for field in ("owned", "discovered", "feedCount", "survivalCount", "questClaimed
 assert "math.max(previousCoins, coins)" not in server, "Unsafe max-based coin save revives spent currency"
 assert "ProcessReceipt" not in server, "Real-money purchases should remain disabled until receipt work is tested"
 
-print(f"OK: {len(pet_prices)} pets, {len(reaction_defs)} reactions, Rojo paths, client/server actions, saved fields")
+garden_cfg = read("src/shared/GardenConfig.luau")
+garden = read("src/server/Garden.luau")
+garden_ui = read("src/client/Garden.client.luau")
+assert garden_cfg.count('kind = "ordinary"') == 10, "Expected ten free-coin crops"
+assert garden_cfg.count('kind = "premium"') == 3, "Expected two premium seeds + one fertilizer"
+assert garden_cfg.count("productId = 0") == 6, "A product ID may have been enabled without receipts"
+assert "G.PLOT_COUNT = 6" in garden_cfg, "Expected six plots per player"
+assert "G.SLOT_COUNT = 12" in garden_cfg, "Expected twelve physical garden zones"
+for action in ("GardenBuySeed", "GardenPlant", "GardenHarvest", "GardenFertilize", "GardenCraft", "GardenFeed", "GardenLure", "GardenVisit"):
+    assert action in server and action in garden_ui, f"Missing garden client/server command: {action}"
+for method in ("Garden.buySeed", "Garden.plant", "Garden.harvest", "Garden.fertilize", "Garden.craft", "Garden.consume"):
+    assert method in garden and method in server, f"Missing server garden rule: {method}"
+assert "Garden.serialize" in progression and "Garden.load" in progression, "Garden data not saved"
+assert "PromptProductPurchase" not in garden_ui, "Premium products must remain disabled"
+assert "No teleporting away from Giggles" in server, "Garden escape during boss fight was enabled"
+
+
+print(f"OK: {len(pet_prices)} pets, {len(reaction_defs)} reactions, 12 crops, 8 recipes, disabled premium products, Rojo paths and saved fields")
