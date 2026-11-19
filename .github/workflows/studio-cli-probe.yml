@@ -1,4 +1,4 @@
-name: Experimental Studio CLI smoke test
+name: Experimental Studio CLI smoke test (installer stabilization)
 
 on:
   push:

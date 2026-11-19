@@ -47,6 +47,25 @@ try {
   } while ((Get-Date) -lt $until)
   Capture "01-installed.png"
   if (-not $studio) {throw "Studio exe not found"}
+  # Prevent the common installer race: RobloxStudioBeta.exe appears before
+  # the bootstrapper has finished downloading the complete Studio distribution.
+  Write-Host "Studio executable located; waiting for installation stabilization."
+  $stable=0
+  $lastSize=-1
+  $waitUntil=(Get-Date).AddSeconds(140)
+  do {
+    Start-Sleep -Seconds 10
+    $installers=@(Get-Process -Name RobloxStudioInstaller,RobloxStudioLauncherBeta -ErrorAction SilentlyContinue)
+    $size=(Get-Item -LiteralPath $studio).Length
+    if ($installers.Count -eq 0 -and $size -eq $lastSize) {$stable+=1} else {$stable=0}
+    $lastSize=$size
+  } while ($stable -lt 3 -and (Get-Date) -lt $waitUntil)
+  # Give Roblox's launched child downloaders time to finish placing resources.
+  Start-Sleep -Seconds 25
+  $signatureStudio=Get-AuthenticodeSignature $studio
+  if ($signatureStudio.Status -ne 'Valid' -or $signatureStudio.SignerCertificate.Subject -notmatch 'Roblox') {
+    throw "Refusing unsigned or non-Roblox Studio executable."
+  }
   $report.installed=$true
   $file=Join-Path $root "dist\dont-wake-the-monster.rbxlx"
   $script=Join-Path $root "scripts\studio_cli_smoketest.luau"
@@ -56,6 +75,23 @@ try {
   Write-Host "Starting documented RunScript task using local .rbxlx; no login automation."
   $p=Start-Process -FilePath $studio -ArgumentList $args -PassThru
   Start-Sleep -Seconds 15
+  # Bring Studio's own window to foreground instead of screenshotting runner logs.
+  try {
+    Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public static class StudioFocus {
+  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hwnd);
+  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hwnd, int mode);
+}
+'@ -ErrorAction SilentlyContinue
+    $window=Get-Process RobloxStudioBeta -ErrorAction SilentlyContinue | Where-Object {$_.MainWindowHandle -ne [IntPtr]::Zero}|Select-Object -First 1
+    if ($window) {
+      [StudioFocus]::ShowWindow($window.MainWindowHandle,3)|Out-Null
+      [StudioFocus]::SetForegroundWindow($window.MainWindowHandle)|Out-Null
+      Start-Sleep -Seconds 2
+    }
+  } catch { Write-Host "Studio focus failed: $($_.Exception.Message)" }
   Capture "02-cli-running.png"
   try {$p.WaitForExit(55000)|Out-Null} catch {}
   Capture "03-cli-completed.png"
