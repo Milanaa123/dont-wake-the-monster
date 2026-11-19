@@ -20,6 +20,8 @@ effectsGroup.Volume = 1
 effectsGroup.Parent = SoundService
 
 local music: Sound? = nil
+local chase: Sound? = nil
+local ambience: Sound? = nil
 local musicEnabled = true
 local effectsEnabled = true
 local phase = "SLEEP"
@@ -65,7 +67,7 @@ end
 local function refreshButtons()
     musicButton.Text = if musicEnabled then "🎵 MUSIC ON" else "🔇 MUSIC OFF"
     fxButton.Text = if effectsEnabled then "🔊 EFFECTS ON" else "🔇 EFFECTS OFF"
-    if not authorizedId(Config.MusicAssetId) then musicButton.Text = "🎵 AUDIO PENDING" end
+    if not authorizedId(Config.MusicAssetId) and not authorizedId(Config.ChaseMusicAssetId) then musicButton.Text = "🎵 AUDIO PENDING" end
 end
 local function targetMusicVolume(): number
     if not musicEnabled then return 0 end
@@ -83,11 +85,40 @@ if authorizedId(Config.MusicAssetId) then
     music = sound
     sound:Play()
 end
+local function loopTrack(assetId: any, name: string, volume: number, group: SoundGroup): Sound?
+    if not authorizedId(assetId) then return nil end
+    local sound = Instance.new("Sound")
+    sound.Name = name
+    sound.SoundId = "rbxassetid://" .. tostring(assetId)
+    sound.Volume = volume
+    sound.Looped = true
+    sound.SoundGroup = group
+    sound.Parent = SoundService
+    sound:Play()
+    return sound
+end
+chase = loopTrack(Config.ChaseMusicAssetId, "OriginalMonsterChaseTheme", 0, soundGroup)
+ambience = loopTrack(Config.AmbienceAssetId, "OriginalSleepyForestAmbience",
+    if musicEnabled then Config.AmbienceVolume else 0, soundGroup)
+
+local function crossfadeMusic()
+    local calmVolume = if musicEnabled and phase ~= "AWAKE" then Config.MusicVolume else 0
+    local chaseVolume = if musicEnabled and phase == "AWAKE" then Config.ChaseMusicVolume else 0
+    local ambientVolume = if musicEnabled and phase == "SLEEP" then Config.AmbienceVolume else 0
+    for _, item in ipairs({
+        {sound = music, target = calmVolume},
+        {sound = chase, target = chaseVolume},
+        {sound = ambience, target = ambientVolume},
+    }) do
+        if item.sound then
+            TweenService:Create(item.sound, TweenInfo.new(1.1, Enum.EasingStyle.Quad), {Volume = item.target}):Play()
+        end
+    end
+end
+
 musicButton.MouseButton1Click:Connect(function()
     musicEnabled = not musicEnabled
-    if music then
-        TweenService:Create(music, TweenInfo.new(0.5), {Volume = targetMusicVolume()}):Play()
-    end
+    crossfadeMusic()
     refreshButtons()
 end)
 fxButton.MouseButton1Click:Connect(function()
@@ -120,9 +151,7 @@ remote.OnClientEvent:Connect(function(event: any)
         local nextPhase = event.phase or phase
         if nextPhase ~= phase then
             phase = nextPhase
-            if music then
-                TweenService:Create(music, TweenInfo.new(0.85), {Volume = targetMusicVolume()}):Play()
-            end
+            crossfadeMusic()
         end
     end
 end)
