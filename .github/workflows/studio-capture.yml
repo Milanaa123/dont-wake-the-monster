@@ -1,0 +1,40 @@
+name: Experimental real Studio capture (Windows)
+
+on:
+  push:
+    paths:
+      - .github/workflows/studio-capture.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download and build Roblox place with official Rojo binary
+        shell: pwsh
+        run: |
+          $ProgressPreference = 'SilentlyContinue'
+          Invoke-WebRequest 'https://github.com/rojo-rbx/rojo/releases/download/v7.7.1/rojo-7.7.1-windows-x86_64.zip' -OutFile "$env:RUNNER_TEMP\rojo.zip"
+          Expand-Archive "$env:RUNNER_TEMP\rojo.zip" "$env:RUNNER_TEMP\rojo" -Force
+          New-Item -ItemType Directory -Path dist -Force | Out-Null
+          & "$env:RUNNER_TEMP\rojo\rojo.exe" build default.project.json --output dist/dont-wake-the-monster.rbxlx
+          if ($LASTEXITCODE -ne 0) { throw "Rojo build failed" }
+
+      - name: Attempt official Roblox Studio setup and real play capture
+        shell: pwsh
+        run: ./scripts/studio_capture.ps1
+
+      - name: Upload evidence, including blockers if playtest cannot start
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: studio-capture-evidence
+          path: capture/
+          if-no-files-found: warn
+          retention-days: 7
