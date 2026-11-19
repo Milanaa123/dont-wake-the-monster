@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.5 — Active Co-op Rescue (2026-11-19)
+- Each monster wake-up now spawns seven rescueable stray creatures around the island.
+- Players must rescue a server-population-scaled goal of two to five before the round ends.
+- In-world E/touch ProximityPrompts show SAVE ME! and require real player proximity, a living character, and an active boss phase.
+- Each animal rescued earns 8 free coins. Participants who meet the team goal and survive receive an extra 30 coins.
+- Live rescue progress shows above the feeding controls; tutorial explains grow–mix–feed–rescue.
+- No fake Roblox Studio video has been produced. A previous Windows-hosted Studio attempt reached the account login screen; actual runtime capture requires an authorized session.
+- Luau syntax and Rojo build checks are automatic; multiplayer, difficulty, on-device appearance and DataStore performance still require Studio testing.
+
 ## v0.4 — More Creatures & Secret Recipe Book (2026-11-19)
 - Expanded animal collection from 10 to **30** species, adding unique decorative features and six comedy temperaments.
 - Expanded crop catalog from 12 to **30** plants: 28 obtainable with in-game coins, 2 disabled premium designs.

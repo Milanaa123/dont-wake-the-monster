@@ -12,6 +12,8 @@ A colorful, chaotic multiplayer Roblox prototype: feed your ridiculous pet, trig
 - Each animal has a distinctive look and one of six comedy temperaments affecting, but not determining, chaos outcomes.
 - Four mobile-friendly feed buttons, **12 reaction types**, food combos, and six spontaneous island-wide surprises.
 - Shared noise meter, randomized monster attacks, three-hit survival, and coins for surviving rounds.
+- **Co-op rescue challenge** every time Giggles wakes: race around the island to rescue runaway animals (2–5 target by player count). Server checks proximity, awards 8 free coins for a rescue, and pays participating survivors a 30-coin completion bonus.
+- **First-play tutorial** on mobile and desktop explains the main gameplay loop; a ? button reopens it.
 - Starter quests, reaction discovery album, daily in-game coin treat, a collection/inventory screen and pet swapping.
 - Persistent coins, owned pets, equipped pet, discovered reactions and quest progress (when Roblox DataStore works).
 - Responsive touchscreen controls and keyboard support.
@@ -37,7 +39,9 @@ A colorful, chaotic multiplayer Roblox prototype: feed your ridiculous pet, trig
 - `src/server/RecipeCatalog.luau`: **server-only** secret formulas, never replicated to the client.
 - `src/client/Garden.client.luau`: mobile garden, seed shop, ingredient mixer and personal recipe book.
 - `scripts/test_garden.py`: isolated Luau runtime tests for farming, hidden recipes, discoveries, persistence and anti-exploit rules.
-- `src/client/HUD.client.luau`: controls, notifications, noise and survival UI.
+- `src/client/HUD.client.luau`: controls, notifications, noise, survival and live rescue objective progress.
+- `src/server/RescueObjective.luau`: server-side co-op mission with animal rescue prompts, distance validation and rewards.
+- `src/client/HowToPlay.client.luau`: first-play instruction overlay and help button.
 - `src/client/Collection.client.luau`: pet inventory, shop and quest tracking.
 - `scripts/validate_project.py`: offline source-structure and economy checks.
 - `scripts/publish_roblox.py` and `.github/workflows/upload-roblox.yml`: optional, manually triggered place upload (not currently connected).
