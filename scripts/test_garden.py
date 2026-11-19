@@ -15,12 +15,16 @@ config = (root / "src/shared/GardenConfig.luau").read_text(encoding="utf-8")
 exploration_config = (root / "src/shared/ExpeditionConfig.luau").read_text(encoding="utf-8")
 hunt = (root / "src/server/SeedHunt.luau").read_text(encoding="utf-8")
 catalog = (root / "src/server/RecipeCatalog.luau").read_text(encoding="utf-8")
+merchant = (root / "src/shared/SeedMerchant.luau").read_text(encoding="utf-8")
 rules = (root / "src/server/Garden.luau").read_text(encoding="utf-8")
 assert config.endswith("return G\n")
 assert exploration_config.endswith("return X\n")
 assert hunt.endswith("return Hunt\n")
 assert catalog.endswith("return Catalog\n")
 assert rules.endswith("return Garden\n")
+assert merchant.endswith("return Shop\n")
+merchant = merchant.replace('local G = require(script.Parent:WaitForChild("GardenConfig"))\n', "", 1)
+merchant = merchant.removesuffix("return Shop\n")
 config = config.removesuffix("return G\n")
 exploration_config = exploration_config.removesuffix("return X\n")
 hunt = hunt.replace('local ReplicatedStorage = game:GetService("ReplicatedStorage")\n', "", 1)
@@ -30,6 +34,7 @@ hunt = hunt.removesuffix("return Hunt\n")
 catalog = catalog.removesuffix("return Catalog\n")
 rules = rules.replace('local ReplicatedStorage = game:GetService("ReplicatedStorage")\n', "", 1)
 rules = rules.replace('local G = require(ReplicatedStorage:WaitForChild("GardenConfig"))\n', "", 1)
+rules = rules.replace('local SeedMerchant = require(ReplicatedStorage:WaitForChild("SeedMerchant"))\n', "local SeedMerchant = Shop\n", 1)
 rules = rules.replace('local Catalog = require(script.Parent:WaitForChild("RecipeCatalog"))\n', "", 1)
 rules = rules.replace('local Hunt = require(script.Parent:WaitForChild("SeedHunt"))\n', "", 1)
 rules = rules.replace('local X = require(ReplicatedStorage:WaitForChild("ExpeditionConfig"))\n', "", 1)
@@ -221,7 +226,7 @@ print("PASS: forest discovery, nine cache cooldowns, free rare seeds, 28-plant b
 source = (
     "Color3 = {fromRGB = function(r,g,b) return {r,g,b} end}\n"
     + config + "\n" + exploration_config + "\n" + catalog + "\n"
-    + hunt + "\n" + rules + "\n" + suite
+    + hunt + "\n" + merchant + "\n" + rules + "\n" + suite
 )
 with tempfile.TemporaryDirectory() as tmp:
     script = Path(tmp) / "garden_spec.luau"
