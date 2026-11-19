@@ -161,9 +161,10 @@ bad, message = Garden.experiment(g, {"ThunderPlum", "ThunderPlum"})
 assert(not bad, "unowned harvested ingredient rejected")
 print("PASS: 30 crops, 26 secret recipes, empty book, discovery, failed mixes, repeat crafting, 30-plant support, saves and exploits")
 """
-source = "Color3 = {fromRGB = function(r,g,b) return {r,g,b} end}\n" + config + "\n" + exploration_config + "\n" + catalog + "\n" + hunt + "\n" + rules + "\n" + suite
+source = (
     "Color3 = {fromRGB = function(r,g,b) return {r,g,b} end}\n"
-    + config + "\n" + catalog + "\n" + rules + "\n" + suite
+    + config + "\n" + exploration_config + "\n" + catalog + "\n"
+    + hunt + "\n" + rules + "\n" + suite
 )
 with tempfile.TemporaryDirectory() as tmp:
     script = Path(tmp) / "garden_spec.luau"
