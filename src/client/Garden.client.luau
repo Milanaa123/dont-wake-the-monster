@@ -1,5 +1,5 @@
 --!strict
--- Mobile garden: six plots, 12 seeds, deterministic recipes, bait and fertilizer.
+-- 30 crops and a SECRET recipe book: players experiment and discover recipes themselves.
 -- Robux-only products are visibly disabled until product IDs and server receipts exist.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -19,6 +19,9 @@ local coins = 0
 local tab = "Plots"
 local seedIndex = 1
 local fertilizerKey = "Compost"
+local mixSlots = {"", "", ""}
+local pickerSlot = 0
+local selectedCropCount = 0
 local plotTimers: {[number]: TextLabel} = {}
 
 local function round(obj: Instance, radius: number)
@@ -144,7 +147,7 @@ local tabs = {}
 for i, info in ipairs({
     {key = "Plots", label = "🌱 PLOTS"},
     {key = "Seeds", label = "🛒 SEEDS"},
-    {key = "Craft", label = "🧪 CRAFT"},
+    {key = "Craft", label = "📖 ALCHEMY"},
 }) do
     local b = button(tabRow, info.label, MINT)
     b.Position = UDim2.new((i - 1) / 3, 3, 0, 0)
@@ -235,12 +238,12 @@ local function drawPlots()
     selectorFert.Position = UDim2.new(0, 8, 0, 9)
     selectorFert.Size = UDim2.new(1, -16, 0, 48)
     selectorFert.MouseButton1Click:Connect(function()
-        if fertilizerKey == "Compost" then
-            fertilizerKey = "Starlight"
-        elseif fertilizerKey == "Starlight" then
-            fertilizerKey = "AuroraDust"
-        else
-            fertilizerKey = "Compost"
+        local keys = {"Compost", "Starlight", "HoneyCompost", "FrostFertilizer", "AuroraDust"}
+        for i, key in ipairs(keys) do
+            if key == fertilizerKey then
+                fertilizerKey = keys[i % #keys + 1]
+                break
+            end
         end
         tabs._render()
     end)
@@ -316,54 +319,160 @@ local function drawSeeds()
     comingSoon.AutoButtonColor = false
 end
 
-local function drawCraft()
-    topHint("🧪 Grow crops → harvest ingredients → craft special pet food, wild-creature lures and fertilizer.")
-    local summary = row(91, Color3.fromRGB(246, 236, 218))
-    local inventory = {}
-    for _, seed in ipairs(G.Order) do
-        local n = cropInventory(seed)
-        if n > 0 then table.insert(inventory, G.Crops[seed].icon .. tostring(n)) end
+local function drawIngredientPicker()
+    local slot = pickerSlot
+    topHint("🧺 SELECT INGREDIENT FOR SLOT " .. slot .. ". Only crops YOU harvested appear here.")
+    local clear = row(54, Color3.fromRGB(242, 233, 253))
+    local remove = button(clear, "✕ REMOVE INGREDIENT / BACK", Color3.fromRGB(238, 210, 237))
+    remove.Position = UDim2.new(0, 8, 0, 7)
+    remove.Size = UDim2.new(1, -16, 0, 40)
+    remove.MouseButton1Click:Connect(function()
+        mixSlots[slot] = ""
+        pickerSlot = 0
+        tabs._render()
+    end)
+    local choices = 0
+    for _, key in ipairs(G.Order) do
+        local available = cropInventory(key)
+        if available > 0 then
+            choices += 1
+            local crop = G.Crops[key]
+            local card = row(56, MINT)
+            local choose = button(card, crop.icon .. " " .. crop.name .. "   ×" .. available, Color3.fromRGB(200, 240, 201))
+            choose.Position = UDim2.new(0, 8, 0, 7)
+            choose.Size = UDim2.new(1, -16, 0, 42)
+            choose.MouseButton1Click:Connect(function()
+                mixSlots[slot] = key
+                pickerSlot = 0
+                tabs._render()
+            end)
+        end
     end
-    local cropSummary = text(summary, "HARVEST: " .. (if #inventory > 0 then table.concat(inventory, "   ") else "Nothing harvested yet"), 12, INK, true)
-    cropSummary.Position = UDim2.new(0, 9, 0, 7)
-    cropSummary.Size = UDim2.new(1, -18, 0, 72)
+    if choices == 0 then topHint("Your basket is empty. Plant seeds and harvest crops first!") end
+end
 
-    for _, key in ipairs(G.RecipeOrder) do
-        local recipe = G.Recipes[key]
-        local frame = row(111, MINT)
-        local heading = text(frame, recipe.icon .. " " .. recipe.name .. "  (×" .. recipe.produces .. ")", 14, INK, true)
-        heading.Position = UDim2.new(0, 10, 0, 5)
+local function ingredientCard(index: number)
+    local key = mixSlots[index]
+    local crop = G.Crops[key]
+    local card = row(52, Color3.fromRGB(238, 244, 226))
+    local cap = if crop then crop.icon .. " " .. crop.name else "＋ Choose ingredient"
+    local selectIngredient = button(card, "SLOT " .. index .. ": " .. cap, Color3.fromRGB(220, 241, 210))
+    selectIngredient.Position = UDim2.new(0, 8, 0, 6)
+    selectIngredient.Size = UDim2.new(1, -16, 0, 39)
+    selectIngredient.MouseButton1Click:Connect(function()
+        pickerSlot = index
+        tabs._render()
+    end)
+end
+
+local function drawCraft()
+    if pickerSlot > 0 then
+        drawIngredientPicker()
+        return
+    end
+    topHint("🧪 EXPERIMENT! Mix TWO or THREE harvested ingredients. No recipes are given at the start. Every discovery is written in YOUR book.")
+    local counter = row(63, Color3.fromRGB(246, 236, 218))
+    local ownedCrops = 0
+    local varieties = 0
+    for _, key in ipairs(G.Order) do
+        local amount = cropInventory(key)
+        if amount > 0 then
+            varieties += 1
+            ownedCrops += amount
+        end
+    end
+    local inventoryLabel = text(counter, "🌿 HARVESTED: " .. ownedCrops .. " pieces • " .. varieties .. " crop types. Each mix uses the ingredients you choose.", 13, INK, true)
+    inventoryLabel.Position = UDim2.new(0, 10, 0, 5)
+    inventoryLabel.Size = UDim2.new(1, -20, 1, -10)
+
+    for i = 1, 3 do
+        ingredientCard(i)
+    end
+    local mixture = row(61, Color3.fromRGB(253, 232, 194))
+    local mixButton = button(mixture, "⚗️ MIX INGREDIENTS — DISCOVER!", Color3.fromRGB(255, 203, 124))
+    mixButton.Position = UDim2.new(0, 9, 0, 8)
+    mixButton.Size = UDim2.new(1, -18, 0, 44)
+    mixButton.MouseButton1Click:Connect(function()
+        local ingredients = {}
+        for _, ingredient in ipairs(mixSlots) do
+            if ingredient ~= "" then table.insert(ingredients, ingredient) end
+        end
+        if #ingredients >= 2 and #ingredients <= 3 then
+            remote:FireServer("GardenExperiment", ingredients)
+        else
+            -- No event is sent for incomplete experiments.
+            mixButton.Text = "CHOOSE 2 OR 3 INGREDIENTS!"
+        end
+    end)
+
+    local book = if state and typeof(state.book) == "table" then state.book else {}
+    local chapter = row(61, Color3.fromRGB(235, 227, 253))
+    local chapterTitle = text(chapter, "📖 YOUR RECIPE BOOK: " .. #book .. " / " .. (if state then state.totalRecipes or "?" else "?") .. " DISCOVERED", 15, INK, true)
+    chapterTitle.Position = UDim2.new(0, 11, 0, 5)
+    chapterTitle.Size = UDim2.new(1, -20, 0, 25)
+    local chapterTip = text(chapter, "Successful experiments become permanent pages.", 11, MUTED)
+    chapterTip.Position = UDim2.new(0, 11, 0, 29)
+    chapterTip.Size = UDim2.new(1, -20, 0, 27)
+    if #book == 0 then
+        topHint("📕 All pages are blank. Try mixing berries, vegetables, flowers or magic herbs!")
+    end
+
+    for _, recipe in ipairs(book) do
+        local card = row(112, MINT)
+        local heading = text(card, recipe.icon .. " " .. recipe.name .. "  ×" .. recipe.produces, 15, INK, true)
+        heading.Position = UDim2.new(0, 10, 0, 4)
         heading.Size = UDim2.new(1, -18, 0, 27)
         local ingredients = {}
         local canCraft = true
-        for _, seed in ipairs(G.Order) do
-            local needed = recipe.ingredients[seed]
-            if needed then
-                local have = cropInventory(seed)
-                table.insert(ingredients, needed .. "× " .. G.Crops[seed].icon .. G.Crops[seed].name .. " (" .. have .. ")")
-                if have < needed then canCraft = false end
+        for _, key in ipairs(G.Order) do
+            local need = recipe.ingredients[key]
+            if need then
+                local have = cropInventory(key)
+                table.insert(ingredients, need .. "× " .. G.Crops[key].icon .. " " .. G.Crops[key].name)
+                if have < need then canCraft = false end
             end
         end
-        local detail = text(frame, table.concat(ingredients, " + "), 11, MUTED, false)
-        detail.Position = UDim2.new(0, 10, 0, 34)
-        detail.Size = UDim2.new(1, -18, 0, 26)
-        local amount = productInventory(key, recipe.type == "fertilizer")
-        local craft = button(frame, "CRAFT", if canCraft then Color3.fromRGB(255, 219, 145) else Color3.fromRGB(227, 221, 213))
-        craft.Position = UDim2.new(0, 10, 0, 66)
-        craft.Size = UDim2.new(0.47, -10, 0, 36)
-        craft.MouseButton1Click:Connect(function()
-            remote:FireServer("GardenCraft", key)
+        local detail = text(card, table.concat(ingredients, " + "), 11, MUTED)
+        detail.Position = UDim2.new(0, 10, 0, 35)
+        detail.Size = UDim2.new(1, -20, 0, 27)
+        local make = button(card, "MAKE AGAIN", if canCraft then Color3.fromRGB(255, 225, 153) else Color3.fromRGB(228, 226, 227))
+        make.Position = UDim2.new(0, 9, 0, 67)
+        make.Size = UDim2.new(0.48, -10, 0, 36)
+        make.MouseButton1Click:Connect(function()
+            remote:FireServer("GardenCraft", recipe.id)
         end)
-        local consume = button(frame, (if recipe.type == "fertilizer" then "STOCK" else "USE") .. " ×" .. amount, Color3.fromRGB(188, 236, 221))
-        consume.Position = UDim2.new(0.51, 0, 0, 66)
-        consume.Size = UDim2.new(0.48, -10, 0, 36)
-        local enabled = recipe.type ~= "fertilizer" and amount > 0
-        consume.Active = enabled
-        consume.AutoButtonColor = enabled
+        local amount = productInventory(recipe.id, recipe.type == "fertilizer")
+        local consume = button(card, (if recipe.type == "fertilizer" then "STOCK" else "USE") .. " ×" .. amount, Color3.fromRGB(185, 237, 211))
+        consume.Position = UDim2.new(0.5, 0, 0, 67)
+        consume.Size = UDim2.new(0.49, -10, 0, 36)
+        consume.Active = amount > 0 and recipe.type ~= "fertilizer"
+        consume.AutoButtonColor = consume.Active
         consume.MouseButton1Click:Connect(function()
-            if recipe.type == "feed" and amount > 0 then remote:FireServer("GardenFeed", key) end
-            if recipe.type == "lure" and amount > 0 then remote:FireServer("GardenLure", key) end
+            if amount < 1 then return end
+            if recipe.type == "feed" then
+                remote:FireServer("GardenFeed", recipe.id)
+            elseif recipe.type == "lure" then
+                remote:FireServer("GardenLure", recipe.id)
+            end
         end)
+    end
+
+    -- Existing products and chaotic mistakes remain usable even if the
+    -- corresponding recipe has not yet been discovered in the new book.
+    local products = if state and typeof(state.products) == "table" then state.products else {}
+    local knownMap = {}
+    for _, recipe in ipairs(book) do knownMap[recipe.id] = true end
+    for _, recipe in ipairs(products) do
+        if not knownMap[recipe.id] then
+            local card = row(57, Color3.fromRGB(251, 224, 220))
+            local use = button(card, recipe.icon .. " " .. recipe.name .. " ×" .. recipe.amount .. " — USE", Color3.fromRGB(253, 215, 190))
+            use.Position = UDim2.new(0, 8, 0, 8)
+            use.Size = UDim2.new(1, -16, 0, 40)
+            use.MouseButton1Click:Connect(function()
+                if recipe.type == "feed" then remote:FireServer("GardenFeed", recipe.id)
+                elseif recipe.type == "lure" then remote:FireServer("GardenLure", recipe.id) end
+            end)
+        end
     end
 end
 
