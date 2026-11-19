@@ -17,6 +17,9 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
+      - name: Validate project structure and free-coin economy
+        run: python3 scripts/validate_project.py
+
       - name: Install Rojo 7.7.1
         shell: bash
         run: |

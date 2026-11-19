@@ -17,22 +17,28 @@
 - Reaction types eventually occur over repeated plays; visual effects expire.
 - Noise reaches threshold, boss wakes and attacks, timer ends, rewards arrive.
 - No uncontrolled part count / anchored-object physics spikes during a 20-minute run.
-- Coins persist across rejoins in a published test experience.
+- Coins, purchased pets, equipped companion, daily claim and quest/discovery progress persist across rejoins in a published test experience.
+- Pet purchases spend the correct number of free coins and cannot be repeated for the same pet.
+- Each player has three hearts during a wake event; hits, fall-outs and death prevent the survival bonus.
+- Starter missions can be earned once, do not duplicate rewards after a rejoin, and catalog tracks all 10 pets.
+- New player sees feed buttons on touchscreens and collection/quest/daily interface without overlapping the HUD.
 - No purchases are charged before receipts and policy compliance are implemented.
 
 ## Next development targets
 
 1. Studio/runtime QA and fix all reported errors.
 2. Replace primitive monsters with original optimized mesh models and animations.
-3. Expand to 8-12 collectible creatures, creature inventory and unlock progression.
-4. Add multiple environment zones and social group activities.
-5. Record telemetry: first action, playtime, D1, rounds survived, session failures.
-6. Implement purchase products through server-side receipt handling, after user provides Roblox creator IDs.
-7. Soft launch in a private test environment; optimize mobile performance before promotion.
+3. Move the coin/inventory DataStore to a production-safe session-lock design; conduct a two-server reconnect test.
+4. Replace the placeholder creature models with original optimized assets and animations.
+5. Add multiple environment zones, cooperative objectives and repeatable quests.
+6. Record telemetry: onboarding completion, first feed, playtime, D1, round outcomes, purchases and errors.
+7. Add **optional** cosmetic Robux products with verified server-side receipt processing, after the Roblox experience and product IDs exist. No paid random rewards.
+8. Soft launch privately; test multiple mobile devices, age/region settings, safety and moderation before promotion.
 
 ## Anti-exploit approach
 
 - Clients only request feed item names; server checks known items, live character position, proximity, phase and request rate.
 - Reward amounts and chaos outcomes are calculated on the server.
-- Data is saved with UpdateAsync in guarded calls; failed reads do not overwrite existing data.
+- Server validates pet ownership, spending, daily reward and quest completion; clients cannot submit coin balances.
+- Data is saved with UpdateAsync in guarded calls; failed reads do not overwrite existing data. Prototype still lacks a distributed session lock, so simultaneous-server writes must be addressed before release.
 - Project does not contain any Roblox credentials, webhook addresses or live product IDs.

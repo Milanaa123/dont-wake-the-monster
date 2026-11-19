@@ -5,14 +5,15 @@ A colorful, chaotic multiplayer Roblox prototype: feed your ridiculous pet, trig
 ## Prototype features
 
 - Procedurally constructed floating island, decorations, glowing crystals, clouds and an enormous sleeping monster.
-- One expressive companion creature per player (five color/species variants).
-- Four mobile-friendly feed buttons, with **twelve possible reactions** and combo effects.
-- Shared noise meter, timed monster wake-ups, randomized shockwave and sneeze attacks.
-- Cooperative rewards (coins), server-authoritative cooldowns and persistent coin saves.
-- Responsive HUD for mobile and desktop.
-- Automated `.rbxlx` builds with GitHub Actions + Rojo.
+- Ten collectible, distinct-color companion pets with procedural cosmetic details, bought using **in-game coins only**.
+- Four mobile-friendly feed buttons, **12 reaction types**, food combos, and six spontaneous island-wide surprises.
+- Shared noise meter, randomized monster attacks, three-hit survival, and coins for surviving rounds.
+- Starter quests, reaction discovery album, daily in-game coin treat, a collection/inventory screen and pet swapping.
+- Persistent coins, owned pets, equipped pet, discovered reactions and quest progress (when Roblox DataStore works).
+- Responsive touchscreen controls and keyboard support.
+- Automatic Luau compilation, Rojo `.rbxlx` build and source/invariant checks through GitHub Actions.
 
-**Status:** source-code MVP, not yet verified in Roblox Studio or published. Assets are procedural primitives, not final custom models/animations. Purchases are intentionally NOT connected to real Robux products yet.
+**Status: v0.2 source-code MVP. GitHub CI builds and checks code syntax, but Roblox Studio runtime/multiplayer/device testing has NOT been performed.** Procedural art is a placeholder for final optimized meshes and animations. NO real Robux payments or marketplace product IDs are connected. In-game coin prices are not Robux prices. Cross-server persistence needs session-lock hardening before public release.
 
 ## No-computer workflow
 
@@ -25,8 +26,11 @@ A colorful, chaotic multiplayer Roblox prototype: feed your ridiculous pet, trig
 
 - `src/shared/Config.luau`: balance, feed items, creature types and reaction catalog.
 - `src/server/World.luau`: procedural world and monster art.
-- `src/server/Game.server.luau`: multiplayer game loop, noise, pet movement, chaos, rewards and saving.
-- `src/client/HUD.client.luau`: controls, notifications and accessibility.
+- `src/server/Game.server.luau`: authoritative multiplayer game loop, hearts, boss damage, pet effects and saving.
+- `src/server/Progression.luau`: catalog, buying/equipping pets, starter missions, discoveries and daily rewards.
+- `src/client/HUD.client.luau`: controls, notifications, noise and survival UI.
+- `src/client/Collection.client.luau`: pet inventory, shop and quest tracking.
+- `scripts/validate_project.py`: offline source-structure and economy checks.
 - `default.project.json`: Rojo build manifest.
 - `.github/workflows/build.yml`: safe build-only CI pipeline.
 
@@ -44,7 +48,7 @@ In Studio, select **Play** to test; enable Studio API services only for isolated
 
 - [x] Source repository initialized
 - [x] Gameplay code, world generator, client HUD drafted
-- [ ] GitHub Actions build verified
+- [x] GitHub Actions Rojo build and Luau syntax checks verified
 - [ ] Roblox Studio runtime / multiplayer playtest
 - [ ] Custom creature and environment art
 - [ ] Production DataStore & economy tests
