@@ -250,9 +250,9 @@ local function drawPlots()
 
     for i = 1, G.PLOT_COUNT do
         local p = if state then state.plots[i] else false
-        local card = row(80, if p then Color3.fromRGB(237, 250, 230) else Color3.fromRGB(242, 238, 230))
+        local card = row(if p then 114 else 80, if p then Color3.fromRGB(237, 250, 230) else Color3.fromRGB(242, 238, 230))
         local crop = if typeof(p) == "table" then G.Crops[p.seed] else nil
-        local plotText = text(card, "PLOT " .. i .. "   " .. (if crop then crop.icon .. " " .. crop.name else "Empty"), 14, INK, true)
+        local plotText = text(card, "PLOT " .. i .. "   " .. (if crop then crop.icon .. " " .. (if p.mutation then "✨ " .. p.mutation .. " " else "") .. crop.name else "Empty"), 14, INK, true)
         plotText.Position = UDim2.new(0, 11, 0, 5)
         plotText.Size = UDim2.new(0.56, 0, 0, 27)
         local countdown = text(card, if crop then "Growing..." else "Ready for planting", 12, MUTED, false)
@@ -279,6 +279,14 @@ local function drawPlots()
                 if not p.fertilized then
                     remote:FireServer("GardenFertilize", {plot = i, fertilizer = fertilizerKey})
                 end
+            end)
+            local assist = button(card, if p.assistUsed then "🐾 PET ALREADY HELPED" else "🐾 ASK PET TO HELP GROW", Color3.fromRGB(205, 241, 205))
+            assist.Position = UDim2.new(0.03, 0, 0, 83)
+            assist.Size = UDim2.new(0.94, 0, 0, 25)
+            assist.Active = not p.assistUsed
+            assist.AutoButtonColor = not p.assistUsed
+            assist.MouseButton1Click:Connect(function()
+                if not p.assistUsed then remote:FireServer("GardenAssist", i) end
             end)
         end
     end
@@ -480,7 +488,7 @@ local function render()
     if not state then
         status.Text = "Garden loading...   🪙 " .. coins
     else
-        status.Text = "🪙 " .. coins .. "  •  " .. (if state.saving then "PROGRESS SAVES" else "SAVE OFFLINE") .. "  •  " .. (if state.slot > 0 then "PRIVATE GARDEN #" .. state.slot else "VIRTUAL GARDEN")
+        status.Text = "🪙 " .. coins .. " • " .. (if state.saving then "SAVED" else "OFFLINE") .. " • " .. (state.weather or "SUNNY") .. " • " .. (state.forageTotal or 0) .. " SEED FINDS"
     end
     for key, b in pairs(tabs) do
         if typeof(b) == "Instance" and b:IsA("TextButton") then
