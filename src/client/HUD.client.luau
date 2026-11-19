@@ -1,0 +1,297 @@
+--!strict
+-- Responsive, self-contained Roblox GUI. Playable with touch or keyboard 1–4.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local Config = require(ReplicatedStorage:WaitForChild("Config"))
+local remote = ReplicatedStorage:WaitForChild("MonsterRemote") :: RemoteEvent
+local gui = Instance.new("ScreenGui")
+gui.Name = "MonsterHUD"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = false
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local DARK = Color3.fromRGB(53, 46, 88)
+local LAVENDER = Color3.fromRGB(108, 80, 171)
+local CREAM = Color3.fromRGB(255, 252, 244)
+local function round(parent: Instance, radius: number)
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, radius)
+    corner.Parent = parent
+end
+
+local function stroke(parent: Instance, color: Color3, thickness: number)
+    local s = Instance.new("UIStroke")
+    s.Color = color
+    s.Thickness = thickness
+    s.Transparency = 0.16
+    s.Parent = parent
+end
+
+local function label(parent: Instance, text: string, font: Enum.Font, size: number, color: Color3): TextLabel
+    local t = Instance.new("TextLabel")
+    t.Name = "Text"
+    t.BackgroundTransparency = 1
+    t.Font = font
+    t.Text = text
+    t.TextSize = size
+    t.TextColor3 = color
+    t.TextWrapped = true
+    t.TextXAlignment = Enum.TextXAlignment.Center
+    t.TextYAlignment = Enum.TextYAlignment.Center
+    t.Parent = parent
+    return t
+end
+
+local header = Instance.new("Frame")
+header.Name = "StatusCard"
+header.AnchorPoint = Vector2.new(0.5, 0)
+header.Position = UDim2.new(0.5, 0, 0, 10)
+header.Size = UDim2.new(0.94, 0, 0, 112)
+header.BackgroundColor3 = CREAM
+header.BorderSizePixel = 0
+header.Parent = gui
+round(header, 20)
+stroke(header, Color3.fromRGB(238, 211, 255), 2)
+local headerLimit = Instance.new("UISizeConstraint")
+headerLimit.MaxSize = Vector2.new(650, 112)
+headerLimit.Parent = header
+
+local title = label(header, "😴 DON'T WAKE THE MONSTER!", Enum.Font.GothamBlack, 21, DARK)
+title.Position = UDim2.new(0.03, 0, 0, 4)
+title.Size = UDim2.new(0.94, 0, 0, 27)
+local titleLimit = Instance.new("UITextSizeConstraint")
+titleLimit.MinTextSize = 12
+titleLimit.MaxTextSize = 22
+titleLimit.Parent = title
+title.TextScaled = true
+
+local phaseText = label(header, "SHHH... GIGGLES IS SLEEPING", Enum.Font.GothamBold, 13, LAVENDER)
+phaseText.Position = UDim2.new(0.04, 0, 0, 31)
+phaseText.Size = UDim2.new(0.76, 0, 0, 20)
+phaseText.TextXAlignment = Enum.TextXAlignment.Left
+phaseText.TextScaled = true
+local phaseLimit = Instance.new("UITextSizeConstraint")
+phaseLimit.MinTextSize = 10
+phaseLimit.MaxTextSize = 15
+phaseLimit.Parent = phaseText
+
+local timer = label(header, "01:50", Enum.Font.GothamBlack, 18, DARK)
+timer.Position = UDim2.new(0.79, 0, 0, 31)
+timer.Size = UDim2.new(0.17, 0, 0, 20)
+
+local barBack = Instance.new("Frame")
+barBack.Name = "NoiseTrack"
+barBack.Position = UDim2.new(0.04, 0, 0, 60)
+barBack.Size = UDim2.new(0.92, 0, 0, 23)
+barBack.BackgroundColor3 = Color3.fromRGB(235, 229, 245)
+barBack.BorderSizePixel = 0
+barBack.ClipsDescendants = true
+barBack.Parent = header
+round(barBack, 12)
+
+local barFill = Instance.new("Frame")
+barFill.Name = "NoiseFill"
+barFill.Size = UDim2.fromScale(0, 1)
+barFill.BackgroundColor3 = Color3.fromRGB(255, 133, 176)
+barFill.BorderSizePixel = 0
+barFill.Parent = barBack
+round(barFill, 12)
+local gradient = Instance.new("UIGradient")
+gradient.Color = ColorSequence.new(Color3.fromRGB(123, 218, 249), Color3.fromRGB(255, 91, 155))
+gradient.Parent = barFill
+
+local noiseCaption = label(header, "NOISE 0 / 100    •    every action makes chaos!", Enum.Font.GothamBold, 11, DARK)
+noiseCaption.Position = UDim2.new(0.04, 0, 0, 87)
+noiseCaption.Size = UDim2.new(0.92, 0, 0, 18)
+
+local stats = Instance.new("Frame")
+stats.Name = "Stats"
+stats.AnchorPoint = Vector2.new(0, 0)
+stats.Position = UDim2.new(0, 12, 0, 132)
+stats.Size = UDim2.new(0, 184, 0, 48)
+stats.BackgroundColor3 = Color3.fromRGB(255, 249, 212)
+stats.BorderSizePixel = 0
+stats.Parent = gui
+round(stats, 15)
+stroke(stats, Color3.fromRGB(255, 222, 128), 2)
+local statsLabel = label(stats, "🪙 0   •   PET: ???", Enum.Font.GothamBlack, 13, DARK)
+statsLabel.Size = UDim2.fromScale(1, 1)
+
+local banner = Instance.new("TextLabel")
+banner.Name = "ChaosBanner"
+banner.AnchorPoint = Vector2.new(0.5, 0)
+banner.Position = UDim2.new(0.5, 0, 0, 194)
+banner.Size = UDim2.new(0.94, 0, 0, 58)
+banner.BackgroundColor3 = DARK
+banner.BackgroundTransparency = 0.14
+banner.TextColor3 = Color3.fromRGB(255, 247, 200)
+banner.Font = Enum.Font.GothamBlack
+banner.TextScaled = true
+banner.TextWrapped = true
+banner.TextStrokeTransparency = 0.5
+banner.Text = ""
+banner.Visible = false
+banner.Parent = gui
+round(banner, 18)
+local bannerLimit = Instance.new("UISizeConstraint")
+bannerLimit.MaxSize = Vector2.new(650, 58)
+bannerLimit.Parent = banner
+local bannerFont = Instance.new("UITextSizeConstraint")
+bannerFont.MinTextSize = 13
+bannerFont.MaxTextSize = 23
+bannerFont.Parent = banner
+
+local foodPanel = Instance.new("Frame")
+foodPanel.Name = "FeedControls"
+foodPanel.AnchorPoint = Vector2.new(0.5, 1)
+foodPanel.Position = UDim2.new(0.5, 0, 1, -14)
+foodPanel.Size = UDim2.new(0.94, 0, 0, 168)
+foodPanel.BackgroundColor3 = Color3.fromRGB(255, 251, 246)
+foodPanel.BackgroundTransparency = 0.04
+foodPanel.BorderSizePixel = 0
+foodPanel.Parent = gui
+round(foodPanel, 20)
+stroke(foodPanel, Color3.fromRGB(229, 210, 255), 2)
+local panelLimit = Instance.new("UISizeConstraint")
+panelLimit.MaxSize = Vector2.new(590, 168)
+panelLimit.Parent = foodPanel
+
+local prompt = label(foodPanel, "FEED YOUR PET... IF YOU DARE 👀", Enum.Font.GothamBlack, 16, DARK)
+prompt.Position = UDim2.new(0.02, 0, 0, 5)
+prompt.Size = UDim2.new(0.96, 0, 0, 25)
+
+local subtitle = label(foodPanel, "Tap food • discover surprises • 1–4 on keyboard", Enum.Font.GothamMedium, 11, LAVENDER)
+subtitle.Position = UDim2.new(0.02, 0, 0, 28)
+subtitle.Size = UDim2.new(0.96, 0, 0, 19)
+
+local layout = Instance.new("Frame")
+layout.Name = "Buttons"
+layout.Position = UDim2.new(0.03, 0, 0, 53)
+layout.Size = UDim2.new(0.94, 0, 0, 105)
+layout.BackgroundTransparency = 1
+layout.Parent = foodPanel
+local grid = Instance.new("UIGridLayout")
+grid.CellSize = UDim2.new(0.485, 0, 0, 47)
+grid.CellPadding = UDim2.new(0.03, 0, 0, 7)
+grid.SortOrder = Enum.SortOrder.LayoutOrder
+grid.Parent = layout
+
+local buttonOrder = {"Candy", "Pepper", "Bubble", "Star"}
+local buttons: {[string]: TextButton} = {}
+local pressedAt = 0
+local function clickFood(food: string)
+    local now = os.clock()
+    if now - pressedAt < 0.12 then return end
+    pressedAt = now
+    remote:FireServer("Feed", food)
+    local button = buttons[food]
+    if button then
+        TweenService:Create(button, TweenInfo.new(0.1, Enum.EasingStyle.Back), {Rotation = -3}):Play()
+        task.delay(0.14, function()
+            if button and button.Parent then TweenService:Create(button, TweenInfo.new(0.25, Enum.EasingStyle.Elastic), {Rotation = 0}):Play() end
+        end)
+    end
+end
+
+for index, food in ipairs(buttonOrder) do
+    local data = Config.Foods[food]
+    local b = Instance.new("TextButton")
+    b.Name = food
+    b.LayoutOrder = index
+    b.Text = tostring(index) .. "   " .. data.label
+    b.Font = Enum.Font.GothamBlack
+    b.TextScaled = true
+    b.TextColor3 = DARK
+    b.BackgroundColor3 = data.color
+    b.BorderSizePixel = 0
+    b.AutoButtonColor = true
+    b.Parent = layout
+    round(b, 14)
+    stroke(b, Color3.fromRGB(255, 255, 255), 2)
+    local textLimit = Instance.new("UITextSizeConstraint")
+    textLimit.MinTextSize = 11
+    textLimit.MaxTextSize = 19
+    textLimit.Parent = b
+    b.MouseButton1Click:Connect(function() clickFood(food) end)
+    buttons[food] = b
+end
+
+UserInputService.InputBegan:Connect(function(input: InputObject, processed: boolean)
+    if processed then return end
+    local keyToFood = {
+        [Enum.KeyCode.One] = "Candy",
+        [Enum.KeyCode.Two] = "Pepper",
+        [Enum.KeyCode.Three] = "Bubble",
+        [Enum.KeyCode.Four] = "Star",
+    }
+    local food = keyToFood[input.KeyCode]
+    if food then clickFood(food) end
+end)
+
+local noticeToken = 0
+local function showNotice(message: string, color: Color3?)
+    noticeToken += 1
+    local token = noticeToken
+    banner.Text = message
+    banner.TextColor3 = color or Color3.fromRGB(255, 247, 200)
+    banner.Visible = true
+    banner.TextTransparency = 0
+    banner.BackgroundTransparency = 0.14
+    banner.Rotation = -2
+    TweenService:Create(banner, TweenInfo.new(0.24, Enum.EasingStyle.Back), {Rotation = 0}):Play()
+    task.delay(3, function()
+        if token ~= noticeToken or not banner.Parent then return end
+        local tween = TweenService:Create(banner, TweenInfo.new(0.5), {TextTransparency = 1, BackgroundTransparency = 1})
+        tween:Play()
+        tween.Completed:Wait()
+        if token == noticeToken then banner.Visible = false end
+    end)
+end
+
+local function countdown(seconds: number): string
+    local value = math.max(0, math.floor(seconds))
+    return string.format("%02d:%02d", math.floor(value / 60), value % 60)
+end
+
+remote.OnClientEvent:Connect(function(event: any)
+    if type(event) ~= "table" then return end
+    if event.type == "state" then
+        local fraction = math.clamp((event.noise or 0) / (event.maxNoise or 100), 0, 1)
+        TweenService:Create(barFill, TweenInfo.new(0.32, Enum.EasingStyle.Sine), {Size = UDim2.fromScale(fraction, 1)}):Play()
+        noiseCaption.Text = string.format("NOISE %d / %d   •   MORE CHAOS!", event.noise or 0, event.maxNoise or 100)
+        timer.Text = countdown(event.time or 0)
+        if event.phase == "AWAKE" then
+            title.Text = "🚨 GIGGLES IS AWAKE! RUN!"
+            phaseText.Text = "DODGE THE SHOCKWAVES!"
+            title.TextColor3 = Color3.fromRGB(243, 70, 107)
+            prompt.Text = "SURVIVE! THE PETS NEED YOU!"
+        elseif event.phase == "COOLDOWN" then
+            title.Text = "💤 PHEW... NAP TIME!"
+            phaseText.Text = "YOUR COINS ARE ON THE WAY"
+            title.TextColor3 = DARK
+            prompt.Text = "REST A MOMENT..."
+        else
+            title.Text = "😴 DON'T WAKE THE MONSTER!"
+            phaseText.Text = "SHHH... GIGGLES IS SLEEPING"
+            title.TextColor3 = DARK
+            prompt.Text = "FEED YOUR PET... IF YOU DARE 👀"
+        end
+    elseif event.type == "stats" then
+        statsLabel.Text = string.format("🪙 %d   •   PET: %s", event.coins or 0, event.pet or "???")
+    elseif event.type == "notice" then
+        showNotice(tostring(event.text or ""), event.color)
+    elseif event.type == "shake" then
+        -- Small HUD shake only, never override the camera on mobile.
+        local original = foodPanel.Position
+        foodPanel.Position = original + UDim2.fromOffset(5, 0)
+        TweenService:Create(foodPanel, TweenInfo.new(0.18, Enum.EasingStyle.Back), {Position = original}):Play()
+    end
+end)
+
+remote:FireServer("Sync")
+showNotice("WELCOME! TRY A SNACK 🍬🌶️🫧⭐", Color3.fromRGB(255, 227, 132))
