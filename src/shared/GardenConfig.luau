@@ -2,7 +2,7 @@
 -- ALL premium product IDs are disabled (0) until a Roblox place and receipts exist.
 -- "Premium" crops have deterministic yields, not paid random loot.
 local G = {}
-G.PLOT_COUNT = 6
+G.PLOT_COUNT = 9
 G.SLOT_COUNT = 12
 G.SEED_PACK_SIZE = 3
 G.MAX_STACK = 500
