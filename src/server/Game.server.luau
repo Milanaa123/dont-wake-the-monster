@@ -174,10 +174,27 @@ local function onPlayerAdded(player: Player)
     profile.pet = World.makePet(petDefinition.name .. "_" .. player.UserId, petDefinition.color, petDefinition.ear == "pointy")
     movePetNearPlayer(player)
 
-    player.CharacterAdded:Connect(function()
+    local function characterReady(character: Model)
+        local humanoid = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid", 5)
+        if humanoid and humanoid:IsA("Humanoid") then
+            humanoid.Died:Connect(function()
+                if phase == "AWAKE" and profiles[player] == profile and player.Character == character then
+                    profile.knockedOut = true
+                    profile.hearts = 0
+                    sendStats(player)
+                    remote:FireClient(player, {type = "notice", text = "OH NO! YOU'RE OUT UNTIL THE NEXT ROUND!", color = Color3.fromRGB(255, 161, 170)})
+                end
+            end)
+        end
         task.wait(0.5)
-        movePetNearPlayer(player)
+        if player.Character == character then movePetNearPlayer(player) end
+    end
+    player.CharacterAdded:Connect(function(character: Model)
+        task.spawn(characterReady, character)
     end)
+    if player.Character then
+        task.spawn(characterReady, player.Character)
+    end
     sendStats(player)
     sendCollection(player)
     sendState(player)
@@ -413,8 +430,8 @@ local function monsterAction()
         task.delay(0.8, function() monsterStrike(spot, 28, 55, true) end)
     elseif choice == 2 then
         notice("GIANT SNEEZE! HOLD ON!", Color3.fromRGB(136, 229, 255))
-        World.wave(Vector3.new(0, 14, 0), 88, Color3.fromRGB(122, 213, 255))
-        task.delay(0.9, function() monsterStrike(Vector3.new(0, 12, 0), 86, 72, false) end)
+        World.wave(Vector3.new(0, 14, 0), 60, Color3.fromRGB(122, 213, 255))
+        task.delay(0.9, function() monsterStrike(Vector3.new(0, 12, 0), 58, 55, false) end)
     elseif choice == 3 then
         notice("THE SKY IS RAINING JELLY!", Color3.fromRGB(255, 223, 114))
         for _ = 1, 3 do
@@ -534,6 +551,12 @@ RunService.Heartbeat:Connect(function(dt: number)
         local root = rootFor(player)
         local pet = profile.pet
         if root and root.Position.Y < -18 then
+            if phase == "AWAKE" and not profile.knockedOut then
+                profile.knockedOut = true
+                profile.hearts = 0
+                sendStats(player)
+                remote:FireClient(player, {type = "notice", text = "SPLASH! OUT FOR THIS ROUND!", color = Color3.fromRGB(152, 230, 255)})
+            end
             root.CFrame = CFrame.new(0, 16, 74)
             root.AssemblyLinearVelocity = Vector3.zero
         end
