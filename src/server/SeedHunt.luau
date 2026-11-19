@@ -79,7 +79,7 @@ function Hunt.collect(h: any, seeds: any, nodeId: any, roll: number, assist: num
     local adjusted = math.clamp(roll + math.clamp(assist, 0, 0.08), 0, 0.9999999)
     local rarity = if adjusted < 0.65 then "common" elseif adjusted < 0.93 then "uncommon" else "rare"
     local index = if rarity == "common" then 1 elseif rarity == "uncommon" then 2 else 3
-    local seed = found.node.loot[index]
+    local seed = if index == 3 and found.node.loot[4] and adjusted >= 0.965 then found.node.loot[4] else found.node.loot[index]
     if not G.Crops[seed] or G.Crops[seed].kind ~= "ordinary" then return false, "Invalid loot table", nil, nil, false end
     local number = if rarity == "common" then 2 else 1
     if (seeds[seed] or 0) > X.SeedCap - number then return false, "Seed bag full for this plant", nil, nil, false end

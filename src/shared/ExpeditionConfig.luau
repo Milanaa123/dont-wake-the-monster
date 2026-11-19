@@ -31,7 +31,7 @@ X.Zones = {
         name = "Giggle Ruins", icon = "🗿", hint = "Ancient stones hum when the giant snores.",
         color = Color3.fromRGB(235, 167, 212),
         nodes = {
-            {id = "ruins_1", x = -23, z = -101, label = "Old Idol", loot = {"Pepper", "GlowPumpkin", "Dragonfruit"}},
+            {id = "ruins_1", x = -23, z = -101, label = "Old Idol", loot = {"Pepper", "GlowPumpkin", "Dragonfruit", "LavaMelon"}},
             {id = "ruins_2", x = 23, z = -101, label = "Crystal Tablet", loot = {"Corn", "StardustRice", "JellyCactus"}},
             {id = "ruins_3", x = 7, z = 102, label = "Secret Gateway", loot = {"GummyGrape", "Peppermint", "CaramelApple"}},
         },
