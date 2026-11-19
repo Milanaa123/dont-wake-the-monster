@@ -29,6 +29,21 @@ jobs:
           chmod +x /tmp/rojo/rojo
           /tmp/rojo/rojo --version
 
+      - name: Install Luau compiler and check script syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 \
+            'https://github.com/luau-lang/luau/releases/download/0.747/luau-ubuntu.zip' \
+            -o /tmp/luau.zip
+          mkdir -p /tmp/luau
+          unzip -q /tmp/luau.zip -d /tmp/luau
+          chmod +x /tmp/luau/luau-compile
+          while IFS= read -r -d '' script; do
+            echo "Checking $script"
+            /tmp/luau/luau-compile "$script" > /dev/null
+          done < <(find src -name '*.luau' -print0)
+
       - name: Build playable-place file
         shell: bash
         run: |
