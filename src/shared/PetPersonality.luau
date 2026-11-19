@@ -46,7 +46,8 @@ function Personality.seedFor(userId: number, petIndex: number): number
 end
 
 function Personality.generate(seed: number, species: string?)
-    local roll = generator(seed)
+    local normalizedSeed = math.max(1, math.floor(math.abs(seed)) % (LIMIT - 1))
+    local roll = generator(normalizedSeed)
     local temperament = Personality.Temperaments[roll(#Personality.Temperaments)]
     local habit = Personality.Habits[roll(#Personality.Habits)]
     local fear = Personality.Fears[roll(#Personality.Fears)]
@@ -72,7 +73,7 @@ function Personality.generate(seed: number, species: string?)
     local hint = hints[temperament]
     if hint then traits[hint[1]] = math.clamp(traits[hint[1]] + hint[2], 1, 100) end
     return {
-        seed = math.floor(math.abs(seed)) % (LIMIT - 1) + 1,
+        seed = normalizedSeed,
         temperament = temperament,
         habit = habit,
         fear = fear,
