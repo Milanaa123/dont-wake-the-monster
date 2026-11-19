@@ -20,7 +20,7 @@ function Shop.offers(now: number)
     local offers = {}
     -- Coprime step traverses all 28 ordinary crops without duplicate slots.
     for slot = 1, Shop.OfferCount do
-        local index = ((rotation * 7 + (slot - 1) * 9) % #ordinary) + 1
+        local index = ((rotation * 5 + (slot - 1) * 9) % #ordinary) + 1
         local key = ordinary[index]
         local crop = G.Crops[key]
         local price = math.max(5, math.floor(crop.coins * 0.62))
