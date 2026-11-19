@@ -54,10 +54,23 @@ try {
     $deadline = (Get-Date).AddSeconds(155)
     do {
         Start-Sleep -Seconds 8
-        $versions = Join-Path $env:LOCALAPPDATA "Roblox\Versions"
-        if (Test-Path $versions) {
-            $studio = Get-ChildItem $versions -Filter "RobloxStudioBeta.exe" -Recurse -ErrorAction SilentlyContinue |
-                Sort-Object LastWriteTime -Descending | Select-Object -First 1 -ExpandProperty FullName
+        # The 2026 Studio installer may use Program Files rather than LocalAppData.
+        # Prefer the actually running signed Studio executable from our own installer.
+        $runningStudio = Get-Process RobloxStudioBeta -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($runningStudio) {
+            try { $studio = $runningStudio.Path } catch { }
+        }
+        if (-not $studio) {
+            foreach ($versions in @(
+                (Join-Path $env:LOCALAPPDATA "Roblox\Versions"),
+                (Join-Path $env:ProgramFiles "Roblox\Versions"),
+                (Join-Path ${env:ProgramFiles(x86)} "Roblox\Versions")
+            )) {
+                if (-not (Test-Path $versions)) { continue }
+                $studio = Get-ChildItem $versions -Filter "RobloxStudioBeta.exe" -Recurse -ErrorAction SilentlyContinue |
+                    Sort-Object LastWriteTime -Descending | Select-Object -First 1 -ExpandProperty FullName
+                if ($studio) { break }
+            }
         }
         if ($studio) { break }
     } while ((Get-Date) -lt $deadline)

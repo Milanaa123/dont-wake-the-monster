@@ -1,4 +1,4 @@
-name: Experimental real Studio capture (Windows)
+name: Experimental real Studio capture (Windows) # Retry after discovering alternate install path
 
 on:
   push:
