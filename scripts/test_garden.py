@@ -12,16 +12,27 @@ import tempfile
 root = Path(__file__).resolve().parents[1]
 exe = sys.argv[1] if len(sys.argv) > 1 else "luau"
 config = (root / "src/shared/GardenConfig.luau").read_text(encoding="utf-8")
+exploration_config = (root / "src/shared/ExpeditionConfig.luau").read_text(encoding="utf-8")
+hunt = (root / "src/server/SeedHunt.luau").read_text(encoding="utf-8")
 catalog = (root / "src/server/RecipeCatalog.luau").read_text(encoding="utf-8")
 rules = (root / "src/server/Garden.luau").read_text(encoding="utf-8")
 assert config.endswith("return G\n")
+assert exploration_config.endswith("return X\n")
+assert hunt.endswith("return Hunt\n")
 assert catalog.endswith("return Catalog\n")
 assert rules.endswith("return Garden\n")
 config = config.removesuffix("return G\n")
+exploration_config = exploration_config.removesuffix("return X\n")
+hunt = hunt.replace('local ReplicatedStorage = game:GetService("ReplicatedStorage")\n', "", 1)
+hunt = hunt.replace('local X = require(ReplicatedStorage:WaitForChild("ExpeditionConfig"))\n', "", 1)
+hunt = hunt.replace('local G = require(ReplicatedStorage:WaitForChild("GardenConfig"))\n', "", 1)
+hunt = hunt.removesuffix("return Hunt\n")
 catalog = catalog.removesuffix("return Catalog\n")
 rules = rules.replace('local ReplicatedStorage = game:GetService("ReplicatedStorage")\n', "", 1)
 rules = rules.replace('local G = require(ReplicatedStorage:WaitForChild("GardenConfig"))\n', "", 1)
 rules = rules.replace('local Catalog = require(script.Parent:WaitForChild("RecipeCatalog"))\n', "", 1)
+rules = rules.replace('local Hunt = require(script.Parent:WaitForChild("SeedHunt"))\n', "", 1)
+rules = rules.replace('local X = require(ReplicatedStorage:WaitForChild("ExpeditionConfig"))\n', "", 1)
 rules = rules.removesuffix("return Garden\n")
 
 suite = r"""
@@ -150,7 +161,7 @@ bad, message = Garden.experiment(g, {"ThunderPlum", "ThunderPlum"})
 assert(not bad, "unowned harvested ingredient rejected")
 print("PASS: 30 crops, 26 secret recipes, empty book, discovery, failed mixes, repeat crafting, 30-plant support, saves and exploits")
 """
-source = (
+source = "Color3 = {fromRGB = function(r,g,b) return {r,g,b} end}\n" + config + "\n" + exploration_config + "\n" + catalog + "\n" + hunt + "\n" + rules + "\n" + suite
     "Color3 = {fromRGB = function(r,g,b) return {r,g,b} end}\n"
     + config + "\n" + catalog + "\n" + rules + "\n" + suite
 )
