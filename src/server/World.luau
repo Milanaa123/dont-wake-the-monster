@@ -212,7 +212,7 @@ function World.makePet(name: string, color: Color3, pointy: boolean): Model
         orb(pet, "TinyFoot", Vector3.new(x * 0.7, -1.86, -0.9), Vector3.new(1.25, 0.7, 1.45), color)
     end
     orb(pet, "PuffTail", Vector3.new(0, -0.2, 2.05), Vector3.new(1.8, 1.8, 1.8), color)
-    local species = string.match(name, "^[^_]+") or name
+    local species = (string.match(name, "^[^_]+") or name):gsub("^Wild", "")
     if species == "Nugget" or species == "Zuzu" then
         for _, x in ipairs({-1, 1}) do
             local wing = orb(pet, "FluffyWing", Vector3.new(x * 2.6, 0.2, 0.3), Vector3.new(1.5, 2.4, 1.2), Color3.fromRGB(255, 245, 196))
@@ -235,6 +235,98 @@ function World.makePet(name: string, color: Color3, pointy: boolean): Model
     elseif species == "Wobble" then
         local halo = part(pet, "WobbleHalo", Vector3.new(0.4, 5.2, 5.2), CFrame.new(0, 3.1, 0) * CFrame.Angles(0, 0, math.rad(90)), PURPLE, Enum.Material.Neon, Enum.PartType.Cylinder)
         halo.Transparency = 0.32
+    elseif species == "Luma" then
+        orb(pet, "FluffyCloud", Vector3.new(0, 2.5, 0), Vector3.new(4, 1.5, 3), Color3.fromRGB(255, 248, 251))
+        orb(pet, "StarCharm", Vector3.new(0, 3.45, -0.8), Vector3.new(1.4, 1.7, 1), YELLOW, Enum.Material.Neon)
+    elseif species == "Snorf" then
+        orb(pet, "BigSnout", Vector3.new(0, -0.5, -2.35), Vector3.new(2.2, 1.3, 1.3), Color3.fromRGB(241, 203, 159))
+        for _, x in ipairs({-1, 1}) do orb(pet, "FloppyEar", Vector3.new(x * 2.1, 2, 0), Vector3.new(1.4, 2.8, 1.6), color) end
+    elseif species == "Floofle" then
+        for _, x in ipairs({-1, 1}) do
+            orb(pet, "BunnyEar", Vector3.new(x * 1.3, 3.4, 0), Vector3.new(1.4, 4.2, 1.1), color)
+            orb(pet, "BuckTooth", Vector3.new(x * 0.4, -1, -2.1), Vector3.new(0.65, 0.8, 0.5), Color3.fromRGB(255, 254, 248))
+        end
+    elseif species == "Quibble" then
+        for _, x in ipairs({-1, 1}) do
+            orb(pet, "CrabClaw", Vector3.new(x * 3.2, -0.2, -0.5), Vector3.new(2.1, 2.4, 2.1), color)
+            orb(pet, "EyeStalk", Vector3.new(x * 1.15, 2.8, -0.7), Vector3.new(0.8, 2.8, 0.8), color)
+        end
+    elseif species == "Fizzle" then
+        for i = 1, 4 do
+            local spike = orb(pet, "FireSpike", Vector3.new(0, 2.5 + i * 0.35, -1.6 + i * 0.8), Vector3.new(1.1, 1.8, 1), Color3.fromRGB(255, 224 - i * 24, 87), Enum.Material.Neon)
+            spike.CFrame *= CFrame.Angles(0, 0, math.rad(i * 12))
+        end
+    elseif species == "Puddle" then
+        for _, x in ipairs({-1, 1}) do
+            for i = 1, 3 do
+                orb(pet, "AxolotlGill", Vector3.new(x * (2.4 + i * 0.2), 1.8 - i * 0.85, -0.4), Vector3.new(1.5, 0.7, 0.9), Color3.fromRGB(255, 174, 195))
+            end
+        end
+    elseif species == "Sprig" then
+        for _, x in ipairs({-1, 1}) do
+            local horn = orb(pet, "LittleAntler", Vector3.new(x * 1.5, 3.7, 0), Vector3.new(0.6, 3.2, 0.6), Color3.fromRGB(169, 123, 92))
+            horn.CFrame *= CFrame.Angles(0, 0, math.rad(x * 20))
+            orb(pet, "LeafCrown", Vector3.new(x * 1.7, 4.5, 0), Vector3.new(1.4, 0.7, 1), MINT)
+        end
+    elseif species == "Twinkle" then
+        for _, x in ipairs({-1, 1}) do
+            orb(pet, "ButterflyWingTop", Vector3.new(x * 3.2, 1.2, 1.7), Vector3.new(3, 3.9, 0.7), Color3.fromRGB(247, 185, 253))
+            orb(pet, "ButterflyWingBottom", Vector3.new(x * 2.9, -0.8, 1.8), Vector3.new(2, 2.4, 0.7), Color3.fromRGB(167, 220, 254))
+        end
+    elseif species == "Mallow" then
+        orb(pet, "MarshmallowHat", Vector3.new(0, 2.75, 0), Vector3.new(3.5, 1.5, 3.5), Color3.fromRGB(255, 251, 238))
+        orb(pet, "HeartNose", Vector3.new(0, -0.4, -2.5), Vector3.new(0.9, 0.65, 0.6), PINK)
+    elseif species == "Pebble" then
+        orb(pet, "TurtleShell", Vector3.new(0, 0.7, 2.0), Vector3.new(4.7, 3.8, 2.5), Color3.fromRGB(92, 174, 120))
+        for _, x in ipairs({-1, 1}) do orb(pet, "ShellSpot", Vector3.new(x * 1.3, 1.7, 3.0), Vector3.new(1.3, 1.3, 0.6), MINT) end
+    elseif species == "Noodle" then
+        for _, x in ipairs({-1, 1}) do
+            orb(pet, "LongFloppyEar", Vector3.new(x * 2.5, 2.1, -0.6), Vector3.new(1.1, 4.8, 1.2), color)
+            orb(pet, "Whisker", Vector3.new(x * 1.6, -0.5, -2.2), Vector3.new(1.4, 0.15, 0.2), Color3.fromRGB(255, 249, 230))
+        end
+    elseif species == "Swoop" then
+        for _, x in ipairs({-1, 1}) do
+            orb(pet, "OwlFaceDisc", Vector3.new(x * 1.1, 0.6, -1.95), Vector3.new(2.3, 2.5, 0.55), Color3.fromRGB(251, 231, 255))
+            orb(pet, "OwlFeather", Vector3.new(x * 1.8, 2.9, 0), Vector3.new(0.85, 2.2, 1), color)
+        end
+        orb(pet, "Beak", Vector3.new(0, -0.25, -2.4), Vector3.new(1, 1.4, 0.85), YELLOW)
+    elseif species == "Rumble" then
+        for i = 1, 5 do
+            orb(pet, "DinoSpike", Vector3.new(0, 2.3, -2.1 + i), Vector3.new(1.4, 1.3, 1.5), Color3.fromRGB(121, 201, 133))
+        end
+    elseif species == "Doodle" then
+        for i = 1, 5 do
+            local theta = i * math.pi * 2 / 5
+            orb(pet, "InkDot", Vector3.new(math.cos(theta) * 3, 1 + math.sin(theta) * 2.8, 0), Vector3.new(0.65, 0.65, 0.65), Color3.fromRGB(82, 77, 138))
+        end
+    elseif species == "Crumble" then
+        for i = 1, 6 do
+            local theta = i * math.pi * 2 / 6
+            orb(pet, "ChocolateChip", Vector3.new(math.cos(theta) * 1.45, math.sin(theta) * 1.4, -1.88), Vector3.new(0.65, 0.7, 0.35), Color3.fromRGB(128, 81, 65))
+        end
+    elseif species == "Squiggle" then
+        for i = 1, 6 do
+            local theta = i * math.pi * 2 / 6
+            orb(pet, "SquidArm", Vector3.new(math.cos(theta) * 2, -2, math.sin(theta) * 2), Vector3.new(0.8, 2.2, 0.8), color)
+        end
+    elseif species == "Glimmer" then
+        local horn = orb(pet, "UnicornHorn", Vector3.new(0, 3.6, -0.6), Vector3.new(1, 3.3, 1), Color3.fromRGB(255, 238, 138), Enum.Material.Neon)
+        horn.CFrame *= CFrame.Angles(math.rad(-22), 0, 0)
+        for _, x in ipairs({-1, 1}) do orb(pet, "RainbowMane", Vector3.new(x * 1.2, 2.1, 0.8), Vector3.new(2, 1.3, 1.5), Color3.fromRGB(235, 178, 254)) end
+    elseif species == "Splat" then
+        for _, x in ipairs({-1, 1}) do
+            orb(pet, "FrogEyebulge", Vector3.new(x * 1.3, 2.2, -1.1), Vector3.new(2, 2, 1.8), color)
+            orb(pet, "FrogFoot", Vector3.new(x * 2, -1.95, -1), Vector3.new(2, 0.7, 2), color)
+        end
+    elseif species == "Puffin" then
+        for _, x in ipairs({-1, 1}) do orb(pet, "PuffinWing", Vector3.new(x * 2.5, 0.1, 0), Vector3.new(1.5, 3, 1.9), Color3.fromRGB(255, 245, 218)) end
+        orb(pet, "OrangeBeak", Vector3.new(0, -0.5, -2.65), Vector3.new(1.5, 1.1, 1.4), Color3.fromRGB(255, 165, 94))
+    elseif species == "Echo" then
+        for _, x in ipairs({-1, 1}) do
+            local wing = orb(pet, "BatWing", Vector3.new(x * 3.1, 0.7, 1), Vector3.new(3, 2.6, 0.75), Color3.fromRGB(94, 79, 174))
+            wing.CFrame *= CFrame.Angles(0, 0, math.rad(x * 24))
+            orb(pet, "Fang", Vector3.new(x * 0.6, -1.1, -2.17), Vector3.new(0.45, 0.95, 0.45), Color3.fromRGB(254, 254, 248))
+        end
     end
     local tag = Instance.new("BillboardGui")
     tag.Name = "PetNameTag"
@@ -305,13 +397,13 @@ function World.createGarden(userId: number, ownerName: string, slot: number): bo
     model.Parent = scenery
     farmModels[userId] = model
     farmCenters[userId] = center
-    local base = part(model, "GardenPlatform", Vector3.new(28, 0.8, 23), center, Color3.fromRGB(247, 213, 160), Enum.Material.WoodPlanks)
+    local base = part(model, "GardenPlatform", Vector3.new(28, 0.8, 32), center, Color3.fromRGB(247, 213, 160), Enum.Material.WoodPlanks)
     base.CanCollide = true
-    part(model, "GreenGrass", Vector3.new(26, 0.4, 21), center * CFrame.new(0, 0.5, 0), Color3.fromRGB(166, 234, 156), Enum.Material.Grass)
+    part(model, "GreenGrass", Vector3.new(26, 0.4, 30), center * CFrame.new(0, 0.5, 0), Color3.fromRGB(166, 234, 156), Enum.Material.Grass)
     local labelPosition = (center * CFrame.new(0, 2.2, 12)).Position
     billboard(model, "🌼 " .. string.sub(ownerName, 1, 16) .. "'S GARDEN", labelPosition, 260)
 
-    for index = 1, 6 do
+    for index = 1, 9 do
         local col = (index - 1) % 3
         local row = math.floor((index - 1) / 3)
         local plot = Instance.new("Model")
@@ -319,7 +411,7 @@ function World.createGarden(userId: number, ownerName: string, slot: number): bo
         plot.Parent = model
         plot:SetAttribute("StageKey", "EMPTY")
         plot:SetAttribute("PlotIndex", index)
-        local place = center * CFrame.new((col - 1) * 8.2, 0.9, (row - 0.5) * 8.4)
+        local place = center * CFrame.new((col - 1) * 8.2, 0.9, (row - 1) * 8.4)
         plot:SetAttribute("PosX", place.Position.X)
         plot:SetAttribute("PosY", place.Position.Y)
         plot:SetAttribute("PosZ", place.Position.Z)
@@ -366,7 +458,7 @@ function World.updateGarden(userId: number, garden: any, cropConfig: any)
     local model = farmModels[userId]
     if not model then return end
     local now = os.time()
-    for index = 1, 6 do
+    for index = 1, cropConfig.PLOT_COUNT do
         local plot = model:FindFirstChild("Plot_" .. index)
         if not plot or not plot:IsA("Model") then continue end
         local p = garden.plots[index]
