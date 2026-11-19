@@ -198,7 +198,7 @@ local function render()
     hint.Text = "🐾 " .. pet.name .. "   •   " .. (pet.description or "a tiny chaos creature") .. "   •   " .. profile.mood
     addInfoRow("👑 " .. profile.temperament .. " CHARACTER", "Habit: " .. profile.habit .. "   •   Fear: " .. profile.fear, LILAC)
     addInfoRow("🍬 SECRET FOOD TASTES", "Loves " .. profile.favoriteFood .. "   •   Dislikes " .. profile.dislikedFood, PINK)
-    addInfoRow("💞 HOW TO SHOW LOVE", "Favorite attention: " .. profile.affection .. "   •   Mood: " .. profile.mood, MINT)
+    addInfoRow("💞 " .. (profile.bondStage or "FRIENDSHIP"), "Loves: " .. profile.affection .. "   •   Mood: " .. profile.mood, MINT)
     local meter = panelRow(156, Color3.fromRGB(250, 237, 230))
     indicator(meter, 0, "💖 FRIENDSHIP", profile.bond, Color3.fromRGB(255, 110, 149))
     indicator(meter, 1, "😊 HAPPINESS", profile.happiness, Color3.fromRGB(244, 191, 88))
