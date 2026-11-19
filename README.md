@@ -82,7 +82,7 @@ A colorful, chaotic multiplayer Roblox prototype: feed your ridiculous pet, trig
 
 ## Publication without a local PC
 
-The **[current mobile-only release guide](docs/PUBLISH_FROM_ANDROID_2026.md)** explains how to bootstrap a Roblox place using an existing experience, official Roblox Build (limited regions), Studio Lite, or a remote Studio, then upload our **actual** `.rbxlx` with one GitHub Actions click using either of two supported Roblox Open Cloud APIs. Once uploaded, the game can be tested privately on Android. Public release is separate and is subject to Roblox age and account eligibility requirements.
+The **[current mobile-only release guide](docs/PUBLISH_FROM_ANDROID_2026.md)** explains how to bootstrap a Roblox place using an existing experience, official Roblox Build (limited regions), or a remote Studio. Studio Lite is not a confirmed way to bootstrap an empty account, then upload our **actual** `.rbxlx` with one GitHub Actions click using either of two supported Roblox Open Cloud APIs. Once uploaded, the game can be tested privately on Android. Public release is separate and is subject to Roblox age and account eligibility requirements.
 
 ## Local development (optional)
 

@@ -42,8 +42,10 @@ https://github.com/Milanaa123/dont-wake-the-monster/actions/workflows/upload-rob
 
 1. In [Creator Dashboard](https://create.roblox.com/dashboard/creations),
    check for an **existing test experience / starting place** and copy the
-   Place ID. If none exists, try **Build** (limited regions), **Studio Lite**
-   (third-party Roblox game), or one-time official Windows/macOS Studio.
+   Place ID. If none exists, first check for **Build** in the official Roblox mobile app
+   (limited countries and age verification). **Studio Lite cannot reliably
+   create the first experience on an empty account** according to its own FAQ.
+   Otherwise one-time official Windows/macOS Studio is necessary.
    See [all verified options](PUBLISH_FROM_ANDROID_2026.md).
 2. Create a Roblox Open Cloud key in Creator Dashboard for the selected
    backend and save it in

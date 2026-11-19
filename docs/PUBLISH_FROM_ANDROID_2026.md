@@ -12,6 +12,8 @@ The [official Roblox Assets API](https://create.roblox.com/docs/cloud/guides/usa
 
 ## First attempt: check for an existing place on your Android phone
 
+**Screenshot reviewed 19 November 2026:** Creator Dashboard → Experiences → My Experiences displays the **"Create an experience"** empty state and **"Create in Studio"**. No owned experience or Place ID is visible. The mobile Creator Dashboard button launches desktop Studio rather than creating the missing initial place. **Next actionable check is whether the official Roblox app offers a Build tab.** If not, the verified first-experience route is one-time official Studio on an authorized Windows/Mac computer.
+
 1. Open [Creator Dashboard — Creations](https://create.roblox.com/dashboard/creations) in Chrome and log in directly to Roblox yourself.
 2. Open **Experiences**. If your account already has an experience (perhaps a default place), open it → **Places**.
 3. Tap its starting-place tile to open the place configuration. The **Place ID** is the number after `/places/` in its URL, e.g. `.../experiences/222222/places/333333/configure` means **Place ID = 333333**, **Universe ID = 222222**.
@@ -25,18 +27,18 @@ Pick exactly one creation method (these create a *starting place*, NOT our final
 
 ### A. Official Build tab on Android (only if available)
 
-- Roblox app → **Build** → type `Create a private test game named Don't Wake the Monster! with an empty island`. Let the app create a game.
+- Roblox app → **Build** (if the tab is visible on this account) → create a basic test experience. Check the visibility options before any publishing; the exact private/public flow may vary in alpha.
 - **Do not automatically tap Publish/public release**; use the available private/preview experience path first.
 - Open the game in Creator Dashboard and obtain the Place ID. Then try the GitHub **Saved** upload below.
 - **Not yet verified:** Open Cloud `.rbxlx` replacement of a Build-created place. It is technically a Roblox place and Roblox says Build games can be opened in Studio, but the combined Open Cloud overwrite flow is **not directly confirmed by Roblox documentation**.
 - Modifying a Build creation outside Build can remove its automatic Moderate content rating; you then need to complete the Roblox Content Ratings Questionnaire.
-- **Availability:** Roblox says the Build rollout is regional and age-checked. Its October 2026 earnings transcript names tests in New Zealand, Singapore, Serbia and Thailand and says broader U.S. rollout is planned for December 2026 and global rollout for 2027. Do not assume this feature appears in Poland or elsewhere.
+- **Availability:** Roblox's updated help page (as of 19 November 2026) lists New Zealand, Singapore, Serbia, Thailand and Canada for Build. Roblox requires age checks; it is not confirmed available in Poland. https://en.help.roblox.com/hc/en-us/articles/51824773718932-Creating-with-Build
 - References: https://en.help.roblox.com/hc/en-us/articles/51824773718932-Creating-with-Build ; https://www.sec.gov/Archives/edgar/data/1315098/000162828026068235/ex991-q32026earningsshar.htm
 
 ### B. Studio Lite inside Roblox (third-party experience, Android-friendly)
 
 - Open https://www.roblox.com/games/10959918411/Studio-Lite with the **official Roblox app**.
-- This is a **user-created Roblox game**, not the official Roblox Studio. It can create and publish a basic Roblox experience from the phone. Follow its current in-experience publishing instructions; it may require a Roblox Open Cloud API key.
+- This is a **user-created Roblox game**, not the official Roblox Studio. Its developer's FAQ explicitly says that **Studio Lite needs an existing Roblox experience to publish to**, and that it cannot create an initial Experience directly on mobile (developer reply October 29, 2024). Therefore it is **NOT a solution for an account showing "Create an experience" and zero owned experiences**, unless its capabilities have since changed and you can independently verify that in its current UI. Do not create or share broad/unrestricted Open Cloud keys just to test it.
 - After a real game/Place ID exists, **do not try to paste the entire repo into Studio Lite manually**. Instead use our own GitHub Open Cloud upload workflow below.
 - Source: the actual Roblox game's description and developer's guide: https://devforum.roblox.com/t/studio-lite-tips-and-faq/3191419/
 
