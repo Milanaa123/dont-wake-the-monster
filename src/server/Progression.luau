@@ -2,6 +2,7 @@
 -- Pure progression rules. Never trust a client-supplied coin total or ownership flag.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage:WaitForChild("Config"))
+local Garden = require(script.Parent:WaitForChild("Garden"))
 
 local Progression = {}
 local MAX_COINS = 1000000000
@@ -26,12 +27,14 @@ function Progression.new()
         survivalCount = 0,
         questClaimed = {feeds = false, survivals = false, discoveries = false},
         dailyDay = -1,
+        garden = Garden.new(),
     }
 end
 
 function Progression.load(profile: any, data: any)
     if type(data) ~= "table" then return end
     profile.coins = saneInt(data.coins, MAX_COINS)
+    profile.garden = Garden.load(data.garden)
     local id = saneInt(data.petIndex, #Config.Pets)
     profile.petIndex = if id >= 1 then id else 1
 
@@ -87,6 +90,7 @@ function Progression.serialize(profile: any)
             discoveries = profile.questClaimed.discoveries,
         },
         dailyDay = profile.dailyDay,
+        garden = Garden.serialize(profile.garden),
     }
 end
 
