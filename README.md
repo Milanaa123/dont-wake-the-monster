@@ -9,6 +9,11 @@ A colorful, chaotic multiplayer Roblox prototype: feed your ridiculous pet, trig
 - **Optional 3/4 garden-view camera** enabled by default, switch to follow camera with the on-screen button or V key. This is actual Roblox client code, not a generated mockup.
 - Thirty collectible, differently styled companion pets with procedural cosmetic details, bought using **in-game coins only**.
 - **Gardening & Secret Alchemy v0.4**: 30 crops, 9 plots/player, 28 coin-earnable seed varieties, offline growth, staged art and 26 hidden experimental recipes.
+- **Secret Seed Forest v0.9:** three original explorable biomes, nine physical seed caches with hold-to-search prompts, personal cooldowns and a 28-seed discovery album.
+- Four rotating weather conditions can change plant growth and create Golden, Dewy, Moonlit and Giggly mutations with a fixed doubled harvest. Pets help find seeds and tend growing crops.
+- **Cooperative Seed Festival:** 12 server-wide seed searches reward participating players. Funny garden incidents such as singing plants and meowing melons can help wake the giant.
+- **Original audio package:** 18-second soft background-music loop, eleven short original comedic/gameplay effects plus the earlier cat purr. WAVs are in GitHub; actual Roblox playback requires owner-uploaded asset IDs.
+- **Analytics hooks:** first feed, first seed, first planting, recipe discovery, first survival and 10-minute participation (real data only after publishing).
 - The player's recipe book **starts empty**. Mixing 2–3 harvested ingredients discovers new formulas, and successful discoveries persist. Failed mixes create funny edible Oops Soup. No ingredient formulas are exposed in the client before discovery.
 - Four earnable fertilizer types speed up growth; two premium seed types and one premium fertilizer remain disabled previews.
 - **Living Pets v0.6**: every owned animal receives its own saved personality, not merely a species-wide type. 12 temperaments (from Kind to Grumpy and Wild), 12 habits, 7 fears, 7 ways of showing affection, favorite/disliked foods and six numerical character traits.
@@ -26,7 +31,7 @@ A colorful, chaotic multiplayer Roblox prototype: feed your ridiculous pet, trig
 - Responsive touchscreen controls and keyboard support.
 - Automatic Luau compilation, Rojo `.rbxlx` build and source/invariant checks through GitHub Actions.
 
-**Status: v0.8 source-code MVP. GitHub CI compiles, runs pure-Luau garden + personality tests and builds a .rbxlx; actual Roblox Studio runtime, appearance and multiplayer testing have NOT yet been performed.** Procedural art is a placeholder for final optimized meshes and animations. NO real Robux payments or marketplace product IDs are connected. In-game coin prices are not Robux prices. Cross-server persistence needs session-lock hardening before public release.
+**Status: v0.9 source-code MVP. GitHub CI compiles, runs pure-Luau garden + personality tests and builds a .rbxlx; actual Roblox Studio runtime, appearance and multiplayer testing have NOT yet been performed.** Procedural art is a placeholder for final optimized meshes and animations. NO real Robux payments or marketplace product IDs are connected. In-game coin prices are not Robux prices. Cross-server persistence needs session-lock hardening before public release.
 
 ## No-computer workflow
 
@@ -44,6 +49,10 @@ A colorful, chaotic multiplayer Roblox prototype: feed your ridiculous pet, trig
 - `src/server/Game.server.luau`: authoritative multiplayer game loop, hearts, boss damage, pet effects and saving.
 - `src/server/Progression.luau`: catalog, buying/equipping pets, daily rewards, gardening persistence and per-pet personality save migration.
 - `src/shared/PetPersonality.luau`: unique seeded genetics, mood, individual preferences, social scenes and bonding.
+- `src/shared/ExpeditionConfig.luau`, `src/server/SeedHunt.luau`: 3 biomes, 9 caches, weather and foraging.
+- `src/server/ForestWorld.luau`, `src/client/SeedExplorer.client.luau`: procedural forest graphics, physical pickup prompts, tracking and album UI.
+- `src/shared/AudioConfig.luau`, `src/client/Soundscape.client.luau`: audio ID mapping, event-driven SFX, fade/mute controls.
+- `assets/audio/`: 13 original music and SFX WAVs, awaiting Roblox audio import.
 - `src/shared/PetAffection.luau`: real-time cat purring, stroke tolerance, random overstimulation and global noise.
 - `src/client/PetCare.client.luau`: touch hold/pick-up controls, R/C shortcuts, purr volume meter and arms pose.
 - `assets/audio/original-cat-purr-loop.wav`: an original synthesized 4-second purr loop, pending authorized Roblox asset upload.
@@ -85,4 +94,4 @@ In Studio, select **Play** to test; enable Studio API services only for isolated
 - [ ] Monetization IDs, purchase receipt handling and age/regional compliance
 - [ ] Mobile performance profiling, moderation and public release
 
-See the [cuddling and purring guide](docs/PET_CARE.md), [visual direction and competitor audit](docs/VISUAL_DIRECTION.md), [Living Pets character system](docs/PERSONALITIES.md), [Gardening guide](docs/GARDENING.md), [Changelog](docs/CHANGELOG.md) and [Roadmap](docs/ROADMAP.md).
+See the [Secret Seed Forest guide](docs/SEED_FOREST.md), [original soundtrack setup](docs/AUDIO.md), [cuddling and purring guide](docs/PET_CARE.md), [visual direction and competitor audit](docs/VISUAL_DIRECTION.md), [Living Pets character system](docs/PERSONALITIES.md), [Gardening guide](docs/GARDENING.md), [Changelog](docs/CHANGELOG.md) and [Roadmap](docs/ROADMAP.md).

@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.9 — Secret Seed Forest & Original Music (2026-11-19)
+- Built 3 original fairytale biomes, nine physically searchable seed caches, a mobile seed journal, server distance checks and per-player 4-minute cache respawns.
+- All 28 ordinary seed species can be discovered without Robux; rare seed and pet curiosity chances are server-owned.
+- Four weather phases modify growing-time and create visibly glowing Golden/Dewy/Moonlit/Giggly mutations (fixed 2x yield).
+- Pets can help with gardening, while singing plants, dancing vegetables and sneezing carrots may add noise and wake the giant.
+- Added a daily five-find explorer reward and a server-wide 12-find Seed Festival with cooperative coin bonuses.
+- Updated tutorial to include exploration, alchemy, cuddle-noise and rescues.
+- Created original ~18-second gentle background loop and 11 original sound-effects WAVs, a Roblox client sound mixer and mute buttons.
+- Audio assets remain disabled until uploaded to the creator's Roblox account and IDs are configured; GitHub WAV sources alone are not audible in Roblox.
+- Added official Roblox AnalyticsService custom events for basic first-session funnels; only report data after an experience is published.
+- Luau compilation, seed/weather/cat rules tests, audio integrity checks and Rojo packaging are automated. In-engine Roblox Studio gameplay is still untested.
+
 ## v0.8 — Cuddle & Purr Panic (2026-11-19)
 - Added tap-to-carry companions in the avatar's arms and local raised-arm pose (for supported humanoid rigs).
 - Added hold-to-stroke input for mobile touch/mouse and R/C keyboard controls.
