@@ -12,6 +12,7 @@ local World = require(script.Parent:WaitForChild("World"))
 local Progression = require(script.Parent:WaitForChild("Progression"))
 local Garden = require(script.Parent:WaitForChild("Garden"))
 local RecipeCatalog = require(script.Parent:WaitForChild("RecipeCatalog"))
+local RescueObjective = require(script.Parent:WaitForChild("RescueObjective"))
 local GardenConfig = require(ReplicatedStorage:WaitForChild("GardenConfig"))
 
 World.build()
@@ -60,7 +61,7 @@ local function sendGarden(player: Player)
 end
 
 local function sendState(player: Player?)
-    local update = {type = "state", phase = phase, noise = noise, maxNoise = Config.NOISE_MAX, time = secondsLeft, wakes = wakeCount}
+    local update = {type = "state", phase = phase, noise = noise, maxNoise = Config.NOISE_MAX, time = secondsLeft, wakes = wakeCount, rescue = RescueObjective.status()}
     if player then
         remote:FireClient(player, update)
     else
@@ -698,6 +699,20 @@ local function startWake()
     World.setMonsterAwake(true)
     notice("OH NO!!! YOU WOKE GIGGLES! SURVIVE!", Color3.fromRGB(255, 113, 145))
     World.wave(Vector3.new(0, 11, 0), 90, Color3.fromRGB(255, 104, 156))
+    RescueObjective.start(function(player: Player, justCompleted: boolean, reward: number)
+        addCoins(player, reward)
+        if justCompleted then
+            notice("TEAM CHALLENGE COMPLETE! ALL LOST PETS ARE SAFE!", Color3.fromRGB(160, 255, 203))
+            World.burst(Vector3.new(0, 52, 0), Color3.fromRGB(255, 232, 122), 30, 32)
+        else
+            remote:FireClient(player, {type = "questToast", text = "PET RESCUED! +" .. reward .. " COINS!"})
+        end
+        sendState()
+    end, function(player: Player): boolean
+        local profile = profiles[player]
+        return phase == "AWAKE" and profile ~= nil and not profile.knockedOut
+    end)
+    notice("SAVE THE RUNAWAY PETS! Follow their HELP prompts!", Color3.fromRGB(255, 232, 151))
     sendState()
 end
 
@@ -706,12 +721,17 @@ local function endWake()
     noise = 0
     secondsLeft = Config.COOLDOWN_SECONDS
     World.setMonsterAwake(false)
+    local teamCompleted = RescueObjective.completed()
     for _, player in ipairs(Players:GetPlayers()) do
         local profile = profiles[player]
         if profile then
             if rootFor(player) and not profile.knockedOut then
                 local bonus = Progression.recordSurvival(profile)
-                addCoins(player, Config.SURVIVAL_REWARD + bonus)
+                local rescueBonus = if teamCompleted and RescueObjective.participated(player) then RescueObjective.status().bonus else 0
+                addCoins(player, Config.SURVIVAL_REWARD + bonus + rescueBonus)
+                if rescueBonus > 0 then
+                    remote:FireClient(player, {type = "questToast", text = "CO-OP HERO! +" .. rescueBonus .. " BONUS COINS!"})
+                end
                 if bonus > 0 then
                     task.delay(1.2, function()
                         if profiles[player] == profile then
@@ -728,7 +748,8 @@ local function endWake()
             sendCollection(player)
         end
     end
-    notice("GIGGLES IS ASLEEP! Surviving players earned coins.", Color3.fromRGB(150, 255, 204))
+    RescueObjective.finish()
+    notice(if teamCompleted then "GIGGLES IS ASLEEP! HEROES SAVED THE PETS!" else "GIGGLES IS ASLEEP! NEXT TIME, RESCUE THE RUNAWAYS!", Color3.fromRGB(150, 255, 204))
     sendState()
 end
 
