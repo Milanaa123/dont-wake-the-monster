@@ -17,6 +17,8 @@ required = [
     "src/shared/Config.luau",
     "src/server/Game.server.luau",
     "src/server/World.luau",
+    "src/server/CottageGardenStyle.luau",
+    "src/client/CottageCamera.client.luau",
     "src/server/Progression.luau",
     "src/client/HUD.client.luau",
     "src/client/Collection.client.luau",
@@ -129,3 +131,19 @@ print("OK: per-owner individual personalities, saved genetics, dynamic mood, soc
 
 
 print(f"OK: {len(pet_prices)} pets, {len(reaction_defs)} reactions, 30 plants, 26 hidden recipes, save fields and disabled premium products")
+
+assert "CottageStyle.decorateWorld(scenery)" in world, "Garden environment must be integrated into actual island"
+assert "CottageStyle.decorateFarm(model, center)" in world, "Physical garden fence decoration not integrated"
+assert "CottageStyle.decorateCrop(visual, center, seedType, stage)" in world, "Detailed crops not integrated"
+styling = read("src/server/CottageGardenStyle.luau")
+camera = read("src/client/CottageCamera.client.luau")
+for token in ("function Cottage.applyLighting()", "function Cottage.decorateWorld(", "function Cottage.decorateFarm(", "function Cottage.decorateCrop("):
+    assert token in styling, f"Missing cottage style pipeline: {token}"
+for token in ("OrchardTrunk", "GoldenOrange", "WildStrawberry", "GoldenWheat", "SunlitMelon", "WarmGardenPath", "FencePost"):
+    assert token in styling, f"Missing reference-informed art element: {token}"
+for token in ("ColorCorrectionEffect", "BloomEffect", "Atmosphere", "SunRaysEffect"):
+    assert token in styling, f"Missing outdoor lighting layer: {token}"
+for token in ("CameraType.Scriptable", "CameraType.Custom", "BindToRenderStep", "camera.Focus", "GARDEN VIEW"):
+    assert token in camera, f"Missing optional camera behavior: {token}"
+assert "CanCollide = false" in styling and "CanTouch = false" in styling, "New foliage must not block gameplay"
+print("OK: cottage garden world/plots/crop art, warm lighting and optional three-quarter camera")

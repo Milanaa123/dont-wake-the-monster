@@ -5,6 +5,8 @@ A colorful, chaotic multiplayer Roblox prototype: feed your ridiculous pet, trig
 ## Prototype features
 
 - Procedurally constructed floating island, decorations, glowing crystals, clouds and an enormous sleeping monster.
+- **Cottage Garden art direction (v0.7)** inspired by the player's green, sunlit gardening reference: soft golden-hour color grading, warm atmospheric haze, original orange orchard, strawberry bushes, melons, wheat, flower patches and dirt paths. Personal gardens have wood fencing and more recognizable crop details.
+- **Optional 3/4 garden-view camera** enabled by default, switch to follow camera with the on-screen button or V key. This is actual Roblox client code, not a generated mockup.
 - Thirty collectible, differently styled companion pets with procedural cosmetic details, bought using **in-game coins only**.
 - **Gardening & Secret Alchemy v0.4**: 30 crops, 9 plots/player, 28 coin-earnable seed varieties, offline growth, staged art and 26 hidden experimental recipes.
 - The player's recipe book **starts empty**. Mixing 2–3 harvested ingredients discovers new formulas, and successful discoveries persist. Failed mixes create funny edible Oops Soup. No ingredient formulas are exposed in the client before discovery.
@@ -22,7 +24,7 @@ A colorful, chaotic multiplayer Roblox prototype: feed your ridiculous pet, trig
 - Responsive touchscreen controls and keyboard support.
 - Automatic Luau compilation, Rojo `.rbxlx` build and source/invariant checks through GitHub Actions.
 
-**Status: v0.6 source-code MVP. GitHub CI compiles, runs pure-Luau garden + personality tests and builds a .rbxlx; actual Roblox Studio runtime, appearance and multiplayer testing have NOT yet been performed.** Procedural art is a placeholder for final optimized meshes and animations. NO real Robux payments or marketplace product IDs are connected. In-game coin prices are not Robux prices. Cross-server persistence needs session-lock hardening before public release.
+**Status: v0.7 source-code MVP. GitHub CI compiles, runs pure-Luau garden + personality tests and builds a .rbxlx; actual Roblox Studio runtime, appearance and multiplayer testing have NOT yet been performed.** Procedural art is a placeholder for final optimized meshes and animations. NO real Robux payments or marketplace product IDs are connected. In-game coin prices are not Robux prices. Cross-server persistence needs session-lock hardening before public release.
 
 ## No-computer workflow
 
@@ -35,6 +37,8 @@ A colorful, chaotic multiplayer Roblox prototype: feed your ridiculous pet, trig
 
 - `src/shared/Config.luau`: balance, feed items, creature types and reaction catalog.
 - `src/server/World.luau`: procedural world and monster art.
+- `src/server/CottageGardenStyle.luau`: original warm landscaping, orchard, berry patches, fencing, lighting and crop details.
+- `src/client/CottageCamera.client.luau`: 3/4 garden view with optional third-person toggle.
 - `src/server/Game.server.luau`: authoritative multiplayer game loop, hearts, boss damage, pet effects and saving.
 - `src/server/Progression.luau`: catalog, buying/equipping pets, daily rewards, gardening persistence and per-pet personality save migration.
 - `src/shared/PetPersonality.luau`: unique seeded genetics, mood, individual preferences, social scenes and bonding.
@@ -75,4 +79,4 @@ In Studio, select **Play** to test; enable Studio API services only for isolated
 - [ ] Monetization IDs, purchase receipt handling and age/regional compliance
 - [ ] Mobile performance profiling, moderation and public release
 
-See the [Living Pets character system](docs/PERSONALITIES.md), [Gardening guide](docs/GARDENING.md), [Changelog](docs/CHANGELOG.md) and [Roadmap](docs/ROADMAP.md).
+See the [visual direction and competitor audit](docs/VISUAL_DIRECTION.md), [Living Pets character system](docs/PERSONALITIES.md), [Gardening guide](docs/GARDENING.md), [Changelog](docs/CHANGELOG.md) and [Roadmap](docs/ROADMAP.md).

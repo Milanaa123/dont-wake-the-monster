@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.7 — Cottage Garden Art & Camera (2026-11-19)
+- Acted on the user's uploaded game-art reference **in the Roblox source**, not by producing a separate image.
+- Warm outdoor color grading, sunlight, gentle bloom, atmosphere and soft-shadow settings.
+- Original procedurally built orange orchard, strawberry berry bushes, wheat clumps, melons, flower beds, warm soil paths and cottage fences.
+- Greener and less neon island landscaping, reduced older candy-like decorations.
+- Growth-stage crop embellishments for strawberries, tomatoes, peppers, carrots and melon types.
+- Toggleable 3/4 camera on mobile/desktop to help view the gardens from an elevated angle.
+- All scenery remains anchored/non-colliding; the visual changes remain placeholder primitives pending final low-poly meshes.
+- GitHub build + Luau static syntax passed. Visual result and mobile performance have NOT been observed in authenticated Roblox Studio.
+
 ## v0.6 — Living Personalities (2026-11-19)
 - Gave every owned animal a unique, saved identity instead of using only one species-wide behavioral label.
 - 12 possible temperaments, 12 habits, seven fears, seven preferred kinds of affection, four snack tastes with a different favorite and disliked one, six independently varying traits.
