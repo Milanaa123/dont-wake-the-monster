@@ -10,6 +10,8 @@ local TweenService = game:GetService("TweenService")
 local Config = require(ReplicatedStorage:WaitForChild("Config"))
 local World = require(script.Parent:WaitForChild("World"))
 local Progression = require(script.Parent:WaitForChild("Progression"))
+local Garden = require(script.Parent:WaitForChild("Garden"))
+local GardenConfig = require(ReplicatedStorage:WaitForChild("GardenConfig"))
 
 World.build()
 local remote = Instance.new("RemoteEvent")
@@ -24,6 +26,8 @@ local secondsLeft = Config.SLEEP_MAX_SECONDS
 local profiles: {[Player]: any} = {}
 local totalActions = 0
 local wakeCount = 0
+local farmSlots: {[number]: Player} = {}
+local farmOfPlayer: {[Player]: number} = {}
 
 local function notice(message: string, color: Color3?)
     remote:FireAllClients({type = "notice", text = message, color = color or Color3.fromRGB(255, 255, 255)})
@@ -42,6 +46,16 @@ local function sendCollection(player: Player)
     local catalog = Progression.catalog(profile)
     catalog.type = "collection"
     remote:FireClient(player, catalog)
+end
+
+local function sendGarden(player: Player)
+    local profile = profiles[player]
+    if not profile then return end
+    local snapshot = Garden.snapshot(profile.garden)
+    snapshot.type = "garden"
+    snapshot.slot = farmOfPlayer[player] or 0
+    snapshot.saving = profile.loaded
+    remote:FireClient(player, snapshot)
 end
 
 local function sendState(player: Player?)
@@ -149,6 +163,9 @@ local function onPlayerAdded(player: Player)
     profile.lastSync = -100
     profile.lastShopAction = -100
     profile.lastDailyRequest = -100
+    profile.lastGardenAction = -100
+    profile.lastLure = -100
+    profile.lastGardenVisit = -100
     profile.lastFood = ""
     profile.loaded = false
     profile.dirty = false
@@ -175,6 +192,15 @@ local function onPlayerAdded(player: Player)
     local petDefinition = Config.Pets[profile.petIndex]
     profile.pet = World.makePet(petDefinition.name .. "_" .. player.UserId, petDefinition.color, petDefinition.ear == "pointy")
     movePetNearPlayer(player)
+    for slot = 1, GardenConfig.SLOT_COUNT do
+        if not farmSlots[slot] then
+            farmSlots[slot] = player
+            farmOfPlayer[player] = slot
+            World.createGarden(player.UserId, player.DisplayName, slot)
+            World.updateGarden(player.UserId, profile.garden, GardenConfig)
+            break
+        end
+    end
 
     local function characterReady(character: Model)
         local humanoid = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid", 5)
@@ -199,6 +225,7 @@ local function onPlayerAdded(player: Player)
     end
     sendStats(player)
     sendCollection(player)
+    sendGarden(player)
     sendState(player)
     remote:FireClient(player, {type = "notice", text = "Meet " .. petDefinition.name .. "! Feed it. Nothing can go wrong... right?", color = Color3.fromRGB(252, 205, 255)})
 end
@@ -207,6 +234,10 @@ local function onPlayerRemoving(player: Player)
     save(player)
     local profile = profiles[player]
     if profile and profile.pet then profile.pet:Destroy() end
+    World.removeGarden(player.UserId)
+    local slot = farmOfPlayer[player]
+    if slot then farmSlots[slot] = nil end
+    farmOfPlayer[player] = nil
     profiles[player] = nil
 end
 
@@ -328,10 +359,14 @@ local function petEffect(profile: any, reaction: any, food: string)
     end
 end
 
-local function feed(player: Player, food: any)
+local function feed(player: Player, food: any, craftedId: string?)
     local profile = profiles[player]
     if not profile or typeof(food) ~= "string" then return end
     local foodInfo = Config.Foods[food]
+    if craftedId then
+        local recipe = GardenConfig.Recipes[craftedId]
+        if not recipe or recipe.type ~= "feed" or recipe.baseFood ~= food then return end
+    end
     if not foodInfo then return end
     if phase ~= "SLEEP" then
         remote:FireClient(player, {type = "notice", text = "The monster is awake! DODGE!", color = Color3.fromRGB(255, 174, 96)})
@@ -346,6 +381,16 @@ local function feed(player: Player, food: any)
         return
     end
 
+    if craftedId then
+        local ok, message = Garden.consume(profile.garden, craftedId, "feed")
+        if not ok then
+            remote:FireClient(player, {type = "notice", text = message, color = Color3.fromRGB(255, 190, 130)})
+            return
+        end
+        profile.dirty = profile.loaded
+        profile.revision += 1
+        sendGarden(player)
+    end
     profile.lastFeed = now
     local reaction = weightedReaction(food, profile.lastFood)
     local combo = profile.lastFood == food and rng:NextNumber() < 0.24
@@ -354,12 +399,19 @@ local function feed(player: Player, food: any)
 
     petEffect(profile, reaction, food)
     local earnedNoise = foodInfo.noise + reaction.noise + (if combo then 7 else 0)
+    if craftedId then
+        earnedNoise += GardenConfig.Recipes[craftedId].extraNoise
+        if profile.pet and profile.pet.PrimaryPart then
+            World.burst(profile.pet.PrimaryPart.Position, GardenConfig.Crops.Berry.color, 12, 11)
+        end
+    end
     noise = math.min(Config.NOISE_MAX, noise + earnedNoise)
     local bonus, discoveries = Progression.recordFeed(profile, reaction.id)
     addCoins(player, Config.FEED_REWARD + (if combo then 3 else 0) + bonus)
     sendCollection(player)
     local text = player.DisplayName .. "'s " .. Config.Pets[profile.petIndex].name .. ": " .. reaction.title
     if combo then text ..= " + COMBO!" end
+    if craftedId then text ..= " (GARDEN RECIPE!)" end
     notice(text, foodInfo.color)
     sendState()
     if #discoveries > 0 then
@@ -401,11 +453,106 @@ local function switchPet(player: Player, rawId: any, isPurchase: boolean)
     remote:FireClient(player, {type = "notice", text = message, color = if ok then Color3.fromRGB(162, 255, 201) else Color3.fromRGB(255, 182, 151)})
 end
 
+local function gardenAction(player: Player, command: string, arg: any)
+    local profile = profiles[player]
+    if not profile then return end
+    local now = os.clock()
+    if now - profile.lastGardenAction < 0.23 then return end
+    profile.lastGardenAction = now
+    local g = profile.garden
+    local ok, message, price
+    if command == "GardenBuySeed" then
+        if not profile.loaded then
+            remote:FireClient(player, {type = "notice", text = "Saving is offline. Seed purchases are paused.", color = Color3.fromRGB(255, 193, 130)})
+            return
+        end
+        ok, message, price = Garden.buySeed(g, profile.coins, arg)
+        if ok then profile.coins -= price end
+    elseif command == "GardenPlant" then
+        if typeof(arg) ~= "table" then return end
+        ok, message = Garden.plant(g, arg.plot, arg.seed)
+    elseif command == "GardenHarvest" then
+        ok, message = Garden.harvest(g, arg)
+    elseif command == "GardenFertilize" then
+        if typeof(arg) ~= "table" then return end
+        ok, message = Garden.fertilize(g, arg.plot, arg.fertilizer)
+    elseif command == "GardenCraft" then
+        ok, message = Garden.craft(g, arg)
+    else
+        return
+    end
+    if ok then
+        if profile.loaded then profile.dirty = true end
+        profile.revision += 1
+        World.updateGarden(player.UserId, g, GardenConfig)
+        sendGarden(player)
+        sendStats(player)
+    end
+    remote:FireClient(player, {type = "notice", text = message, color = if ok then Color3.fromRGB(164, 255, 186) else Color3.fromRGB(255, 196, 143)})
+end
+
+local function useLure(player: Player, id: any)
+    local profile = profiles[player]
+    if not profile or typeof(id) ~= "string" then return end
+    if id ~= "SillyLure" and id ~= "MonsterLure" then return end
+    if phase ~= "SLEEP" then
+        remote:FireClient(player, {type = "notice", text = "Wait until the monster sleeps!", color = Color3.fromRGB(255, 202, 156)})
+        return
+    end
+    if os.clock() - profile.lastLure < 10 then return end
+    local root = rootFor(player)
+    if not root then return end
+    local ok, message = Garden.consume(profile.garden, id, "lure")
+    if not ok then
+        remote:FireClient(player, {type = "notice", text = message, color = Color3.fromRGB(255, 182, 136)})
+        return
+    end
+    profile.lastLure = os.clock()
+    if profile.loaded then profile.dirty = true end
+    profile.revision += 1
+    local stronger = id == "MonsterLure"
+    local center = root.Position + root.CFrame.LookVector * 9
+    World.burst(center, if stronger then Color3.fromRGB(255, 106, 163) else Color3.fromRGB(170, 235, 134), if stronger then 26 else 18, 14)
+    noise = math.min(Config.NOISE_MAX, noise + (if stronger then 28 else 11))
+    local visitors = if stronger then 3 else 1
+    for i = 1, visitors do
+        local definition = Config.Pets[rng:NextInteger(1, #Config.Pets)]
+        local visitor = World.makePet("Wild" .. definition.name .. "_" .. i, definition.color, definition.ear == "pointy")
+        visitor.Name = "WildVisitor"
+        visitor:PivotTo(CFrame.new(center + Vector3.new(i * 4 - visitors * 2, 4, -2)))
+        Debris:AddItem(visitor, 8)
+    end
+    addCoins(player, if stronger then 20 else 8)
+    sendGarden(player)
+    sendState()
+    notice(player.DisplayName .. " used " .. message .. "! WILD VISITORS!", Color3.fromRGB(192, 255, 150))
+end
+
 remote.OnServerEvent:Connect(function(player: Player, command: any, arg: any)
     local profile = profiles[player]
     if not profile or typeof(command) ~= "string" then return end
     if command == "Feed" then
         feed(player, arg)
+    elseif command == "GardenFeed" then
+        if typeof(arg) ~= "string" then return end
+        local recipe = GardenConfig.Recipes[arg]
+        if recipe and recipe.type == "feed" then
+            feed(player, recipe.baseFood, arg)
+        end
+    elseif command == "GardenBuySeed" or command == "GardenPlant" or command == "GardenHarvest"
+       or command == "GardenFertilize" or command == "GardenCraft" then
+        gardenAction(player, command, arg)
+    elseif command == "GardenLure" then
+        useLure(player, arg)
+    elseif command == "GardenVisit" then
+        if os.clock() - profile.lastGardenVisit < 2 then return end
+        profile.lastGardenVisit = os.clock()
+        local spot = World.gardenSpawn(player.UserId)
+        local root = rootFor(player)
+        if spot and root then
+            root.CFrame = CFrame.new(spot)
+            root.AssemblyLinearVelocity = Vector3.zero
+        end
     elseif command == "BuyPet" or command == "EquipPet" then
         if os.clock() - profile.lastShopAction < 0.35 then return end
         profile.lastShopAction = os.clock()
@@ -429,6 +576,7 @@ remote.OnServerEvent:Connect(function(player: Player, command: any, arg: any)
         sendState(player)
         sendStats(player)
         sendCollection(player)
+        sendGarden(player)
     end
 end)
 
@@ -632,6 +780,16 @@ task.spawn(function()
             end
         end
         sendState()
+    end
+end)
+
+task.spawn(function()
+    while true do
+        task.wait(8)
+        for player, profile in pairs(profiles) do
+            World.updateGarden(player.UserId, profile.garden, GardenConfig)
+            sendGarden(player)
+        end
     end
 end)
 
