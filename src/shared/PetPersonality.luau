@@ -209,4 +209,54 @@ function Personality.reactionMultiplier(p: any, reactionId: string): number
     return mult
 end
 
+-- Pet-to-pet social encounters. One small server-selected event per social tick,
+-- not a client-triggered reward action. No real-money or random paid rewards.
+Personality.EncounterNames = {
+    "Besties", "Prank", "DanceOff", "DramaDuel", "HideAndSeek", "NapTogether",
+    "SneezeChain", "Singing", "Zoomies", "ShinyTrade", "Rivalry", "Cuddle",
+}
+
+function Personality.meet(a: any, b: any)
+    local first, second = a.temperament, b.temperament
+    local pair = first .. ":" .. second
+    local roll = (a.seed * 19 + b.seed * 37 + a.interactions * 7 + b.interactions * 11) % 12 + 1
+    local kind = Personality.EncounterNames[roll]
+    if (first == "Kind" and second == "Kind") or (first == "Clingy" and second == "Kind") then
+        kind = "Besties"
+    elseif first == "Sleepy" and second == "Sleepy" then
+        kind = "NapTogether"
+    elseif (first == "Shy" and second == "Wild") or (first == "Wild" and second == "Shy") then
+        kind = "HideAndSeek"
+    elseif (first == "Mischievous" and second == "Grumpy") or (first == "Grumpy" and second == "Mischievous") then
+        kind = "Prank"
+    elseif (first == "Dramatic" and second == "Dramatic") then
+        kind = "DramaDuel"
+    elseif (first == "Playful" and second == "Playful") then
+        kind = "Zoomies"
+    elseif (first == "Proud" and second == "Brave") or (first == "Brave" and second == "Proud") then
+        kind = "Rivalry"
+    end
+    local definitions = {
+        Besties = {noise = 0, delta = 8, title = "became BEST FRIENDS!"},
+        Prank = {noise = 12, delta = -5, title = "pulled a ridiculous prank!"},
+        DanceOff = {noise = 7, delta = 7, title = "started a DANCE BATTLE!"},
+        DramaDuel = {noise = 10, delta = -1, title = "had a DRAMATIC ARGUMENT!"},
+        HideAndSeek = {noise = 4, delta = 4, title = "played HIDE AND SEEK!"},
+        NapTogether = {noise = 0, delta = 5, title = "fell asleep TOGETHER!"},
+        SneezeChain = {noise = 11, delta = 0, title = "started a SNEEZE CHAIN!"},
+        Singing = {noise = 8, delta = 5, title = "sang the WORST DUET!"},
+        Zoomies = {noise = 9, delta = 7, title = "got the ZOOMIES!"},
+        ShinyTrade = {noise = 3, delta = 5, title = "traded shiny pebbles!"},
+        Rivalry = {noise = 8, delta = -2, title = "challenged each other!"},
+        Cuddle = {noise = 0, delta = 8, title = "made a tiny CUDDLE PILE!"},
+    }
+    local entry = definitions[kind]
+    if not entry then error("Unknown encounter for " .. pair) end
+    a.happiness = math.clamp(a.happiness + entry.delta, 0, 100)
+    b.happiness = math.clamp(b.happiness + entry.delta, 0, 100)
+    a.interactions += 1
+    b.interactions += 1
+    return {kind = kind, noise = entry.noise, title = entry.title}
+end
+
 return Personality
