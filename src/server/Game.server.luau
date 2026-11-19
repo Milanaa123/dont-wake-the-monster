@@ -162,6 +162,97 @@ local function movePetNearPlayer(player: Player)
     profile.pet:PivotTo(CFrame.new(root.Position + Vector3.new(4, 4, -3)))
 end
 
+local function careUpdate(player: Player)
+    local profile = profiles[player]
+    if not profile then return end
+    local petInfo = Config.Pets[profile.petIndex]
+    remote:FireClient(player, {
+        type = "petCare",
+        petting = profile.petting,
+        carrying = profile.carrying,
+        cat = Affection.isCat(petInfo.description or ""),
+        purr = profile.purr,
+        purrSoundConfigured = type(Config.PurrSoundId) == "number" and Config.PurrSoundId > 0,
+    })
+end
+
+local function stopPetting(player: Player, profile: any)
+    if not profile.petting and profile.purr <= 0 then return end
+    profile.petting = false
+    profile.pettingSession = nil
+    profile.purr = 0
+    profile.purrStage = 0
+    if profile.pet then World.setPurr(profile.pet, 0, Config.PurrSoundId) end
+    if profiles[player] == profile then careUpdate(player) end
+end
+
+local function startPetting(player: Player)
+    local profile = profiles[player]
+    if not profile or profile.petting or phase ~= "SLEEP" then return end
+    local now = os.clock()
+    if now - profile.lastStrokingStart < 1.4 then return end
+    local root = rootFor(player)
+    local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+    if not root or not hum or hum.Health <= 0 or not profile.pet or not profile.pet.PrimaryPart then return end
+    if (root.Position - profile.pet.PrimaryPart.Position).Magnitude > Affection.PetDistance then
+        remote:FireClient(player, {type = "petFeeling", text = "Come closer to your animal before petting."})
+        return
+    end
+    local personality = profile.personalities[profile.petIndex]
+    if not personality then return end
+    profile.lastStrokingStart = now
+    profile.lastCarePulse = now
+    profile.petting = true
+    profile.purr = 0
+    local petInfo = Config.Pets[profile.petIndex]
+    local cat = Affection.isCat(petInfo.description or "")
+    profile.pettingSession = Affection.newSession(personality, cat, rng:NextNumber())
+    World.emotePet(profile.pet, Personality.mood(personality), if cat then "Gentle strokes" else "Cuddles")
+    careUpdate(player)
+end
+
+local function keepPetting(player: Player)
+    local profile = profiles[player]
+    if not profile or not profile.petting then return end
+    local now = os.clock()
+    if now - profile.lastCarePulse >= 0.65 then
+        profile.lastCarePulse = now
+    end
+end
+
+local function toggleCarry(player: Player)
+    local profile = profiles[player]
+    if not profile then return end
+    local now = os.clock()
+    if now - profile.lastCarryChange < 0.65 then return end
+    profile.lastCarryChange = now
+    if profile.carrying then
+        profile.carrying = false
+        remote:FireClient(player, {type = "petFeeling", text = "Your little friend is back on its paws."})
+        careUpdate(player)
+        return
+    end
+    local root = rootFor(player)
+    local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+    if not root or not hum or hum.Health <= 0 or not profile.pet or not profile.pet.PrimaryPart then return end
+    if (root.Position - profile.pet.PrimaryPart.Position).Magnitude > Affection.CarryDistance then return end
+    local personality = profile.personalities[profile.petIndex]
+    if not personality then return end
+    local reluctance = if personality.temperament == "Grumpy" then 0.24
+        elseif personality.temperament == "Shy" then 0.16
+        elseif personality.temperament == "Wild" then 0.18 else 0.03
+    reluctance = math.max(0.01, reluctance - personality.bond / 550)
+    if rng:NextNumber() < reluctance then
+        remote:FireClient(player, {type = "petFeeling", text = "NOT NOW! Your pet wriggled free of the cuddle!"})
+        World.emotePet(profile.pet, "Grumpy", "No hugs")
+        return
+    end
+    profile.carrying = true
+    World.emotePet(profile.pet, Personality.mood(personality), "In arms")
+    remote:FireClient(player, {type = "petFeeling", text = "You picked up " .. Config.Pets[profile.petIndex].name .. "! Hold STROKE to pet."})
+    careUpdate(player)
+end
+
 local function onPlayerAdded(player: Player)
     local profile = Progression.new()
     profile.lastFeed = -100
@@ -258,97 +349,6 @@ local function onPlayerAdded(player: Player)
     sendState(player)
     careUpdate(player)
     remote:FireClient(player, {type = "notice", text = "Meet " .. petDefinition.name .. "! Feed it. Nothing can go wrong... right?", color = Color3.fromRGB(252, 205, 255)})
-end
-
-local function careUpdate(player: Player)
-    local profile = profiles[player]
-    if not profile then return end
-    local petInfo = Config.Pets[profile.petIndex]
-    remote:FireClient(player, {
-        type = "petCare",
-        petting = profile.petting,
-        carrying = profile.carrying,
-        cat = Affection.isCat(petInfo.description or ""),
-        purr = profile.purr,
-        purrSoundConfigured = type(Config.PurrSoundId) == "number" and Config.PurrSoundId > 0,
-    })
-end
-
-local function stopPetting(player: Player, profile: any)
-    if not profile.petting and profile.purr <= 0 then return end
-    profile.petting = false
-    profile.pettingSession = nil
-    profile.purr = 0
-    profile.purrStage = 0
-    if profile.pet then World.setPurr(profile.pet, 0, Config.PurrSoundId) end
-    if profiles[player] == profile then careUpdate(player) end
-end
-
-local function startPetting(player: Player)
-    local profile = profiles[player]
-    if not profile or profile.petting or phase ~= "SLEEP" then return end
-    local now = os.clock()
-    if now - profile.lastStrokingStart < 1.4 then return end
-    local root = rootFor(player)
-    local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-    if not root or not hum or hum.Health <= 0 or not profile.pet or not profile.pet.PrimaryPart then return end
-    if (root.Position - profile.pet.PrimaryPart.Position).Magnitude > Affection.PetDistance then
-        remote:FireClient(player, {type = "petFeeling", text = "Come closer to your animal before petting."})
-        return
-    end
-    local personality = profile.personalities[profile.petIndex]
-    if not personality then return end
-    profile.lastStrokingStart = now
-    profile.lastCarePulse = now
-    profile.petting = true
-    profile.purr = 0
-    local petInfo = Config.Pets[profile.petIndex]
-    local cat = Affection.isCat(petInfo.description or "")
-    profile.pettingSession = Affection.newSession(personality, cat, rng:NextNumber())
-    World.emotePet(profile.pet, Personality.mood(personality), if cat then "Gentle strokes" else "Cuddles")
-    careUpdate(player)
-end
-
-local function keepPetting(player: Player)
-    local profile = profiles[player]
-    if not profile or not profile.petting then return end
-    local now = os.clock()
-    if now - profile.lastCarePulse >= 0.65 then
-        profile.lastCarePulse = now
-    end
-end
-
-local function toggleCarry(player: Player)
-    local profile = profiles[player]
-    if not profile then return end
-    local now = os.clock()
-    if now - profile.lastCarryChange < 0.65 then return end
-    profile.lastCarryChange = now
-    if profile.carrying then
-        profile.carrying = false
-        remote:FireClient(player, {type = "petFeeling", text = "Your little friend is back on its paws."})
-        careUpdate(player)
-        return
-    end
-    local root = rootFor(player)
-    local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-    if not root or not hum or hum.Health <= 0 or not profile.pet or not profile.pet.PrimaryPart then return end
-    if (root.Position - profile.pet.PrimaryPart.Position).Magnitude > Affection.CarryDistance then return end
-    local personality = profile.personalities[profile.petIndex]
-    if not personality then return end
-    local reluctance = if personality.temperament == "Grumpy" then 0.24
-        elseif personality.temperament == "Shy" then 0.16
-        elseif personality.temperament == "Wild" then 0.18 else 0.03
-    reluctance = math.max(0.01, reluctance - personality.bond / 550)
-    if rng:NextNumber() < reluctance then
-        remote:FireClient(player, {type = "petFeeling", text = "NOT NOW! Your pet wriggled free of the cuddle!"})
-        World.emotePet(profile.pet, "Grumpy", "No hugs")
-        return
-    end
-    profile.carrying = true
-    World.emotePet(profile.pet, Personality.mood(personality), "In arms")
-    remote:FireClient(player, {type = "petFeeling", text = "You picked up " .. Config.Pets[profile.petIndex].name .. "! Hold STROKE to pet."})
-    careUpdate(player)
 end
 
 local function onPlayerRemoving(player: Player)
