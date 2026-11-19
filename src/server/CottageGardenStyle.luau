@@ -266,6 +266,41 @@ function Cottage.decorateFarm(parent: Instance, center: CFrame)
     end
     local p = (center * CFrame.new(-11.5, 0.6, 15)).Position
     lowPolyBush(parent, p, 1.6, rng)
+
+    -- Harvest corner: warm wooden basket full of apples and strawberries.
+    local basketCenter = (center * CFrame.new(10.1, 1.0, 13.0)).Position
+    local basket = part(parent, "HarvestBasket", basketCenter, Vector3.new(3.4, 1.3, 2.6),
+        Color3.fromRGB(176, 118, 81), Enum.Material.Wood, Enum.PartType.Cylinder)
+    basket.CFrame *= CFrame.Angles(0, 0, math.rad(90))
+    for i = 1, 5 do
+        local angle = i * 2.399
+        local fruitCenter = basketCenter + Vector3.new(math.cos(angle) * 1.06, 0.74, math.sin(angle) * 0.76)
+        ball(parent, "PickedStrawberry", fruitCenter, Vector3.new(0.93, 0.98, 0.92),
+            if i % 2 == 0 then Color3.fromRGB(248, 105, 108) else Color3.fromRGB(255, 178, 83))
+        ball(parent, "FruitLeaf", fruitCenter + Vector3.new(0, 0.48, 0), Vector3.new(0.93, 0.2, 0.76), LEAF_DARK)
+    end
+
+    -- Toy-sized enamel watering can, a natural place to orient the player.
+    local canCenter = (center * CFrame.new(-9.9, 1.35, 12.5)).Position
+    ball(parent, "WateringCan", canCenter, Vector3.new(2.5, 1.9, 1.8), Color3.fromRGB(159, 198, 215))
+    local spoutEnd = canCenter + (center.RightVector * -2.0) + Vector3.new(0, 0.55, 0)
+    beam(parent, "WateringSpout", canCenter, spoutEnd, 0.38, Color3.fromRGB(121, 166, 196))
+    ball(parent, "WateringRose", spoutEnd, Vector3.new(0.78, 0.27, 0.78), Color3.fromRGB(222, 230, 211))
+
+    -- Low detail density: twelve tiny meadow daisies and pebbles around the beds.
+    for i = 1, 12 do
+        local angle = (i / 12) * 2 * math.pi
+        local x = if i % 2 == 0 then rng:NextNumber(-11.6, 11.6) else (if i % 3 == 0 then -12.5 else 12.5)
+        local z = if i % 2 == 0 then (if i % 4 == 0 then -13.9 else 14.6) else rng:NextNumber(-13, 13)
+        local flowerCenter = (center * CFrame.new(x, 0.75, z)).Position
+        if i % 4 == 0 then
+            pebble(parent, flowerCenter, rng:NextNumber(0.6, 1.2))
+        else
+            flower(parent, flowerCenter,
+                if i % 3 == 0 then WHITE elseif i % 3 == 1 then Color3.fromRGB(255, 215, 205)
+                else Color3.fromRGB(245, 233, 156), 0.48)
+        end
+    end
 end
 
 -- Additional plant language, not separate crops or growth mechanics.
