@@ -9,10 +9,11 @@ A colorful, chaotic multiplayer Roblox prototype: feed your ridiculous pet, trig
 - **Optional 3/4 garden-view camera** enabled by default, switch to follow camera with the on-screen button or V key. This is actual Roblox client code, not a generated mockup.
 - Thirty collectible, differently styled companion pets with procedural cosmetic details, bought using **in-game coins only**.
 - **Gardening & Secret Alchemy v0.4**: 30 crops, 9 plots/player, 28 coin-earnable seed varieties, offline growth, staged art and 26 hidden experimental recipes.
+- **Traveling Seed Merchant v1.0:** four discounted ordinary seed packs rotate globally every 12 minutes, with one purchase per offer per player per restock. The merchant uses only earned coins, and purchase limits persist through reconnects.
 - **Secret Seed Forest v0.9:** three original explorable biomes, nine physical seed caches with hold-to-search prompts, personal cooldowns and a 28-seed discovery album.
 - Four rotating weather conditions can change plant growth and create Golden, Dewy, Moonlit and Giggly mutations with a fixed doubled harvest. Pets help find seeds and tend growing crops.
 - **Cooperative Seed Festival:** 12 server-wide seed searches reward participating players. Funny garden incidents such as singing plants and meowing melons can help wake the giant.
-- **Original audio package:** 18-second soft background-music loop, eleven short original comedic/gameplay effects plus the earlier cat purr. WAVs are in GitHub; actual Roblox playback requires owner-uploaded asset IDs.
+- **Original audio package v1.0:** soft 18-second garden music, an additional 9-second monster chase loop, 9-second forest ambience, fifteen original sound effects (including cartoon record scratch, funny meow, tiny-violin fail and drum sting), plus the earlier cat purr. WAVs are in GitHub; actual Roblox playback requires owner-uploaded asset IDs. The game crossfades from calm music to chase music when the giant wakes, with independent music and effects mute buttons.
 - **Analytics hooks:** first feed, first seed, first planting, recipe discovery, first survival and 10-minute participation (real data only after publishing).
 - The player's recipe book **starts empty**. Mixing 2–3 harvested ingredients discovers new formulas, and successful discoveries persist. Failed mixes create funny edible Oops Soup. No ingredient formulas are exposed in the client before discovery.
 - Four earnable fertilizer types speed up growth; two premium seed types and one premium fertilizer remain disabled previews.
@@ -31,7 +32,7 @@ A colorful, chaotic multiplayer Roblox prototype: feed your ridiculous pet, trig
 - Responsive touchscreen controls and keyboard support.
 - Automatic Luau compilation, Rojo `.rbxlx` build and source/invariant checks through GitHub Actions.
 
-**Status: v0.9 source-code MVP. GitHub CI compiles, runs pure-Luau garden + personality tests and builds a .rbxlx; actual Roblox Studio runtime, appearance and multiplayer testing have NOT yet been performed.** Procedural art is a placeholder for final optimized meshes and animations. NO real Robux payments or marketplace product IDs are connected. In-game coin prices are not Robux prices. Cross-server persistence needs session-lock hardening before public release.
+**Status: v1.0 source-code MVP. GitHub CI compiles, runs pure-Luau garden + personality tests and builds a .rbxlx; actual Roblox Studio runtime, appearance and multiplayer testing have NOT yet been performed.** Procedural art is a placeholder for final optimized meshes and animations. NO real Robux payments or marketplace product IDs are connected. In-game coin prices are not Robux prices. Cross-server persistence needs session-lock hardening before public release.
 
 ## No-computer workflow
 

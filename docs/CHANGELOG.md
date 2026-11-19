@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.0 — Living Seed Merchant & Comedy Soundscape (2026-11-19)
+- Added four rotating merchant offers every 12 minutes, priced in regular coins only. One purchase per offer per player; purchased slots and rotation persist across rejoins.
+- Each offer contains two seeds. The merchant cycles through all 28 earnable crops across rotations, with no paid random loot.
+- Added merchant stock and next-restock display in the Garden Seeds tab, plus automatic refresh.
+- Harvesting now has a temperament-sensitive chance to trigger a funny crop incident; a singing wheat, laughing pumpkin, pet sneeze or dramatic vegetable adds noise and can wake Giggles.
+- Social pet meetings and sudden cat reactions trigger additional original comedy cues.
+- Composed six more original WAVs: cozy forest ambience, chase music, suspicious meow, tiny violin fail, record scratch and comedy sting.
+- Client audio mixer now crossfades between calm/chase music and controls ambience with the music toggle.
+- Sound IDs remain **0** until the Roblox account owner uploads and authorizes audio assets; code alone does not make them audible in Roblox.
+- Added merchant Luau tests, source and WAV integrity checks, and CI packaging.
+- No Roblox Studio playtest or device QA has yet been performed.
+
 ## v0.9 — Secret Seed Forest & Original Music (2026-11-19)
 - Built 3 original fairytale biomes, nine physically searchable seed caches, a mobile seed journal, server distance checks and per-player 4-minute cache respawns.
 - All 28 ordinary seed species can be discovered without Robux; rare seed and pet curiosity chances are server-owned.

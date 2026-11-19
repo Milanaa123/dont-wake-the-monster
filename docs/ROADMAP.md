@@ -9,6 +9,14 @@
 5. See the giant monster wake, dodge telegraphed shockwaves, and survive for coins.
 6. Play another round and see different outcomes.
 
+## Additional v1.0 release checks
+- Upload all creator-owned WAVs, configure asset IDs, and verify each sound is audible on the actual experience (some uploads may need moderation or permission changes).
+- Confirm calm music and ambience crossfade into chase music and back without clipping, with separate music/effects mute controls.
+- Check merchant offers remain one-per-slot after leaving/rejoining; restock switches correctly after 12 minutes; purchases reject spoofed slots and insufficient coins.
+- Check surprising harvests never remove earned crops, and server-wide noise can trigger a wake without paid items.
+- Verify real mobile performance, player camera and 3D visuals with at least two clients.
+- Check DataStore session-lock strategy, production receipts and parental/age rules before enabling any paid products.
+
 ## Prototype acceptance criteria (to verify in Studio, not merely by CI)
 
 - Spawn and camera work on both 16:9 desktop and mobile screen layouts.
