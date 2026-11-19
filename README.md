@@ -74,6 +74,10 @@ A colorful, chaotic multiplayer Roblox prototype: feed your ridiculous pet, trig
 - `default.project.json`: Rojo build manifest.
 - `.github/workflows/build.yml`: safe build-only CI pipeline.
 
+## First launch without owning a PC
+
+**Android setup and first authorized Studio playtest:** [Russian step-by-step guide](docs/START_FROM_ANDROID.md). Build-only GitHub CI has passed; this does not substitute for a real Roblox Studio test.
+
 ## Local development (optional)
 
 Install [Rojo](https://rojo.space), then run:
