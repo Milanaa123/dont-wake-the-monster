@@ -7,6 +7,18 @@ on:
         description: Existing Roblox Place ID (optional if ROBLOX_PLACE_ID variable is set)
         type: string
         required: false
+      universe_id:
+        description: Universe ID; required only for Universe API (optional if GitHub variable set)
+        type: string
+        required: false
+      backend:
+        description: Roblox Open Cloud endpoint
+        type: choice
+        required: true
+        default: assets
+        options:
+          - assets
+          - universes
       upload_mode:
         description: Saved = private draft; Published = publish to Roblox
         type: choice
@@ -36,6 +48,8 @@ jobs:
         env:
           ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
           ROBLOX_PLACE_ID: ${{ inputs.place_id || vars.ROBLOX_PLACE_ID }}
+          ROBLOX_UNIVERSE_ID: ${{ inputs.universe_id || vars.ROBLOX_UNIVERSE_ID }}
+          ROBLOX_PUBLISH_BACKEND: ${{ inputs.backend }}
           UPLOAD_MODE: ${{ inputs.upload_mode }}
         shell: bash
         run: |
@@ -44,11 +58,15 @@ jobs:
             echo "::error::Place ID missing. Enter place_id when running workflow or set Settings > Secrets and variables > Actions > Variables > ROBLOX_PLACE_ID."
             exit 1
           fi
+          if [[ "${ROBLOX_PUBLISH_BACKEND}" == "universes" ]] && [[ ! "${ROBLOX_UNIVERSE_ID}" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error::Universe API needs a Universe ID. Fill universe_id or set GitHub Actions variable ROBLOX_UNIVERSE_ID."
+            exit 1
+          fi
           if [[ -z "${ROBLOX_API_KEY}" ]]; then
             echo "::error::Secret ROBLOX_API_KEY missing. Create a Roblox Open Cloud Assets Read+Write key for THIS place, then save it under GitHub Actions repository Secrets."
             exit 1
           fi
-          echo "Preflight passed. Target Place ID: ${ROBLOX_PLACE_ID}, mode: ${UPLOAD_MODE}. The API key remains secret."
+          echo "Preflight passed. Target Place ID: ${ROBLOX_PLACE_ID}, mode: ${UPLOAD_MODE}, backend: ${ROBLOX_PUBLISH_BACKEND}. The API key remains secret."
       - name: Validate source and economy
         run: python3 scripts/validate_project.py
 
@@ -90,5 +108,7 @@ jobs:
         env:
           ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
           ROBLOX_PLACE_ID: ${{ inputs.place_id || vars.ROBLOX_PLACE_ID }}
+          ROBLOX_UNIVERSE_ID: ${{ inputs.universe_id || vars.ROBLOX_UNIVERSE_ID }}
+          ROBLOX_PUBLISH_BACKEND: ${{ inputs.backend }}
           UPLOAD_MODE: ${{ inputs.upload_mode }}
         run: python3 scripts/publish_roblox.py
