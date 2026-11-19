@@ -91,7 +91,7 @@ gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 local open = button(gui, "🌿 MY GARDEN (G)", MINT)
 open.Name = "GardenOpen"
-open.Position = UDim2.fromOffset(12, 292)
+open.Position = UDim2.new(1, -164, 0, 191)
 open.Size = UDim2.fromOffset(152, 42)
 outline(open, GREEN)
 
