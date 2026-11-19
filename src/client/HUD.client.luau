@@ -160,6 +160,29 @@ bannerFont.MinTextSize = 13
 bannerFont.MaxTextSize = 23
 bannerFont.Parent = banner
 
+local rescueCard = Instance.new("Frame")
+rescueCard.Name = "CoopRescueChallenge"
+rescueCard.AnchorPoint = Vector2.new(0.5, 1)
+rescueCard.Position = UDim2.new(0.5, 0, 1, -193)
+rescueCard.Size = UDim2.new(0.9, 0, 0, 48)
+rescueCard.BackgroundColor3 = Color3.fromRGB(232, 250, 216)
+rescueCard.BorderSizePixel = 0
+rescueCard.Visible = false
+rescueCard.Parent = gui
+round(rescueCard, 15)
+stroke(rescueCard, Color3.fromRGB(128, 212, 150), 2)
+local rescueLimit = Instance.new("UISizeConstraint")
+rescueLimit.MaxSize = Vector2.new(570, 48)
+rescueLimit.Parent = rescueCard
+local rescueLabel = label(rescueCard, "🐾 SAVE THE LOST PETS! 0/3", Enum.Font.GothamBlack, 18, DARK)
+rescueLabel.Size = UDim2.new(1, -12, 1, -4)
+rescueLabel.Position = UDim2.fromOffset(6, 2)
+rescueLabel.TextScaled = true
+local rescueTextLimit = Instance.new("UITextSizeConstraint")
+rescueTextLimit.MinTextSize = 12
+rescueTextLimit.MaxTextSize = 18
+rescueTextLimit.Parent = rescueLabel
+
 local foodPanel = Instance.new("Frame")
 foodPanel.Name = "FeedControls"
 foodPanel.AnchorPoint = Vector2.new(0.5, 1)
@@ -280,6 +303,17 @@ remote.OnClientEvent:Connect(function(event: any)
         noiseCaption.Text = string.format("NOISE %d / %d   •   MORE CHAOS!", event.noise or 0, event.maxNoise or 100)
         timer.Text = countdown(event.time or 0)
         health.Visible = event.phase == "AWAKE"
+        local rescue = event.rescue
+        rescueCard.Visible = event.phase == "AWAKE" and typeof(rescue) == "table" and rescue.active == true
+        if typeof(rescue) == "table" then
+            if rescue.completed then
+                rescueLabel.Text = "🎉 ALL SAVED! +30 COINS FOR SURVIVING HEROES"
+                rescueCard.BackgroundColor3 = Color3.fromRGB(181, 245, 188)
+            else
+                rescueLabel.Text = string.format("🐾 RESCUE THE LOST PETS!  %d / %d  •  +%d BONUS", rescue.rescued or 0, rescue.goal or 3, rescue.bonus or 30)
+                rescueCard.BackgroundColor3 = Color3.fromRGB(232, 250, 216)
+            end
+        end
         for _, foodButton in pairs(buttons) do
             foodButton.Active = event.phase == "SLEEP"
             foodButton.AutoButtonColor = event.phase == "SLEEP"
