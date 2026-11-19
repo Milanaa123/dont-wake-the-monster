@@ -942,6 +942,46 @@ task.spawn(function()
                 sendCollection(player)
             end
         end
+        if phase == "SLEEP" then
+            -- At most one social incident every 25 seconds, no reward farming.
+            local active = Players:GetPlayers()
+            local socialDone = false
+            for first = 1, #active do
+                if socialDone then break end
+                local pa = active[first]
+                local a = profiles[pa]
+                local ra = rootFor(pa)
+                if not a or not ra or not a.pet or not a.pet.PrimaryPart then continue end
+                for second = first + 1, #active do
+                    local pb = active[second]
+                    local b = profiles[pb]
+                    local rb = rootFor(pb)
+                    if not b or not rb or not b.pet or not b.pet.PrimaryPart then continue end
+                    if (ra.Position - rb.Position).Magnitude > 28 then continue end
+                    local petA = a.personalities[a.petIndex]
+                    local petB = b.personalities[b.petIndex]
+                    if not petA or not petB then continue end
+                    local encounter = Personality.meet(petA, petB)
+                    a.revision += 1
+                    b.revision += 1
+                    if a.loaded then a.dirty = true end
+                    if b.loaded then b.dirty = true end
+                    World.emotePet(a.pet, Personality.mood(petA), encounter.kind)
+                    World.emotePet(b.pet, Personality.mood(petB), encounter.kind)
+                    local middle = (ra.Position + rb.Position) / 2 + Vector3.new(0, 3, 0)
+                    World.burst(middle, Config.Pets[a.petIndex].color, 12, 12)
+                    noise = math.min(Config.NOISE_MAX, noise + encounter.noise)
+                    notice(Config.Pets[a.petIndex].name .. " & " .. Config.Pets[b.petIndex].name .. " " .. encounter.title, Color3.fromRGB(255, 210, 145))
+                    sendStats(pa)
+                    sendStats(pb)
+                    sendCollection(pa)
+                    sendCollection(pb)
+                    sendState()
+                    socialDone = true
+                    break
+                end
+            end
+        end
     end
 end)
 
