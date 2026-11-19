@@ -8,6 +8,7 @@ local Debris = game:GetService("Debris")
 local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Config"))
+local Personality = require(ReplicatedStorage:WaitForChild("PetPersonality"))
 local World = require(script.Parent:WaitForChild("World"))
 local Progression = require(script.Parent:WaitForChild("Progression"))
 local Garden = require(script.Parent:WaitForChild("Garden"))
@@ -38,7 +39,8 @@ end
 local function sendStats(player: Player)
     local profile = profiles[player]
     if profile then
-        remote:FireClient(player, {type = "stats", coins = profile.coins, pet = Config.Pets[profile.petIndex].name, hearts = profile.hearts, knockedOut = profile.knockedOut})
+        local p = profile.personalities[profile.petIndex]
+        remote:FireClient(player, {type = "stats", coins = profile.coins, pet = Config.Pets[profile.petIndex].name, hearts = profile.hearts, knockedOut = profile.knockedOut, petMood = if p then Personality.mood(p, phase == "AWAKE") else "Calm", petTemperament = if p then p.temperament else "Unknown"})
     end
 end
 
@@ -169,6 +171,8 @@ local function onPlayerAdded(player: Player)
     profile.lastLure = -100
     profile.lastGardenVisit = -100
     profile.lastFood = ""
+    profile.lastPetInteraction = -100
+    profile.idleAction = "Cuddles"
     profile.loaded = false
     profile.dirty = false
     profile.revision = 0
@@ -190,9 +194,17 @@ local function onPlayerAdded(player: Player)
         warn("DWTM: data load unavailable for " .. player.UserId .. ". Progress is session-only.")
     end
     if profiles[player] ~= profile then return end
+    for petId in pairs(profile.owned) do
+        if Progression.ensurePersonality(profile, petId, player.UserId) then
+            if profile.loaded then profile.dirty = true end
+            profile.revision += 1
+        end
+    end
 
     local petDefinition = Config.Pets[profile.petIndex]
     profile.pet = World.makePet(petDefinition.name .. "_" .. player.UserId, petDefinition.color, petDefinition.ear == "pointy")
+    World.stylePersonality(profile.pet, profile.personalities[profile.petIndex])
+    World.emotePet(profile.pet, Personality.mood(profile.personalities[profile.petIndex]), "Hello")
     movePetNearPlayer(player)
     for slot = 1, GardenConfig.SLOT_COUNT do
         if not farmSlots[slot] then
@@ -243,7 +255,7 @@ local function onPlayerRemoving(player: Player)
     profiles[player] = nil
 end
 
-local function weightedReaction(food: string, previousFood: string, petIndex: number)
+local function weightedReaction(food: string, previousFood: string, petIndex: number, personality: any)
     local total = 0
     local weights = {}
     local quirk = Config.Pets[petIndex].quirk
@@ -258,6 +270,7 @@ local function weightedReaction(food: string, previousFood: string, petIndex: nu
     for index, reaction in ipairs(Config.Reactions) do
         local weight = reaction.weight
         if favorites[quirk] and favorites[quirk][reaction.id] then weight *= 1.6 end
+        if personality then weight *= Personality.reactionMultiplier(personality, reaction.id) end
         if food == "Candy" and (reaction.id == "Confetti" or reaction.id == "Clone" or reaction.id == "Giant") then weight *= 2 end
         if food == "Pepper" and (reaction.id == "Sneeze" or reaction.id == "Spin" or reaction.id == "Hiccup") then weight *= 2 end
         if food == "Bubble" and (reaction.id == "Cloud" or reaction.id == "Mini" or reaction.id == "Bounce") then weight *= 2 end
@@ -404,13 +417,18 @@ local function feed(player: Player, food: any, craftedId: string?)
         sendGarden(player)
     end
     profile.lastFeed = now
-    local reaction = weightedReaction(food, profile.lastFood, profile.petIndex)
+    local activePersonality = profile.personalities[profile.petIndex]
+    local reaction = weightedReaction(food, profile.lastFood, profile.petIndex, activePersonality)
+    local emotionText, personalityNoise = Personality.feed(activePersonality, food)
+    if profile.loaded then profile.dirty = true end
+    profile.revision += 1
     local combo = profile.lastFood == food and rng:NextNumber() < 0.24
     profile.lastFood = food
     totalActions += 1
 
     petEffect(profile, reaction, food)
-    local earnedNoise = foodInfo.noise + reaction.noise + (if combo then 7 else 0)
+    World.emotePet(profile.pet, Personality.mood(activePersonality), if personalityNoise > 0 then "Yuck" else "Nom")
+    local earnedNoise = math.max(0, foodInfo.noise + reaction.noise + personalityNoise + (if combo then 7 else 0))
     if craftedId then
         earnedNoise += RecipeCatalog.Recipes[craftedId].extraNoise
         if profile.pet and profile.pet.PrimaryPart then
@@ -425,6 +443,8 @@ local function feed(player: Player, food: any, craftedId: string?)
     if combo then text ..= " + COMBO!" end
     if craftedId then text ..= " (GARDEN RECIPE!)" end
     notice(text, foodInfo.color)
+    remote:FireClient(player, {type = "petFeeling", text = Config.Pets[profile.petIndex].name .. ": " .. emotionText})
+    sendStats(player)
     sendState()
     if #discoveries > 0 then
         local message = table.concat(discoveries, " | ")
@@ -450,6 +470,9 @@ local function switchPet(player: Player, rawId: any, isPurchase: boolean)
         ok, message = Progression.equip(profile, rawId)
     end
     if ok then
+        if isPurchase then
+            Progression.ensurePersonality(profile, rawId, player.UserId, rng:NextInteger(1, 2147483645))
+        end
         profile.dirty = true
         profile.revision += 1
         -- Buying does not auto-equip: avoids charging again when a user just switches pets.
@@ -457,12 +480,48 @@ local function switchPet(player: Player, rawId: any, isPurchase: boolean)
             if profile.pet then profile.pet:Destroy() end
             local definition = Config.Pets[profile.petIndex]
             profile.pet = World.makePet(definition.name .. "_" .. player.UserId, definition.color, definition.ear == "pointy")
+            World.stylePersonality(profile.pet, profile.personalities[profile.petIndex])
+            World.emotePet(profile.pet, Personality.mood(profile.personalities[profile.petIndex]), "Hello")
             movePetNearPlayer(player)
         end
         sendStats(player)
         sendCollection(player)
     end
     remote:FireClient(player, {type = "notice", text = message, color = if ok then Color3.fromRGB(162, 255, 201) else Color3.fromRGB(255, 182, 151)})
+end
+
+local function interactWithPet(player: Player, rawAction: any)
+    if typeof(rawAction) ~= "string" or (rawAction ~= "Pet" and rawAction ~= "Play" and rawAction ~= "Comfort") then return end
+    local profile = profiles[player]
+    if not profile or phase == "AWAKE" then return end
+    local now = os.clock()
+    if now - profile.lastPetInteraction < 3.5 then return end
+    local root = rootFor(player)
+    if not root or not profile.pet or not profile.pet.PrimaryPart then return end
+    if (root.Position - profile.pet.PrimaryPart.Position).Magnitude > Config.FEED_DISTANCE then
+        remote:FireClient(player, {type = "petFeeling", text = "Come closer to your pet!"})
+        return
+    end
+    profile.lastPetInteraction = now
+    local p = profile.personalities[profile.petIndex]
+    if not p then return end
+    local success, message = Personality.interact(p, rawAction)
+    if success then
+        if profile.loaded then profile.dirty = true end
+        profile.revision += 1
+        profile.idleAction = if rawAction == "Play" then "Jumps" elseif rawAction == "Pet" then "Cuddles" else "Naps"
+        World.emotePet(profile.pet, Personality.mood(p), profile.idleAction)
+        if rawAction == "Play" and p.traits.mischief > 60 then
+            noise = math.min(Config.NOISE_MAX, noise + 3)
+            World.burst(profile.pet.PrimaryPart.Position, Color3.fromRGB(254, 201, 121), 9, 8)
+            sendState()
+        elseif rawAction == "Comfort" then
+            World.burst(profile.pet.PrimaryPart.Position, Color3.fromRGB(215, 175, 255), 8, 7)
+        end
+        sendStats(player)
+        sendCollection(player)
+    end
+    remote:FireClient(player, {type = "petFeeling", text = Config.Pets[profile.petIndex].name .. ": " .. message})
 end
 
 local function gardenAction(player: Player, command: string, arg: any)
@@ -564,6 +623,8 @@ remote.OnServerEvent:Connect(function(player: Player, command: any, arg: any)
     if not profile or typeof(command) ~= "string" then return end
     if command == "Feed" then
         feed(player, arg)
+    elseif command == "PetInteract" then
+        interactWithPet(player, arg)
     elseif command == "GardenFeed" then
         if typeof(arg) ~= "string" then return end
         local recipe = RecipeCatalog.Recipes[arg]
@@ -694,6 +755,11 @@ local function startWake()
         profile.hearts = 3
         profile.knockedOut = false
         profile.lastHit = -100
+        local p = profile.personalities[profile.petIndex]
+        if p and profile.pet then
+            profile.idleAction = Personality.idle(p, true)
+            World.emotePet(profile.pet, Personality.mood(p, true), profile.idleAction)
+        end
         sendStats(player)
     end
     World.setMonsterAwake(true)
@@ -782,13 +848,25 @@ RunService.Heartbeat:Connect(function(dt: number)
             local wobble = math.sin(t * 3 + player.UserId) * 0.65
             local side = root.CFrame.RightVector * 4.8
             local behind = -root.CFrame.LookVector * 3.5
-            local target = root.Position + side + behind + Vector3.new(0, 3.2 + wobble, 0)
+            local personality = profile.personalities[profile.petIndex]
+            local habit = profile.idleAction
+            if personality and habit == "Hides" then
+                side *= 0.45
+                behind *= 1.8
+            elseif habit == "Cuddles" then
+                side *= 0.5
+                behind *= 0.55
+            end
+            local bob = if habit == "Jumps" then math.abs(math.sin(t * 7)) * 2.2 elseif habit == "Naps" then wobble * 0.15 else wobble
+            local target = root.Position + side + behind + Vector3.new(0, 3.2 + bob, 0)
             if (pet.PrimaryPart.Position - target).Magnitude > 60 then
                 pet:PivotTo(CFrame.new(target))
             else
                 local facing = CFrame.lookAt(target, root.Position + Vector3.new(0, 2, 0))
                 if profile.effect == "Spin" and profile.effectUntil > t then
                     facing *= CFrame.Angles(0, t * 11, 0)
+                elseif personality and (habit == "Dances" or habit == "ChasesTail") and profile.effectUntil < t then
+                    facing *= CFrame.Angles(0, math.sin(t * 4) * 0.65, 0)
                 elseif profile.effect == "Bounce" and profile.effectUntil > t then
                     facing += Vector3.new(0, math.abs(math.sin(t * 9)) * 3, 0)
                 end
@@ -844,6 +922,25 @@ task.spawn(function()
         for player, profile in pairs(profiles) do
             World.updateGarden(player.UserId, profile.garden, GardenConfig)
             sendGarden(player)
+        end
+    end
+end)
+
+task.spawn(function()
+    while true do
+        task.wait(25)
+        for player, profile in pairs(profiles) do
+            local p = profile.personalities[profile.petIndex]
+            if p then
+                profile.idleAction = Personality.tick(p, phase == "AWAKE")
+                if profile.loaded then profile.dirty = true end
+                profile.revision += 1
+                if profile.pet and profile.pet.Parent then
+                    World.emotePet(profile.pet, Personality.mood(p, phase == "AWAKE"), profile.idleAction)
+                end
+                sendStats(player)
+                sendCollection(player)
+            end
         end
     end
 end)
