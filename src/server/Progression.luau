@@ -3,6 +3,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage:WaitForChild("Config"))
 local Garden = require(script.Parent:WaitForChild("Garden"))
+local Personality = require(ReplicatedStorage:WaitForChild("PetPersonality"))
 
 local Progression = {}
 local MAX_COINS = 1000000000
@@ -28,6 +29,7 @@ function Progression.new()
         questClaimed = {feeds = false, survivals = false, discoveries = false},
         dailyDay = -1,
         garden = Garden.new(),
+        personalities = {},
     }
 end
 
@@ -47,6 +49,18 @@ function Progression.load(profile: any, data: any)
     -- Old v1 accounts only stored equipped pet; never revoke their old companion.
     profile.owned[1] = true
     profile.owned[profile.petIndex] = true
+
+    -- Migrate old collections without changing ownership or resetting progress.
+    if type(data.personalities) == "table" then
+        for i = 1, #Config.Pets do
+            if profile.owned[i] then
+                local raw = data.personalities[tostring(i)] or data.personalities[i]
+                local pet = Config.Pets[i]
+                local restored = Personality.restore(raw, pet.description or pet.name)
+                if restored then profile.personalities[i] = restored end
+            end
+        end
+    end
 
     if type(data.discovered) == "table" then
         for _, reactionId in ipairs(data.discovered) do
@@ -77,8 +91,15 @@ function Progression.serialize(profile: any)
             table.insert(discovered, reaction.id)
         end
     end
+    local personalityData = {}
+    for i = 1, #Config.Pets do
+        if profile.owned[i] and profile.personalities[i] then
+            personalityData[tostring(i)] = Personality.pack(profile.personalities[i])
+        end
+    end
     return {
         coins = saneInt(profile.coins, MAX_COINS),
+        personalities = personalityData,
         petIndex = profile.petIndex,
         owned = owned,
         discovered = discovered,
@@ -135,13 +156,43 @@ function Progression.recordSurvival(profile: any): number
     return questReward(profile, "survivals", profile.survivalCount)
 end
 
+function Progression.ensurePersonality(profile: any, petId: number, userId: number, freshSeed: number?): boolean
+    if not Config.Pets[petId] or not profile.owned[petId] then return false end
+    if profile.personalities[petId] then return false end
+    local species = Config.Pets[petId].description or Config.Pets[petId].name
+    local seed = freshSeed or Personality.seedFor(userId, petId)
+    profile.personalities[petId] = Personality.generate(seed, species)
+    return true
+end
+
 function Progression.catalog(profile: any)
     local owned = {}
     for i = 1, #Config.Pets do
         if profile.owned[i] then table.insert(owned, i) end
     end
     local currentDay = math.floor(os.time() / 86400)
+    local petProfiles = {}
+    for i = 1, #Config.Pets do
+        local p = profile.personalities[i]
+        if profile.owned[i] and p then
+            petProfiles[tostring(i)] = {
+                temperament = p.temperament,
+                habit = p.habit,
+                fear = p.fear,
+                affection = p.affection,
+                favoriteFood = p.favoriteFood,
+                dislikedFood = p.dislikedFood,
+                traits = table.clone(p.traits),
+                happiness = p.happiness,
+                energy = p.energy,
+                hunger = p.hunger,
+                bond = p.bond,
+                mood = Personality.mood(p),
+            }
+        end
+    end
     return {
+        petProfiles = petProfiles,
         owned = owned,
         equipped = profile.petIndex,
         discovered = discoveryCount(profile),
