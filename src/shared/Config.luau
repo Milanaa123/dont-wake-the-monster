@@ -11,6 +11,9 @@ Config.COOLDOWN_SECONDS = 12
 Config.SURVIVAL_REWARD = 35
 Config.FEED_REWARD = 2
 Config.DATASTORE_NAME = "DWTM_Prototype_v1"
+-- Set after uploading assets/audio/original-cat-purr-loop.wav as a Roblox audio asset.
+-- Zero deliberately disables audible playback until creator-owned permissions are granted.
+Config.PurrSoundId = 0
 
 Config.Foods = {
     Candy = {label = "🍬 CANDY", noise = 9, color = Color3.fromRGB(255, 116, 197)},
