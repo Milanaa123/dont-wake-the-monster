@@ -1,0 +1,8 @@
+build/
+dist/
+*.rbxlx
+*.rbxl
+*.rbxm
+*.rbxmx
+sourcemap.json
+.DS_Store
