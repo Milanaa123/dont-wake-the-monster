@@ -24,6 +24,8 @@ required = [
     "src/server/Garden.luau",
     "src/server/RecipeCatalog.luau",
     "src/client/Garden.client.luau",
+    "src/shared/PetPersonality.luau",
+    "src/client/PetDiary.client.luau",
     "src/server/RescueObjective.luau",
     "src/client/HowToPlay.client.luau",
 ]
@@ -103,6 +105,26 @@ assert 'rescueCard.Visible' in hud and 'rescueLabel.Text' in hud, "Rescue progre
 assert 'GROW & MIX' in onboarding and 'RESCUE & SURVIVE' in onboarding, "First-time tutorial missing"
 
 print("OK: co-op rescue prompts, server checks, objective HUD and first-time tutorial")
+
+personality = read("src/shared/PetPersonality.luau")
+diary = read("src/client/PetDiary.client.luau")
+world = read("src/server/World.luau")
+assert 'Personality.Temperaments = {' in personality and 'Personality.Habits = {' in personality
+assert 'Personality.Fears = {' in personality and 'Personality.Affection = {' in personality
+assert 'function Personality.generate(' in personality and 'function Personality.restore(' in personality
+assert 'function Personality.meet(' in personality and 'Personality.EncounterNames' in personality
+assert 'function Personality.bondStage(' in personality
+for fragment in ("personalities = {}", "Personality.restore(", "Personality.pack(", "function Progression.ensurePersonality(", "petProfiles = petProfiles"):
+    assert fragment in progression, f"Missing persistence or collection: {fragment}"
+assert 'World.stylePersonality(' in server and 'World.emotePet(' in server, "Missing world personality visuals"
+assert 'Personality.reactionMultiplier(' in server and 'Personality.feed(' in server, "Personality must influence chaos reactions"
+assert 'Personality.meet(' in server and 'Personality.tick(' in server, "Personality needs social behavior and idle changes"
+assert '"PetInteract"' in server and '"PetInteract"' in diary, "Server-authoritative pet interactions missing"
+assert 'catalog.petProfiles[tostring(id)]' in client, "Collection must show individual pet traits"
+assert 'profile.temperament' in diary and 'profile.bondStage' in diary, "Pet diary must expose individual traits"
+assert 'species == "Pip" or species == "Zuzu"' in world, "Starter kittens must have cat visuals"
+assert 'Favorite' not in server or 'Personality.feed(' in server, "Pet preferences not connected"
+print("OK: per-owner individual personalities, saved genetics, dynamic mood, social encounters and diary")
 
 
 
