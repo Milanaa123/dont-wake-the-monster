@@ -545,6 +545,10 @@ remote.OnServerEvent:Connect(function(player: Player, command: any, arg: any)
     elseif command == "GardenLure" then
         useLure(player, arg)
     elseif command == "GardenVisit" then
+        if phase == "AWAKE" then
+            remote:FireClient(player, {type = "notice", text = "No teleporting away from Giggles! SURVIVE!", color = Color3.fromRGB(255, 178, 135)})
+            return
+        end
         if os.clock() - profile.lastGardenVisit < 2 then return end
         profile.lastGardenVisit = os.clock()
         local spot = World.gardenSpawn(player.UserId)
