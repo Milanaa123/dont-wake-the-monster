@@ -6,6 +6,8 @@ A colorful, chaotic multiplayer Roblox prototype: feed your ridiculous pet, trig
 
 - Procedurally constructed floating island, decorations, glowing crystals, clouds and an enormous sleeping monster.
 - Ten collectible, distinct-color companion pets with procedural cosmetic details, bought using **in-game coins only**.
+- **Gardening & Alchemy v0.3**: 12 crops, 6 plots/player, 10 coin-earnable seed varieties, offline plant growth, visual farms, 8 recipes, special pet food and creature/monster bait.
+- Compost and Starlight fertilizers speed up plant growth. Two premium seed types and one premium fertilizer remain disabled previews.
 - Four mobile-friendly feed buttons, **12 reaction types**, food combos, and six spontaneous island-wide surprises.
 - Shared noise meter, randomized monster attacks, three-hit survival, and coins for surviving rounds.
 - Starter quests, reaction discovery album, daily in-game coin treat, a collection/inventory screen and pet swapping.
@@ -13,7 +15,7 @@ A colorful, chaotic multiplayer Roblox prototype: feed your ridiculous pet, trig
 - Responsive touchscreen controls and keyboard support.
 - Automatic Luau compilation, Rojo `.rbxlx` build and source/invariant checks through GitHub Actions.
 
-**Status: v0.2 source-code MVP. GitHub CI builds and checks code syntax, but Roblox Studio runtime/multiplayer/device testing has NOT been performed.** Procedural art is a placeholder for final optimized meshes and animations. NO real Robux payments or marketplace product IDs are connected. In-game coin prices are not Robux prices. Cross-server persistence needs session-lock hardening before public release.
+**Status: v0.3 source-code MVP. GitHub CI builds, compiles and executes isolated garden rules, but Roblox Studio runtime/multiplayer/device testing has NOT been performed.** Procedural art is a placeholder for final optimized meshes and animations. NO real Robux payments or marketplace product IDs are connected. In-game coin prices are not Robux prices. Cross-server persistence needs session-lock hardening before public release.
 
 ## No-computer workflow
 
@@ -27,7 +29,11 @@ A colorful, chaotic multiplayer Roblox prototype: feed your ridiculous pet, trig
 - `src/shared/Config.luau`: balance, feed items, creature types and reaction catalog.
 - `src/server/World.luau`: procedural world and monster art.
 - `src/server/Game.server.luau`: authoritative multiplayer game loop, hearts, boss damage, pet effects and saving.
-- `src/server/Progression.luau`: catalog, buying/equipping pets, starter missions, discoveries and daily rewards.
+- `src/server/Progression.luau`: catalog, buying/equipping pets, daily rewards and gardening persistence.
+- `src/shared/GardenConfig.luau`: crop catalog, recipes and disabled premium product definitions.
+- `src/server/Garden.luau`: authoritative farming and crafting rules.
+- `src/client/Garden.client.luau`: mobile garden, seeds, recipes and fertilizer UI.
+- `scripts/test_garden.py`: isolated Luau runtime tests for farm mechanics.
 - `src/client/HUD.client.luau`: controls, notifications, noise and survival UI.
 - `src/client/Collection.client.luau`: pet inventory, shop and quest tracking.
 - `scripts/validate_project.py`: offline source-structure and economy checks.
@@ -56,4 +62,4 @@ In Studio, select **Play** to test; enable Studio API services only for isolated
 - [ ] Monetization IDs, purchase receipt handling and age/regional compliance
 - [ ] Mobile performance profiling, moderation and public release
 
-See `docs/ROADMAP.md` for test criteria and next steps.
+See [Gardening guide](docs/GARDENING.md), [Changelog](docs/CHANGELOG.md) and [Roadmap](docs/ROADMAP.md).
