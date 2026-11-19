@@ -206,6 +206,53 @@ function World.makePet(name: string, color: Color3, pointy: boolean): Model
         orb(pet, "Ear", Vector3.new(x * 1.25, 2.15, 0), pointy and Vector3.new(1.15, 2.4, 1.1) or Vector3.new(1.8, 1.6, 1.3), color)
     end
     orb(pet, "Nose", Vector3.new(0, -0.55, -2.04), Vector3.new(0.55, 0.4, 0.4), PINK)
+    orb(pet, "Smile", Vector3.new(0, -1.13, -1.85), Vector3.new(1.18, 0.25, 0.28), Color3.fromRGB(92, 53, 92))
+    for _, x in ipairs({-1.75, 1.75}) do
+        orb(pet, "RosyCheek", Vector3.new(x, -0.67, -1.57), Vector3.new(0.7, 0.5, 0.27), Color3.fromRGB(255, 156, 177))
+        orb(pet, "TinyFoot", Vector3.new(x * 0.7, -1.86, -0.9), Vector3.new(1.25, 0.7, 1.45), color)
+    end
+    orb(pet, "PuffTail", Vector3.new(0, -0.2, 2.05), Vector3.new(1.8, 1.8, 1.8), color)
+    local species = string.match(name, "^[^_]+") or name
+    if species == "Nugget" or species == "Zuzu" then
+        for _, x in ipairs({-1, 1}) do
+            local wing = orb(pet, "FluffyWing", Vector3.new(x * 2.6, 0.2, 0.3), Vector3.new(1.5, 2.4, 1.2), Color3.fromRGB(255, 245, 196))
+            wing.CFrame = wing.CFrame * CFrame.Angles(0, 0, math.rad(x * 24))
+        end
+    elseif species == "Spark" then
+        local crystal = orb(pet, "SparkCrown", Vector3.new(0, 3.1, 0), Vector3.new(1.55, 2.3, 1.5), YELLOW, Enum.Material.Neon)
+        crystal.CFrame = crystal.CFrame * CFrame.Angles(0, 0, math.rad(22))
+    elseif species == "Pickle" then
+        orb(pet, "LeafSprout", Vector3.new(-0.6, 3.1, 0), Vector3.new(1.75, 0.62, 1.05), MINT)
+        orb(pet, "LeafSprout", Vector3.new(0.6, 3.4, 0), Vector3.new(1.75, 0.62, 1.05), MINT)
+    elseif species == "Mochi" or species == "Tofu" then
+        for _, x in ipairs({-1.1, 0, 1.1}) do
+            orb(pet, "CloudTuft", Vector3.new(x, 2.25, -0.2), Vector3.new(1.8, 1.5, 1.8), Color3.fromRGB(255, 253, 244))
+        end
+    elseif species == "Bloop" or species == "Gloop" then
+        for _, x in ipairs({-1.7, 1.7}) do
+            orb(pet, "JellySpot", Vector3.new(x, 0.85, -1.38), Vector3.new(0.6, 0.65, 0.28), BLUE, Enum.Material.Neon)
+        end
+    elseif species == "Wobble" then
+        local halo = part(pet, "WobbleHalo", Vector3.new(0.4, 5.2, 5.2), CFrame.new(0, 3.1, 0) * CFrame.Angles(0, 0, math.rad(90)), PURPLE, Enum.Material.Neon, Enum.PartType.Cylinder)
+        halo.Transparency = 0.32
+    end
+    local tag = Instance.new("BillboardGui")
+    tag.Name = "PetNameTag"
+    tag.Size = UDim2.fromOffset(140, 36)
+    tag.StudsOffset = Vector3.new(0, 3.7, 0)
+    tag.MaxDistance = 85
+    tag.AlwaysOnTop = true
+    tag.Parent = body
+    local tagText = Instance.new("TextLabel")
+    tagText.Size = UDim2.fromScale(1, 1)
+    tagText.BackgroundTransparency = 1
+    tagText.Text = species
+    tagText.TextScaled = true
+    tagText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    tagText.TextStrokeColor3 = Color3.fromRGB(76, 49, 99)
+    tagText.TextStrokeTransparency = 0.15
+    tagText.Font = Enum.Font.GothamBlack
+    tagText.Parent = tag
     local light = Instance.new("PointLight")
     light.Range = 11
     light.Brightness = 0.4
