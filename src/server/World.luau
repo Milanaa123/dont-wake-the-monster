@@ -491,7 +491,7 @@ function World.updateGarden(userId: number, garden: any, cropConfig: any)
             local ratio = math.clamp((now - p.plantedAt) / total, 0, 1)
             stage = if now >= p.readyAt then 3 elseif ratio > 0.48 then 2 else 1
         end
-        local stageKey = if p then p.seed .. "_" .. stage else "EMPTY"
+        local stageKey = if p then p.seed .. "_" .. stage .. "_" .. (p.mutation or "normal") else "EMPTY"
         if plot:GetAttribute("StageKey") == stageKey then continue end
         plot:SetAttribute("StageKey", stageKey)
         local previous = plot:FindFirstChild("PlantVisual")
@@ -546,6 +546,22 @@ function World.updateGarden(userId: number, garden: any, cropConfig: any)
                 end
             end
             CottageStyle.decorateCrop(visual, center, seedType, stage)
+            if p.mutation then
+                local variations = {
+                    Golden = Color3.fromRGB(255, 224, 107),
+                    Dewy = Color3.fromRGB(133, 225, 255),
+                    Moonlit = Color3.fromRGB(202, 165, 255),
+                    Giggly = Color3.fromRGB(255, 152, 209),
+                }
+                local tint = variations[p.mutation] or crop.color
+                for n = 1, 5 do
+                    local a = n * math.pi * 2 / 5
+                    local bubble = orb(visual, "MutatedSparkle_" .. p.mutation,
+                        head + Vector3.new(math.cos(a) * (size + 1.1), math.sin(a) * (size + 1.2), 0),
+                        Vector3.new(0.64, 0.64, 0.64), tint, Enum.Material.Neon)
+                    bubble.CanCollide = false
+                end
+            end
             if stage == 3 then
                 orb(visual, "HarvestGlow", center + Vector3.new(0, height + 2.4, 0), Vector3.new(0.8, 0.8, 0.8), Color3.fromRGB(255, 248, 187), Enum.Material.Neon)
             end
