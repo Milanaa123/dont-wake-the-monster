@@ -32,7 +32,7 @@ for path in required:
 
 cfg = read(required[0])
 pets = cfg.split("Config.Pets = {", 1)[1].split("Config.Reactions = {", 1)[0]
-pet_prices = re.findall(r'\{name = "([^"]+)".*?price = (\d+)\}', pets)
+pet_prices = re.findall(r'\{name = "([^"]+)"[^}]*?price = (\d+)[^}]*\}', pets)
 assert len(pet_prices) == 30, f"Expected 30 pet definitions, got {len(pet_prices)}"
 names = [name for name, _ in pet_prices]
 prices = [int(price) for _, price in pet_prices]
