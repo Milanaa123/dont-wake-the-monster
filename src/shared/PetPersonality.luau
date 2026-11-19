@@ -117,6 +117,14 @@ function Personality.pack(p: any)
     }
 end
 
+function Personality.bondStage(p: any): string
+    if p.bond >= 90 then return "Soulmates" end
+    if p.bond >= 65 then return "Best Friends" end
+    if p.bond >= 40 then return "Friends" end
+    if p.bond >= 20 then return "Getting Close" end
+    return "Just Met"
+end
+
 function Personality.mood(p: any, monsterAwake: boolean?): string
     if monsterAwake and p.fear == "BigMonsters" and p.traits.courage < 75 then return "Scared" end
     if p.hunger >= 77 then return "Hungry" end
