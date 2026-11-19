@@ -1,57 +1,89 @@
-# Roblox publishing using GitHub only (manual)
+# Roblox publishing from GitHub (Android, no local PC)
 
-**Important:** This workflow is READY TO CONFIGURE but has not been connected to a
-Roblox account or run. It cannot create a new Roblox universe/place, and it does not
-test Roblox engine behavior. It updates an **existing** place.
+**Verified documentation as of 19 November 2026.** The source/build and two
+official Roblox upload backends are implemented. The user's Roblox account
+does not yet have a known linked Place ID, API key, uploaded revision or public
+game. The build-only CI results are not evidence of live Roblox publication.
 
-## Setup from phone (one time)
+**START HERE: [Complete mobile-only decision tree and instructions](PUBLISH_FROM_ANDROID_2026.md).**
 
-1. Create an empty private Roblox experience/place first. If your account cannot
-   create an experience from mobile, a remote computer with Roblox Studio may be
-   needed ONCE for this step.
-2. In Roblox Creator Dashboard, open the experience -> Places -> target place.
-   Copy the numeric **Place ID** from the configuration page URL.
-3. On Roblox Creator Dashboard, create a **dedicated Open Cloud API key** with
-   Assets API access: **Read + Write** for the specific experience. Limit its
-   scope and expiry. Keep it secret.
-4. In GitHub repository -> Settings -> Secrets and variables -> Actions ->
-   **New repository secret**, add exactly `ROBLOX_API_KEY`. Never paste it into
-   a README, source code, issue or chat.
-5. On GitHub -> Actions -> **Upload Roblox place (manual)** -> Run workflow.
-   Enter the **existing Place ID**. Start with **Saved**. This uploads a new
-   unpublished place version; it does not make it publicly playable.
-6. Once a remote Studio test confirms that gameplay works, you can trigger
-   the same workflow and deliberately choose **Published** to publish that
-   place version. Roblox visibility/access settings are separate.
+## What the workflow actually does
 
-No GitHub push automatically publishes. The workflow only runs when manually
-triggered. It refuses to run from branches other than main.
+Manual workflow:
+https://github.com/Milanaa123/dont-wake-the-monster/actions/workflows/upload-roblox.yml
 
-## How the API works
+- Triggered **manually only**, never by a regular source-code push.
+- Creates a complete `dist/dont-wake-the-monster.rbxlx` file using Rojo.
+- Validates code and checks for Roblox place ID and an Open Cloud API key
+  stored as `ROBLOX_API_KEY` in GitHub Actions Secrets. The secret is never
+  committed to GitHub.
+- `backend = assets` (default): official Assets Update API
+  `PATCH https://apis.roblox.com/assets/v1/assets/{placeId}`.
+  API key needs **Assets → Read + Write** for the target game. The API
+  asynchronously reports the actual place revision ID and whether it was published.
+- `backend = universes` (fallback when chosen explicitly): official legacy
+  Place Publishing API
+  `POST https://apis.roblox.com/universes/v1/{universeId}/places/{placeId}/versions?versionType=Saved|Published`.
+  API key needs **universe-places → Write** and BOTH numeric IDs.
+  This operation returns `versionNumber` in its response.
+  The legacy documented limit is 10 MiB; check limits before use.
+- `place_id` and optional `universe_id` can be entered in the Run workflow
+  dialog, or stored once as non-secret GitHub Actions variables
+  `ROBLOX_PLACE_ID` and `ROBLOX_UNIVERSE_ID`.
+- `upload_mode = Saved` adds an unpublished revision only; it is **not**
+  playable even by the owner in Roblox app until the place is subsequently
+  **Published**.
+- `upload_mode = Published` publishes the **place version**.
+  The game can and should remain **PRIVATE** while the creator playtests it.
+  Making the **experience PUBLIC** is a separate Creator Dashboard
+  audience/release operation with Roblox age/eligibility requirements.
 
-The workflow builds `dist/dont-wake-the-monster.rbxlx`, then makes a PATCH request
-to the current Roblox Assets API:
+## Minimum owner actions (secure, from phone)
 
-`PATCH https://apis.roblox.com/assets/v1/assets/{placeId}`
+1. In [Creator Dashboard](https://create.roblox.com/dashboard/creations),
+   check for an **existing test experience / starting place** and copy the
+   Place ID. If none exists, try **Build** (limited regions), **Studio Lite**
+   (third-party Roblox game), or one-time official Windows/macOS Studio.
+   See [all verified options](PUBLISH_FROM_ANDROID_2026.md).
+2. Create a Roblox Open Cloud key in Creator Dashboard for the selected
+   backend and save it in
+   [GitHub Actions Secrets](https://github.com/Milanaa123/dont-wake-the-monster/settings/secrets/actions)
+   as `ROBLOX_API_KEY`. NEVER send the key in chat, documents or issues.
+3. Open the [manual upload action](https://github.com/Milanaa123/dont-wake-the-monster/actions/workflows/upload-roblox.yml),
+   enter the appropriate place ID, choose `assets` + `Saved`,
+   and click Run workflow.
+4. After a successful upload and checking the target place, manually run
+   `Published` while the experience is still private. Play the actual game
+   from the Roblox Android app; this is a live test, **not** a simulated video.
+5. Release publicly in Creator Hub only after fixing live engine bugs,
+   checking ratings/eligibility, and confirming the experience is ready.
 
-The multipart fields are:
-- `request`: JSON `{"assetId":123,"assetType":"Place","published":false}`
-  (or `published:true` after choosing Published).
-- `fileContent`: the Rojo-created `.rbxlx`, MIME `application/xml`.
-
-It then polls `GET /assets/v1/operations/{operationId}` until Roblox confirms the
-operation succeeded or fails. The API key is read from GitHub Secrets.
-
-Roblox's current official reference:
+Roblox official Assets API documentation:
 https://create.roblox.com/docs/cloud/guides/usage-place-publishing
 
-## Known blockers
+Roblox Universe API reference:
+https://github.com/Roblox/creator-docs/blob/main/content/en-us/reference/cloud/universes-api/v1.json
 
-- **No Roblox place has been linked to this repo yet.**
-- Automatic GitHub tests cannot catch engine runtime errors, bad animations,
-  camera issues, mobile UI collisions or multiplayer race conditions.
-- Publishing by Assets API can require Studio for certain asset types;
-  check Roblox's documented limitations.
-- Before public publishing: runtime QA, production-safe DataStore session locks,
-  creator eligibility, content policy checks, and all relevant Roblox settings.
-- No paid products are currently connected; the pet shop uses free coins only.
+Roblox current public release requirements:
+https://create.roblox.com/docs/production/publishing/publish-games-and-places
+
+## Known limitations
+
+- GitHub cannot, through documented Open Cloud API-key endpoints, create a
+  completely new Universe / initial Place from nothing. The owner needs to
+  create or use an existing place in their Roblox account first.
+- **No Roblox API key or Place ID is currently connected** in this repo.
+- Neither a passing GitHub Actions build nor a successful API upload proves
+  that actual gameplay, HUD, saves, audio or multiplayer logic works.
+- Uploaded **.rbxlx place files overwrite the contents of their targeted
+  place**. Do not target any important pre-existing game without a backup.
+- Roblox Build games edited outside Build can lose the automatic Moderate
+  content rating and require the Content Ratings Questionnaire.
+- Roblox Studio is available for Windows/macOS, not Android. Cloud Windows
+  desktops are a separate, potentially paid option; Roblox may reject
+  unsupported virtual machines.
+- No purchased items or Robux monetization is active. Stable server-side
+  session locks and `MarketplaceService.ProcessReceipt` are required before
+  any monetary release.
+
+**This project stays private by default. No automatic public release is enabled.**

@@ -80,6 +80,10 @@ A colorful, chaotic multiplayer Roblox prototype: feed your ridiculous pet, trig
 
 **Android setup and first authorized Studio playtest:** [Russian step-by-step guide](docs/START_FROM_ANDROID.md). Build-only GitHub CI has passed; this does not substitute for a real Roblox Studio test.
 
+## Publication without a local PC
+
+The **[current mobile-only release guide](docs/PUBLISH_FROM_ANDROID_2026.md)** explains how to bootstrap a Roblox place using an existing experience, official Roblox Build (limited regions), Studio Lite, or a remote Studio, then upload our **actual** `.rbxlx` with one GitHub Actions click using either of two supported Roblox Open Cloud APIs. Once uploaded, the game can be tested privately on Android. Public release is separate and is subject to Roblox age and account eligibility requirements.
+
 ## Local development (optional)
 
 Install [Rojo](https://rojo.space), then run:
