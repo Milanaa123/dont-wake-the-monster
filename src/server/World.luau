@@ -607,6 +607,48 @@ function World.stylePersonality(pet: Model, personality: any)
     World.emotePet(pet, "Happy", personality.habit)
 end
 
+-- Configurable sound. Upload the project's original purr WAV in Creator Dashboard
+-- and set Config.PurrSoundId. No third-party or unlicensed audio asset is used.
+function World.setPurr(pet: Model, level: number, soundId: number?)
+    local root = pet.PrimaryPart
+    if not root then return end
+    local existing = root:FindFirstChild("SoftPurrLoop")
+    local valid = type(soundId) == "number" and soundId > 0 and soundId == math.floor(soundId)
+    if not valid then
+        if existing and existing:IsA("Sound") then existing:Stop() end
+        return
+    end
+    local sound: Sound
+    if existing and existing:IsA("Sound") then
+        sound = existing
+    else
+        sound = Instance.new("Sound")
+        sound.Name = "SoftPurrLoop"
+        sound.Looped = true
+        sound.RollOffMaxDistance = 64
+        sound.RollOffMinDistance = 3
+        sound.RollOffMode = Enum.RollOffMode.InverseTapered
+        sound.SoundId = "rbxassetid://" .. tostring(soundId)
+        sound.Volume = 0
+        sound.Parent = root
+    end
+    level = math.clamp(level, 0, 1)
+    sound.Volume = 0.05 + level * 0.77
+    sound.PlaybackSpeed = 0.82 + level * 0.29
+    if level <= 0.001 then
+        sound:Stop()
+    elseif not sound.IsPlaying then
+        sound:Play()
+    end
+end
+
+function World.carryPose(pet: Model, root: BasePart, t: number): CFrame
+    -- Visual cuddling pose, not an equipped Tool. Server continuously positions
+    -- the anchored, non-colliding companion in the avatar's arms.
+    local cuddle = root.CFrame * CFrame.new(0, 1.0 + math.sin(t * 2.5) * 0.09, -3)
+    return cuddle * CFrame.Angles(math.rad(-13), math.rad(math.sin(t * 1.2) * 7), math.rad(-8))
+end
+
 function World.emotePet(pet: Model, mood: string, action: string?)
     local root = pet.PrimaryPart
     if not root then return end
