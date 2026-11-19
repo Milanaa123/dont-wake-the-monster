@@ -127,6 +127,7 @@ rounded(close, 14)
 
 local subtitle = textLabel(panel, "Collect new friends using COINS from chaos!", 12, MUTED)
 subtitle.Position = UDim2.new(0, 18, 0, 48)
+subtitle.Text = "Each pet has a unique temperament. Tap DIARY to bond!"
 subtitle.Size = UDim2.new(1, -36, 0, 24)
 subtitle.TextScaled = true
 local subtitleLimit = Instance.new("UITextSizeConstraint")
@@ -184,6 +185,7 @@ padding.PaddingRight = UDim.new(0, 7)
 padding.Parent = list
 
 local rowButtons: {[number]: TextButton} = {}
+local rowDetails: {[number]: TextLabel} = {}
 local function owned(id: number): boolean
     for _, value in ipairs(catalog.owned) do
         if value == id then return true end
@@ -220,6 +222,7 @@ for id, pet in ipairs(Config.Pets) do
     local petPrice = textLabel(row, if id == 1 then "Starter buddy" else tostring(pet.price) .. " coins", 11, MUTED)
     petPrice.Position = UDim2.new(0, 62, 0, 32)
     petPrice.Size = UDim2.new(0.38, 0, 0, 20)
+    rowDetails[id] = petPrice
 
     local button = Instance.new("TextButton")
     button.Name = "Action"
@@ -258,6 +261,12 @@ local function render()
     daily.BackgroundColor3 = if catalog.dailyReady then Color3.fromRGB(255, 224, 147) else Color3.fromRGB(227, 225, 225)
     for id, pet in ipairs(Config.Pets) do
         local b = rowButtons[id]
+        local profileInfo = if type(catalog.petProfiles) == "table" then catalog.petProfiles[tostring(id)] else nil
+        if profileInfo then
+            rowDetails[id].Text = profileInfo.temperament .. " • " .. profileInfo.mood .. " • Bond " .. profileInfo.bond .. "%"
+        else
+            rowDetails[id].Text = if id == 1 then "Starter buddy" else tostring(pet.price) .. " coins"
+        end
         if catalog.equipped == id then
             b.Text = "EQUIPPED ✓"
             b.BackgroundColor3 = Color3.fromRGB(170, 236, 187)
