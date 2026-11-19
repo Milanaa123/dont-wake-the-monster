@@ -23,6 +23,7 @@ local mixSlots = {"", "", ""}
 local pickerSlot = 0
 local selectedCropCount = 0
 local plotTimers: {[number]: TextLabel} = {}
+local lastMerchantRefresh = -1
 
 local function round(obj: Instance, radius: number)
     local corner = Instance.new("UICorner")
@@ -563,6 +564,14 @@ end)
 task.spawn(function()
     while true do
         task.wait(1)
+        if overlay.Visible and tab == "Seeds" and state and state.merchantShop then
+            local now = (state.serverTime or os.time()) + (os.clock() - latestAt)
+            local rotation = state.merchantShop.rotation
+            if now >= (state.merchantShop.nextRestock or math.huge) and lastMerchantRefresh ~= rotation then
+                lastMerchantRefresh = rotation
+                remote:FireServer("Sync")
+            end
+        end
         if overlay.Visible and tab == "Plots" and state then
             for index, label in pairs(plotTimers) do
                 local p = state.plots[index]
