@@ -1,0 +1,25 @@
+2026-11-19T09:10:45.908Z
+[FLog::Output] All use of Roblox services must comply with Roblox's Terms of Use, Privacy Policy, Community Standards, and applicable laws. Processing of User personal information is limited to the purposes expressly permitted therein.
+2026-11-19T09:10:45.006Z,0.006245,0024,6,Info [FLog::DesktopInstaller] The installer reporter is initialized
+2026-11-19T09:10:45.006Z,0.006289,0024,6,Info [FLog::DesktopInstaller] Reporting Installer Start
+2026-11-19T09:10:45.006Z,0.006293,0024,6,Info [FLog::DesktopInstaller] Set event ingest throttling for InstallNormal to be 10000
+2026-11-19T09:10:45.092Z,0.092604,012c,6,Info [FLog::DesktopInstaller] Start the Installer thread
+2026-11-19T09:10:45.092Z,0.092648,012c,6,Info [FLog::StatusFileManagerLogV2] Recording IN_PROGRESS status with message Runner thread started in status file at C:\users\agent\AppData\Local\Roblox\RobloxStudioInstaller\InstallerInfo.log
+2026-11-19T09:10:45.098Z,0.098398,012c,6,Info [FLog::DesktopInstaller] The installer will run InstallNormal
+2026-11-19T09:10:45.098Z,0.098415,012c,6,Info [FLog::DesktopInstaller] Fetch flag info
+2026-11-19T09:10:45.108Z,0.108153,0128,6,Critical [FLog::DesktopInstaller] failed Http GET url: https://clientsettingscdn.roblox.com/v2/settings/application/PCStudioBootstrapper, code: 11, message: HttpError: TlsVerificationFail, body: 
+2026-11-19T09:11:31.488Z,46.488575,0128,6,Critical [FLog::DesktopInstaller] failed Http GET url: https://clientsettingscdn.roblox.com/v2/settings/application/PCStudioBootstrapper, code: 11, message: HttpError: TlsVerificationFail, body: 
+2026-11-19T09:12:31.066Z,106.066292,0128,6,Critical [FLog::DesktopInstaller] failed Http GET url: https://clientsettingscdn.roblox.com/v2/settings/application/PCStudioBootstrapper, code: 11, message: HttpError: TlsVerificationFail, body: 
+2026-11-19T09:12:31.068Z,106.068275,012c,6,Warning [FLog::DesktopInstaller] Continue installation without flag settings from https://clientsettingscdn.roblox.com/v2/settings/application/PCStudioBootstrapper.
+2026-11-19T09:12:31.069Z,106.069221,012c,6,Info [FLog::DesktopInstaller] Installer runs as standard user
+2026-11-19T09:12:31.069Z,106.069237,012c,6,Info [FLog::DesktopInstaller] Check Windows version
+2026-11-19T09:12:31.069Z,106.069244,012c,6,Info [FLog::DesktopInstaller] Check whether Windows version is at least Windows 10
+2026-11-19T09:12:31.580Z,106.580139,012c,6,Info [FLog::DesktopInstaller] Check whether device has more than 2560 MB memory
+2026-11-19T09:12:31.580Z,106.580208,012c,6,Info [FLog::DesktopInstaller] Use has 9967.25390625 total memory in MB with conversion unit of 1024
+2026-11-19T09:12:31.581Z,106.581650,012c,6,Info [FLog::DesktopInstaller] Storage device type: LOCAL_DRIVE
+2026-11-19T09:12:31.581Z,106.581665,012c,6,Info [FLog::DesktopInstaller] Looking for open processes matching the filename RobloxStudioBeta.exe
+2026-11-19T09:12:31.583Z,106.583191,012c,6,Info [FLog::DesktopInstaller] Found 0 processes matching the filename RobloxStudioBeta.exe
+2026-11-19T09:12:31.583Z,106.583229,012c,6,Info [FLog::DesktopInstaller] Looking for open processes matching the filename RobloxStudio.exe
+2026-11-19T09:12:31.584Z,106.584404,012c,6,Info [FLog::DesktopInstaller] Found 0 processes matching the filename RobloxStudio.exe
+2026-11-19T09:12:31.584Z,106.584457,012c,6,Info [FLog::DesktopInstaller] Fetch version info
+2026-11-19T09:12:31.599Z,106.599228,0128,6,Critical [FLog::DesktopInstaller] failed Http GET url: https://clientsettingscdn.roblox.com/v2/client-version/WindowsStudio64, code: 11, message: HttpError: TlsVerificationFail, body: 

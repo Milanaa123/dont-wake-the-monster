@@ -6,7 +6,7 @@
 - Serialize autosave and leave writes per profile. A leave save waits and takes a fresh snapshot, preserving changes made while autosave was yielding.
 - Save different players concurrently at shutdown; stop accepting gameplay requests during shutdown.
 - Disable Studio analytics calls, which cannot provide meaningful published-game metrics.
-- Move the camera toggle below the audio controls, whose previous coordinates overlapped.
+- Move the camera toggle below the seed journal in the left column; the previous right-column coordinates overlapped the audio controls.
 - Studio diagnostic attempts now fail when execution is unverified; login/error screenshots are never encoded as gameplay.
 - Added deterministic Luau persistence tests. Engine, visual and multiplayer verification remain pending.
 

@@ -20,8 +20,8 @@ gui.Parent = player:WaitForChild("PlayerGui")
 
 local toggle = Instance.new("TextButton")
 toggle.Name = "CameraMode"
-toggle.AnchorPoint = Vector2.new(1, 0)
-toggle.Position = UDim2.new(1, -12, 0, 372)
+toggle.AnchorPoint = Vector2.new(0, 0)
+toggle.Position = UDim2.fromOffset(12, 342)
 toggle.Size = UDim2.fromOffset(152, 42)
 toggle.BackgroundColor3 = Color3.fromRGB(245, 237, 206)
 toggle.BorderSizePixel = 0
