@@ -213,7 +213,20 @@ function World.makePet(name: string, color: Color3, pointy: boolean): Model
     end
     orb(pet, "PuffTail", Vector3.new(0, -0.2, 2.05), Vector3.new(1.8, 1.8, 1.8), color)
     local species = (string.match(name, "^[^_]+") or name):gsub("^Wild", "")
-    if species == "Nugget" or species == "Zuzu" then
+    if species == "Pip" or species == "Zuzu" then
+        -- Two explicitly feline companions. The SAME cat species can have
+        -- entirely different personalities per player.
+        for _, side in ipairs({-1, 1}) do
+            for n = 1, 3 do
+                local whisker = part(pet, "KittenWhisker", Vector3.new(1.15, 0.10, 0.10),
+                    CFrame.new(side * 1.94, -0.55 + (n - 2) * 0.24, -1.51) * CFrame.Angles(0, 0, math.rad(side * (n - 2) * 9)),
+                    Color3.fromRGB(251, 245, 239))
+                whisker.CanCollide = false
+            end
+        end
+        orb(pet, "CatTail", Vector3.new(1.9, 0.35, 2.35), Vector3.new(1, 3.0, 1), color)
+        orb(pet, "TailTip", Vector3.new(1.9, 1.75, 2.35), Vector3.new(1.3, 1.3, 1.3), PINK)
+    elseif species == "Nugget" then
         for _, x in ipairs({-1, 1}) do
             local wing = orb(pet, "FluffyWing", Vector3.new(x * 2.6, 0.2, 0.3), Vector3.new(1.5, 2.4, 1.2), Color3.fromRGB(255, 245, 196))
             wing.CFrame = wing.CFrame * CFrame.Angles(0, 0, math.rad(x * 24))
@@ -526,6 +539,76 @@ function World.updateGarden(userId: number, garden: any, cropConfig: any)
                 orb(visual, "HarvestGlow", center + Vector3.new(0, height + 2.4, 0), Vector3.new(0.8, 0.8, 0.8), Color3.fromRGB(255, 248, 187), Enum.Material.Neon)
             end
         end
+    end
+end
+
+local MOOD_LABELS = {
+    Happy = "😊 HAPPY", Calm = "😌 CALM", Grumpy = "😾 GRUMPY",
+    Excited = "🤩 EXCITED", Shy = "🥺 SHY", Scared = "😱 SCARED",
+    Sleepy = "😴 SLEEPY", Hungry = "🍎 HUNGRY", Curious = "🧐 CURIOUS",
+}
+
+function World.stylePersonality(pet: Model, personality: any)
+    local root = pet.PrimaryPart
+    if not root then return end
+    if pet:FindFirstChild("PersonalityAccessory") then return end
+    local folder = Instance.new("Folder")
+    folder.Name = "PersonalityAccessory"
+    folder.Parent = pet
+    local t = personality.temperament
+    if t == "Grumpy" or t == "Mischievous" or t == "Wild" then
+        for _, side in ipairs({-1, 1}) do
+            local horn = orb(folder, "TinyAttitudeHorn", Vector3.new(side * 1.15, 2.8, -0.4),
+                Vector3.new(0.8, 1.7, 0.8), if t == "Grumpy" then Color3.fromRGB(255, 105, 131) else Color3.fromRGB(183, 137, 249))
+            horn.CFrame *= CFrame.Angles(0, 0, math.rad(side * 23))
+        end
+    elseif t == "Kind" or t == "Clingy" or t == "Shy" then
+        orb(folder, "HeartCharm", Vector3.new(0.65, 2.65, -1.1), Vector3.new(1.5, 1.4, 0.5), PINK, Enum.Material.Neon)
+    elseif t == "Brave" or t == "Proud" then
+        orb(folder, "TinyCrown", Vector3.new(0, 3, -0.3), Vector3.new(2.4, 0.6, 1.2), YELLOW, Enum.Material.Neon)
+        orb(folder, "CrownGem", Vector3.new(0, 3.45, -0.72), Vector3.new(0.8, 0.8, 0.5), BLUE, Enum.Material.Neon)
+    elseif t == "Curious" or t == "Playful" then
+        orb(folder, "CuriosityOrb", Vector3.new(-1.35, 2.7, -0.65), Vector3.new(1.15, 1.15, 1.15), MINT, Enum.Material.Neon)
+    elseif t == "Sleepy" or t == "Dreamer" then
+        orb(folder, "DreamBubble", Vector3.new(1.65, 2.9, 0), Vector3.new(1.3, 1.3, 1.3), BLUE, Enum.Material.Glass)
+    else
+        orb(folder, "DramaStar", Vector3.new(0, 3.2, -0.3), Vector3.new(1.4, 1.4, 1.4), YELLOW, Enum.Material.Neon)
+    end
+    local moodGui = Instance.new("BillboardGui")
+    moodGui.Name = "MoodBubble"
+    moodGui.Size = UDim2.fromOffset(176, 44)
+    moodGui.StudsOffset = Vector3.new(0, 5.1, 0)
+    moodGui.MaxDistance = 82
+    moodGui.AlwaysOnTop = true
+    moodGui.Parent = root
+    local label = Instance.new("TextLabel")
+    label.Name = "MoodText"
+    label.Size = UDim2.fromScale(1, 1)
+    label.BackgroundColor3 = Color3.fromRGB(255, 249, 238)
+    label.BackgroundTransparency = 0.15
+    label.TextColor3 = Color3.fromRGB(79, 55, 104)
+    label.TextScaled = true
+    label.Font = Enum.Font.GothamBlack
+    label.Parent = moodGui
+    local round = Instance.new("UICorner")
+    round.CornerRadius = UDim.new(0, 14)
+    round.Parent = label
+    World.emotePet(pet, "Happy", personality.habit)
+end
+
+function World.emotePet(pet: Model, mood: string, action: string?)
+    local root = pet.PrimaryPart
+    if not root then return end
+    local gui = root:FindFirstChild("MoodBubble")
+    if not gui then return end
+    local label = gui:FindFirstChild("MoodText")
+    if label and label:IsA("TextLabel") then
+        local m = MOOD_LABELS[mood] or mood
+        label.Text = m .. (if action then " • " .. string.upper(action) else "")
+        label.TextColor3 = if mood == "Grumpy" then Color3.fromRGB(195, 68, 94)
+            elseif mood == "Scared" then Color3.fromRGB(113, 91, 210)
+            elseif mood == "Happy" or mood == "Excited" then Color3.fromRGB(79, 159, 97)
+            else Color3.fromRGB(79, 55, 104)
     end
 end
 
