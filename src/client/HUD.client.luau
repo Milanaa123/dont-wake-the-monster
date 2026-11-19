@@ -122,6 +122,20 @@ stroke(stats, Color3.fromRGB(255, 222, 128), 2)
 local statsLabel = label(stats, "🪙 0   •   PET: ???", Enum.Font.GothamBlack, 13, DARK)
 statsLabel.Size = UDim2.fromScale(1, 1)
 
+local health = Instance.new("Frame")
+health.Name = "SurvivalHearts"
+health.AnchorPoint = Vector2.new(1, 0)
+health.Position = UDim2.new(1, -12, 0, 132)
+health.Size = UDim2.fromOffset(122, 48)
+health.BackgroundColor3 = Color3.fromRGB(255, 235, 238)
+health.BorderSizePixel = 0
+health.Visible = false
+health.Parent = gui
+round(health, 15)
+stroke(health, Color3.fromRGB(255, 162, 182), 2)
+local healthLabel = label(health, "❤️❤️❤️", Enum.Font.GothamBlack, 20, DARK)
+healthLabel.Size = UDim2.fromScale(1, 1)
+
 local banner = Instance.new("TextLabel")
 banner.Name = "ChaosBanner"
 banner.AnchorPoint = Vector2.new(0.5, 0)
@@ -265,6 +279,11 @@ remote.OnClientEvent:Connect(function(event: any)
         TweenService:Create(barFill, TweenInfo.new(0.32, Enum.EasingStyle.Sine), {Size = UDim2.fromScale(fraction, 1)}):Play()
         noiseCaption.Text = string.format("NOISE %d / %d   •   MORE CHAOS!", event.noise or 0, event.maxNoise or 100)
         timer.Text = countdown(event.time or 0)
+        health.Visible = event.phase == "AWAKE"
+        for _, foodButton in pairs(buttons) do
+            foodButton.Active = event.phase == "SLEEP"
+            foodButton.AutoButtonColor = event.phase == "SLEEP"
+        end
         if event.phase == "AWAKE" then
             title.Text = "🚨 GIGGLES IS AWAKE! RUN!"
             phaseText.Text = "DODGE THE SHOCKWAVES!"
@@ -283,6 +302,10 @@ remote.OnClientEvent:Connect(function(event: any)
         end
     elseif event.type == "stats" then
         statsLabel.Text = string.format("🪙 %d   •   PET: %s", event.coins or 0, event.pet or "???")
+        local count = math.clamp(event.hearts or 3, 0, 3)
+        healthLabel.Text = if event.knockedOut then "💫 BONKED!" else string.rep("❤️", count) .. string.rep("🖤", 3 - count)
+    elseif event.type == "questToast" then
+        showNotice(tostring(event.text or ""), Color3.fromRGB(175, 255, 205))
     elseif event.type == "notice" then
         showNotice(tostring(event.text or ""), event.color)
     elseif event.type == "shake" then
