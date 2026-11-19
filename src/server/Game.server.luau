@@ -679,6 +679,12 @@ local function gardenAction(player: Player, command: string, arg: any)
     local g = profile.garden
     local ok, message, price
     local newlyDiscovered = false
+    local harvestedMutation = false
+    if command == "GardenHarvest" and typeof(arg) == "number" and arg == math.floor(arg)
+        and arg >= 1 and arg <= GardenConfig.PLOT_COUNT then
+        local plot = g.plots[arg]
+        harvestedMutation = plot and plot.mutation ~= nil or false
+    end
     if command == "GardenBuySeed" then
         if not profile.loaded then
             remote:FireClient(player, {type = "notice", text = "Saving is offline. Seed purchases are paused.", color = Color3.fromRGB(255, 193, 130)})
@@ -733,6 +739,13 @@ local function gardenAction(player: Player, command: string, arg: any)
             if root then World.burst(root.Position + Vector3.new(0, 3, 0), Color3.fromRGB(255, 222, 145), 22, 14) end
         end
         sendStats(player)
+        if command == "GardenHarvest" then
+            remote:FireClient(player, {type = "soundCue", cue = if harvestedMutation then "MutationSparkle" else "HarvestPop"})
+        elseif newlyDiscovered then
+            remote:FireClient(player, {type = "soundCue", cue = "RareDiscovery"})
+        elseif command == "GardenAssist" then
+            remote:FireClient(player, {type = "soundCue", cue = "WeatherChime"})
+        end
     end
     remote:FireClient(player, {type = if newlyDiscovered then "questToast" else "notice", text = message, color = if ok then Color3.fromRGB(164, 255, 186) else Color3.fromRGB(255, 196, 143)})
 end
@@ -960,6 +973,7 @@ end
 
 local function surpriseWeather()
     local choice = rng:NextInteger(1, 6)
+    if choice == 4 or choice == 5 then remote:FireAllClients({type = "soundCue", cue = "Boing"}) end
     if choice == 1 then
         notice("SUGAR RAIN! IT'S RAINING SPRINKLES!", Color3.fromRGB(255, 164, 205))
         for i = 1, 5 do
@@ -1185,6 +1199,53 @@ task.spawn(function()
     end
 end)
 
+-- Garden incidents tie the peaceful farming loop to the main chaos meter.
+-- Cosmetic-only plants: never delete a player's crops during a surprise event.
+task.spawn(function()
+    while true do
+        task.wait(56)
+        if phase ~= "SLEEP" then continue end
+        local eligible = {}
+        for player, profile in pairs(profiles) do
+            if rootFor(player) then
+                for _, plot in ipairs(profile.garden.plots) do
+                    if plot and GardenConfig.Crops[plot.seed] then
+                        table.insert(eligible, {player = player, profile = profile, plot = plot})
+                        break
+                    end
+                end
+            end
+        end
+        if #eligible == 0 then continue end
+        local chosen = eligible[rng:NextInteger(1, #eligible)]
+        local home = World.gardenSpawn(chosen.player.UserId)
+        if not home then continue end
+        local id = rng:NextInteger(1, 5)
+        local emotion = chosen.profile.personalities[chosen.profile.petIndex]
+        local name = GardenConfig.Crops[chosen.plot.seed].name
+        local announcement
+        local incidentNoise
+        if id == 1 then
+            announcement, incidentNoise = name .. " started SINGING OPERA! Cover your ears!", 9
+        elseif id == 2 then
+            announcement, incidentNoise = chosen.player.DisplayName .. "'s veggies did a DANCE BATTLE!", 7
+        elseif id == 3 then
+            announcement, incidentNoise = "A GIANT CARROT JUST SNEEZED IN THE GARDEN!", 11
+        elseif id == 4 then
+            announcement, incidentNoise = "A watermelon yelled MEOW! Even the cats look confused!", 8
+        else
+            announcement, incidentNoise = "THE SUNFLOWERS ARE GOSSIPING ABOUT GIGGLES!", 6
+        end
+        if emotion and emotion.temperament == "Mischievous" then incidentNoise += 3 end
+        notice("🌿 " .. announcement, Color3.fromRGB(229, 218, 141))
+        World.burst(home + Vector3.new(0, 2, 0), GardenConfig.Crops[chosen.plot.seed].color, 22, 14)
+        World.wave(home, 14, Color3.fromRGB(255, 215, 157))
+        noise = math.min(Config.NOISE_MAX, noise + incidentNoise)
+        remote:FireAllClients({type = "soundCue", cue = if id == 1 or id == 4 then "SillyStorm" else "Boing"})
+        sendState()
+    end
+end)
+
 task.spawn(function()
     while true do
         task.wait(8)
@@ -1238,9 +1299,11 @@ task.spawn(function()
                 notice(player.DisplayName .. "'s kitty started PURRING... shhh!", Color3.fromRGB(255, 191, 219))
             elseif outcome.event == "Purrquake" then
                 notice("PURR-QUAKE! That cat is LOUD!", Color3.fromRGB(255, 143, 187))
+                remote:FireAllClients({type = "soundCue", cue = "Boing"})
                 World.wave(pet.PrimaryPart.Position, 9, Color3.fromRGB(255, 177, 210))
             elseif outcome.event == "Swat" or outcome.event == "Hiss" or outcome.event == "Zoomies" or outcome.event == "Hides" then
                 notice(Config.Pets[profile.petIndex].name .. " says NO MORE PETTING! " .. string.upper(outcome.event) .. "!", Color3.fromRGB(255, 180, 122))
+                remote:FireAllClients({type = "soundCue", cue = "CatSwat"})
                 World.burst(pet.PrimaryPart.Position, Color3.fromRGB(251, 171, 142), 12, 9)
                 profile.carrying = false
                 profile.idleAction = if outcome.event == "Zoomies" then "Jumps" elseif outcome.event == "Hides" then "Hides" else "MakesFaces"
