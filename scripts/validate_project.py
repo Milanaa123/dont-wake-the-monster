@@ -200,7 +200,9 @@ assert "function Garden.weather(" in garden and "function Garden.assist(" in gar
 assert 'PremiumProducts' in garden_cfg and all(v in garden_cfg for v in ('productId = 0', 'G.PLOT_COUNT = 9')), "Robux source must remain disabled"
 audio_names = [
     "calm-garden-theme", "SeedFind", "RareDiscovery", "WeatherChime", "Boing", "MonsterWake",
-    "Victory", "Festival", "SillyStorm", "HarvestPop", "MutationSparkle", "CatSwat"
+    "Victory", "Festival", "SillyStorm", "HarvestPop", "MutationSparkle", "CatSwat",
+    "tiny-violin-fail", "suspicious-meow", "cartoon-record-scratch", "comedy-drum-sting",
+    "sleepy-forest-ambience", "monster-chase-theme"
 ]
 import wave
 for name in audio_names:
@@ -211,6 +213,21 @@ for name in audio_names:
         assert w.getframerate() >= 8000
         assert 0.5 <= w.getnframes() / w.getframerate() <= 30, "Audio duration out of bounds"
 assert "Audio.MusicAssetId = 0" in sounds, "Music must remain disabled until authorized asset upload"
-assert sounds.count(" = 0,") == 11, "Expected 11 muted SFX IDs"
+assert sounds.count(" = 0,") == 15, "Expected 15 muted SFX IDs"
 assert "playCue(" in soundscape and "MusicToggle" in soundscape and "EffectsToggle" in soundscape
-print("OK: 3 biomes, 9 physical seed caches, safe seed album, server weather, pet tending, original soundtrack and 11 sound effects")
+print("OK: 3 biomes, 9 seed caches, original music and ambience, 15 sound effects, pet tending")
+
+# Rotating free-coin seed merchant, no paid loot, real save integration.
+merchant = read("src/shared/SeedMerchant.luau")
+for token in ("function Shop.rotation(", "function Shop.offers(", "function Shop.snapshot(", "function Shop.buy(", "Shop.IntervalSeconds"):
+    assert token in merchant, f"Missing seed merchant: {token}"
+for token in ("GardenMerchantBuy", "SeedMerchant.buy(", "profile.loaded"):
+    assert token in server, f"Missing secure merchant integration: {token}"
+for token in ("merchantShop", "merchant = {rotation", "SeedMerchant.snapshot("):
+    assert token in garden, f"Missing merchant persistence: {token}"
+assert "GardenMerchantBuy" in read("src/client/Garden.client.luau"), "Missing merchant shop UI"
+for token in ("Audio.ChaseMusicAssetId = 0", "Audio.AmbienceAssetId = 0", "TinyViolin = 0", "SuspiciousMeow = 0", "RecordScratch = 0", "ComedySting = 0"):
+    assert token in sounds, f"Missing licensed audio config: {token}"
+assert "crossfadeMusic(" in soundscape and "ChaseMusicAssetId" in soundscape
+assert "harvestedSeed" in server and "ComedySting" in server, "Missing crop-chaos connection"
+print("OK: coin-only rotating merchant, per-restock limits, audio crossfade and funny harvest surprises")
