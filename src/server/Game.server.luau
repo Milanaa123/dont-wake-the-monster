@@ -11,6 +11,7 @@ local Config = require(ReplicatedStorage:WaitForChild("Config"))
 local World = require(script.Parent:WaitForChild("World"))
 local Progression = require(script.Parent:WaitForChild("Progression"))
 local Garden = require(script.Parent:WaitForChild("Garden"))
+local RecipeCatalog = require(script.Parent:WaitForChild("RecipeCatalog"))
 local GardenConfig = require(ReplicatedStorage:WaitForChild("GardenConfig"))
 
 World.build()
@@ -364,7 +365,7 @@ local function feed(player: Player, food: any, craftedId: string?)
     if not profile or typeof(food) ~= "string" then return end
     local foodInfo = Config.Foods[food]
     if craftedId then
-        local recipe = GardenConfig.Recipes[craftedId]
+        local recipe = RecipeCatalog.Recipes[craftedId]
         if not recipe or recipe.type ~= "feed" or recipe.baseFood ~= food then return end
     end
     if not foodInfo then return end
@@ -400,7 +401,7 @@ local function feed(player: Player, food: any, craftedId: string?)
     petEffect(profile, reaction, food)
     local earnedNoise = foodInfo.noise + reaction.noise + (if combo then 7 else 0)
     if craftedId then
-        earnedNoise += GardenConfig.Recipes[craftedId].extraNoise
+        earnedNoise += RecipeCatalog.Recipes[craftedId].extraNoise
         if profile.pet and profile.pet.PrimaryPart then
             World.burst(profile.pet.PrimaryPart.Position, GardenConfig.Crops.Berry.color, 12, 11)
         end
@@ -461,6 +462,7 @@ local function gardenAction(player: Player, command: string, arg: any)
     profile.lastGardenAction = now
     local g = profile.garden
     local ok, message, price
+    local newlyDiscovered = false
     if command == "GardenBuySeed" then
         if not profile.loaded then
             remote:FireClient(player, {type = "notice", text = "Saving is offline. Seed purchases are paused.", color = Color3.fromRGB(255, 193, 130)})
@@ -478,6 +480,9 @@ local function gardenAction(player: Player, command: string, arg: any)
         ok, message = Garden.fertilize(g, arg.plot, arg.fertilizer)
     elseif command == "GardenCraft" then
         ok, message = Garden.craft(g, arg)
+    elseif command == "GardenExperiment" then
+        local resultId
+        ok, message, resultId, newlyDiscovered = Garden.experiment(g, arg)
     else
         return
     end
@@ -486,15 +491,21 @@ local function gardenAction(player: Player, command: string, arg: any)
         profile.revision += 1
         World.updateGarden(player.UserId, g, GardenConfig)
         sendGarden(player)
+        if newlyDiscovered then
+            addCoins(player, 15)
+            local root = rootFor(player)
+            if root then World.burst(root.Position + Vector3.new(0, 3, 0), Color3.fromRGB(255, 222, 145), 22, 14) end
+        end
         sendStats(player)
     end
-    remote:FireClient(player, {type = "notice", text = message, color = if ok then Color3.fromRGB(164, 255, 186) else Color3.fromRGB(255, 196, 143)})
+    remote:FireClient(player, {type = if newlyDiscovered then "questToast" else "notice", text = message, color = if ok then Color3.fromRGB(164, 255, 186) else Color3.fromRGB(255, 196, 143)})
 end
 
 local function useLure(player: Player, id: any)
     local profile = profiles[player]
     if not profile or typeof(id) ~= "string" then return end
-    if id ~= "SillyLure" and id ~= "MonsterLure" then return end
+    local lure = RecipeCatalog.Recipes[id]
+    if not lure or lure.type ~= "lure" then return end
     if phase ~= "SLEEP" then
         remote:FireClient(player, {type = "notice", text = "Wait until the monster sleeps!", color = Color3.fromRGB(255, 202, 156)})
         return
@@ -510,11 +521,20 @@ local function useLure(player: Player, id: any)
     profile.lastLure = os.clock()
     if profile.loaded then profile.dirty = true end
     profile.revision += 1
-    local stronger = id == "MonsterLure"
+    local effects = {
+        SillyLure = {visitors = 1, noise = 11, coins = 8},
+        MonsterLure = {visitors = 3, noise = 28, coins = 20},
+        GlowLure = {visitors = 2, noise = 14, coins = 12},
+        CloudLure = {visitors = 2, noise = 17, coins = 13},
+        ThunderLure = {visitors = 4, noise = 32, coins = 25},
+        RainbowLure = {visitors = 3, noise = 24, coins = 18},
+    }
+    local effect = effects[id]
+    if not effect then return end
     local center = root.Position + root.CFrame.LookVector * 9
-    World.burst(center, if stronger then Color3.fromRGB(255, 106, 163) else Color3.fromRGB(170, 235, 134), if stronger then 26 else 18, 14)
-    noise = math.min(Config.NOISE_MAX, noise + (if stronger then 28 else 11))
-    local visitors = if stronger then 3 else 1
+    World.burst(center, Color3.fromHSV(rng:NextNumber(), 0.56, 1), if effect.visitors > 2 then 26 else 17, 14)
+    noise = math.min(Config.NOISE_MAX, noise + effect.noise)
+    local visitors = effect.visitors
     for i = 1, visitors do
         local definition = Config.Pets[rng:NextInteger(1, #Config.Pets)]
         local visitor = World.makePet("Wild" .. definition.name .. "_" .. i, definition.color, definition.ear == "pointy")
@@ -522,7 +542,7 @@ local function useLure(player: Player, id: any)
         visitor:PivotTo(CFrame.new(center + Vector3.new(i * 4 - visitors * 2, 4, -2)))
         Debris:AddItem(visitor, 8)
     end
-    addCoins(player, if stronger then 20 else 8)
+    addCoins(player, effect.coins)
     sendGarden(player)
     sendState()
     notice(player.DisplayName .. " used " .. message .. "! WILD VISITORS!", Color3.fromRGB(192, 255, 150))
@@ -535,12 +555,12 @@ remote.OnServerEvent:Connect(function(player: Player, command: any, arg: any)
         feed(player, arg)
     elseif command == "GardenFeed" then
         if typeof(arg) ~= "string" then return end
-        local recipe = GardenConfig.Recipes[arg]
+        local recipe = RecipeCatalog.Recipes[arg]
         if recipe and recipe.type == "feed" then
             feed(player, recipe.baseFood, arg)
         end
     elseif command == "GardenBuySeed" or command == "GardenPlant" or command == "GardenHarvest"
-       or command == "GardenFertilize" or command == "GardenCraft" then
+       or command == "GardenFertilize" or command == "GardenCraft" or command == "GardenExperiment" then
         gardenAction(player, command, arg)
     elseif command == "GardenLure" then
         useLure(player, arg)
