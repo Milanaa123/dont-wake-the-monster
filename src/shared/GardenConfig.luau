@@ -43,6 +43,8 @@ G.Order = {"Berry", "Carrot", "Corn", "Tomato", "Pepper", "Sunflower", "Moonshro
 G.Fertilizers = {
     Compost = {name = "Compost", modifier = 0.65, description = "Remaining growth time -35%"},
     Starlight = {name = "Starlight Fertilizer", modifier = 0.4, description = "Remaining growth time -60%"},
+    HoneyCompost = {name = "Honey Compost", modifier = 0.5, description = "Remaining growth time -50%"},
+    FrostFertilizer = {name = "Frost Fertilizer", modifier = 0.3, description = "Remaining growth time -70%"},
     AuroraDust = {name = "Aurora Dust", modifier = 0.2, description = "Remaining growth time -80%", kind = "premium", productId = 0},
 }
 -- The ID fields must be populated from Creator Dashboard later. No real-money
