@@ -25,6 +25,14 @@ G.Order = {"Berry", "Carrot", "Corn", "Tomato", "Pepper", "Sunflower", "Moonshro
 G.Fertilizers = {
     Compost = {name = "Compost", modifier = 0.65, description = "Remaining growth time -35%"},
     Starlight = {name = "Starlight Fertilizer", modifier = 0.4, description = "Remaining growth time -60%"},
+    AuroraDust = {name = "Aurora Dust", modifier = 0.2, description = "Remaining growth time -80%", kind = "premium", productId = 0},
+}
+-- The ID fields must be populated from Creator Dashboard later. No real-money
+-- purchase prompts or receipts are active in this codebase.
+G.PremiumProducts = {
+    StarbloomSeeds = {productId = 0, item = "Starbloom", itemType = "seed", amount = 3, suggestedRobux = 49},
+    AuroraMelonSeeds = {productId = 0, item = "AuroraMelon", itemType = "seed", amount = 3, suggestedRobux = 79},
+    AuroraDust = {productId = 0, item = "AuroraDust", itemType = "fertilizer", amount = 5, suggestedRobux = 69},
 }
 -- Output is deterministic and all items are earned from gameplay.
 G.Recipes = {
