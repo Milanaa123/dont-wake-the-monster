@@ -19,12 +19,23 @@ Config.Foods = {
     Star = {label = "⭐ STAR", noise = 11, color = Color3.fromRGB(255, 224, 99)},
 }
 
+Config.DAILY_REWARD = 60
+Config.DISCOVERY_REWARD = 8
+Config.QUEST_GOALS = {feeds = 5, survivals = 2, discoveries = 4}
+Config.QUEST_REWARDS = {feeds = 45, survivals = 80, discoveries = 70}
+
+-- Price is in *earned in-game coins*, never Robux.
 Config.Pets = {
-    {name = "Pip", color = Color3.fromRGB(253, 132, 193), ear = "round"},
-    {name = "Mochi", color = Color3.fromRGB(103, 223, 242), ear = "pointy"},
-    {name = "Pickle", color = Color3.fromRGB(155, 224, 110), ear = "round"},
-    {name = "Bloop", color = Color3.fromRGB(200, 163, 255), ear = "pointy"},
-    {name = "Nugget", color = Color3.fromRGB(255, 196, 108), ear = "round"},
+    {name = "Pip", color = Color3.fromRGB(253, 132, 193), ear = "round", price = 0},
+    {name = "Mochi", color = Color3.fromRGB(103, 223, 242), ear = "pointy", price = 90},
+    {name = "Pickle", color = Color3.fromRGB(155, 224, 110), ear = "round", price = 190},
+    {name = "Bloop", color = Color3.fromRGB(200, 163, 255), ear = "pointy", price = 340},
+    {name = "Nugget", color = Color3.fromRGB(255, 196, 108), ear = "round", price = 540},
+    {name = "Zuzu", color = Color3.fromRGB(255, 104, 145), ear = "pointy", price = 790},
+    {name = "Tofu", color = Color3.fromRGB(245, 241, 202), ear = "round", price = 1100},
+    {name = "Wobble", color = Color3.fromRGB(125, 150, 252), ear = "pointy", price = 1500},
+    {name = "Spark", color = Color3.fromRGB(255, 234, 102), ear = "pointy", price = 2050},
+    {name = "Gloop", color = Color3.fromRGB(90, 228, 184), ear = "round", price = 2700},
 }
 
 Config.Reactions = {
