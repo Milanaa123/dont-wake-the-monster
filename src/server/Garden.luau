@@ -4,6 +4,7 @@
 -- only recipes actually discovered by this player are sent to the client.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local G = require(ReplicatedStorage:WaitForChild("GardenConfig"))
+local SeedMerchant = require(ReplicatedStorage:WaitForChild("SeedMerchant"))
 local Catalog = require(script.Parent:WaitForChild("RecipeCatalog"))
 local Hunt = require(script.Parent:WaitForChild("SeedHunt"))
 local X = require(ReplicatedStorage:WaitForChild("ExpeditionConfig"))
@@ -75,6 +76,7 @@ function Garden.new()
         experiments = 0,
         flops = 0,
         hunt = Hunt.new(),
+        merchant = {rotation = -1, slots = {}},
     }
 end
 
@@ -94,6 +96,17 @@ function Garden.load(raw: any)
                     allowed = Catalog.Recipes[key] ~= nil and Catalog.Recipes[key].type ~= "fertilizer"
                 end
                 if allowed then g[field][key] = clampCount(value) end
+            end
+        end
+    end
+    -- Per-rotation purchase flags are persisted to prevent rejoin farming.
+    if type(raw.merchant) == "table" and type(raw.merchant.rotation) == "number"
+        and raw.merchant.rotation == math.floor(raw.merchant.rotation)
+        and raw.merchant.rotation >= 0 and raw.merchant.rotation <= SeedMerchant.rotation(os.time()) then
+        g.merchant.rotation = raw.merchant.rotation
+        if type(raw.merchant.slots) == "table" then
+            for i = 1, SeedMerchant.OfferCount do
+                g.merchant.slots[i] = raw.merchant.slots[i] == true
             end
         end
     end
@@ -145,6 +158,7 @@ function Garden.serialize(g: any)
         experiments = math.min(G.MAX_STACK, g.experiments),
         flops = math.min(G.MAX_STACK, g.flops),
         hunt = Hunt.snapshot(g.hunt),
+        merchant = {rotation = g.merchant.rotation, slots = table.clone(g.merchant.slots)},
     }
 end
 
@@ -184,6 +198,8 @@ function Garden.snapshot(g: any)
     result.mutationAlbum = table.clone(g.hunt.mutations)
     result.forageTotal = g.hunt.totalFinds
     result.forageToday = g.hunt.questFinds
+    result.merchantShop = SeedMerchant.snapshot(os.time(), g.merchant)
+    result.merchant = nil -- hide internal persistence format
     result.forageClaimed = g.hunt.questClaimed
     return result
 end
