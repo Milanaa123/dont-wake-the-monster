@@ -92,6 +92,30 @@ local n = 0
 for _ in pairs(distinctWeights) do n += 1 end
 assert(n > 1, "unique character must influence reaction likelihoods")
 
+-- Different creatures react to their neighbors, not just to the player.
+assert(#Personality.EncounterNames == 12, "12 friendship and rivalry events")
+local encounters = {}
+for i = 1, 240 do
+    local one = Personality.generate(i + 9191, "kitten")
+    local two = Personality.generate(i * 23 + 125, "dragon")
+    local before = one.interactions
+    local result = Personality.meet(one, two)
+    assert(result.noise >= 0 and result.noise <= 12, "social noise bounded")
+    assert(type(result.title) == "string" and type(result.kind) == "string", "encounter reports outcome")
+    assert(one.interactions == before + 1, "social encounters change animal experience")
+    encounters[result.kind] = true
+end
+local encounterKinds = 0
+for _ in pairs(encounters) do encounterKinds += 1 end
+assert(encounterKinds >= 6, "social encounters need meaningful variety")
+local friend = Personality.generate(211, "kitten")
+friend.bond = 10
+assert(Personality.bondStage(friend) == "Just Met", "first friendship level")
+friend.bond = 41
+assert(Personality.bondStage(friend) == "Friends", "friendship progresses")
+friend.bond = 100
+assert(Personality.bondStage(friend) == "Soulmates", "highest friendship rank")
+
 local m = Personality.mood(a, false)
 assert(type(m) == "string", "mood returned")
 a.energy = 1
@@ -102,7 +126,7 @@ assert(Personality.mood(a, false) == "Hungry", "hunger changes mood")
 a.hunger = 30
 local idle = Personality.tick(a, false)
 assert(type(idle) == "string" and a.hunger >= 30, "idle behavior and needs")
-print("PASS: 12 temperaments, 12 habits, 7 fears, food tastes, seeded cat individuality, traits, bonding, save migration, moods and reactions")
+print("PASS: 12 temperaments, 12 habits, 7 fears, 12 social encounters, feline individuality, bonding, save restore, moods, food tastes and reactions")
 """
 with tempfile.TemporaryDirectory() as folder:
     script = Path(folder) / "personality_spec.luau"
