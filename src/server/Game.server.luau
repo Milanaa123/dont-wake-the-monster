@@ -147,6 +147,8 @@ local function onPlayerAdded(player: Player)
     local profile = Progression.new()
     profile.lastFeed = -100
     profile.lastSync = -100
+    profile.lastShopAction = -100
+    profile.lastDailyRequest = -100
     profile.lastFood = ""
     profile.loaded = false
     profile.dirty = false
@@ -356,13 +358,18 @@ local function feed(player: Player, food: any)
     local bonus, discoveries = Progression.recordFeed(profile, reaction.id)
     addCoins(player, Config.FEED_REWARD + (if combo then 3 else 0) + bonus)
     sendCollection(player)
-    if #discoveries > 0 then
-        remote:FireClient(player, {type = "questToast", text = table.concat(discoveries, " | ")})
-    end
     local text = player.DisplayName .. "'s " .. Config.Pets[profile.petIndex].name .. ": " .. reaction.title
     if combo then text ..= " + COMBO!" end
     notice(text, foodInfo.color)
     sendState()
+    if #discoveries > 0 then
+        local message = table.concat(discoveries, " | ")
+        task.delay(1.15, function()
+            if profiles[player] == profile then
+                remote:FireClient(player, {type = "questToast", text = message})
+            end
+        end)
+    end
 end
 
 local function switchPet(player: Player, rawId: any, isPurchase: boolean)
@@ -400,8 +407,12 @@ remote.OnServerEvent:Connect(function(player: Player, command: any, arg: any)
     if command == "Feed" then
         feed(player, arg)
     elseif command == "BuyPet" or command == "EquipPet" then
+        if os.clock() - profile.lastShopAction < 0.35 then return end
+        profile.lastShopAction = os.clock()
         switchPet(player, arg, command == "BuyPet")
     elseif command == "ClaimDaily" then
+        if os.clock() - profile.lastDailyRequest < 1 then return end
+        profile.lastDailyRequest = os.clock()
         if not profile.loaded then
             remote:FireClient(player, {type = "notice", text = "Daily reward unavailable: saving is offline.", color = Color3.fromRGB(255, 180, 153)})
             return
@@ -520,7 +531,11 @@ local function endWake()
                 local bonus = Progression.recordSurvival(profile)
                 addCoins(player, Config.SURVIVAL_REWARD + bonus)
                 if bonus > 0 then
-                    remote:FireClient(player, {type = "questToast", text = "SURVIVAL QUEST COMPLETE! +" .. bonus .. " coins"})
+                    task.delay(1.2, function()
+                        if profiles[player] == profile then
+                            remote:FireClient(player, {type = "questToast", text = "SURVIVAL QUEST COMPLETE! +" .. bonus .. " coins"})
+                        end
+                    end)
                 end
             else
                 addCoins(player, 8) -- consolation so new players can still progress
