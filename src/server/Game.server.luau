@@ -17,6 +17,7 @@ local Garden = require(script.Parent:WaitForChild("Garden"))
 local RecipeCatalog = require(script.Parent:WaitForChild("RecipeCatalog"))
 local RescueObjective = require(script.Parent:WaitForChild("RescueObjective"))
 local GardenConfig = require(ReplicatedStorage:WaitForChild("GardenConfig"))
+local SeedMerchant = require(ReplicatedStorage:WaitForChild("SeedMerchant"))
 local X = require(ReplicatedStorage:WaitForChild("ExpeditionConfig"))
 local SeedHunt = require(script.Parent:WaitForChild("SeedHunt"))
 local ForestWorld = require(script.Parent:WaitForChild("ForestWorld"))
@@ -709,7 +710,14 @@ local function gardenAction(player: Player, command: string, arg: any)
         local plot = g.plots[arg]
         harvestedMutation = plot and plot.mutation ~= nil or false
     end
-    if command == "GardenBuySeed" then
+    if command == "GardenMerchantBuy" then
+        if not profile.loaded then
+            remote:FireClient(player, {type = "notice", text = "Saving is offline. Merchant purchases are paused."})
+            return
+        end
+        ok, message, price = SeedMerchant.buy(g, profile.coins, arg, os.time())
+        if ok then profile.coins -= price end
+    elseif command == "GardenBuySeed" then
         if not profile.loaded then
             remote:FireClient(player, {type = "notice", text = "Saving is offline. Seed purchases are paused.", color = Color3.fromRGB(255, 193, 130)})
             return
@@ -769,6 +777,8 @@ local function gardenAction(player: Player, command: string, arg: any)
             remote:FireClient(player, {type = "soundCue", cue = if harvestedMutation then "MutationSparkle" else "HarvestPop"})
         elseif newlyDiscovered then
             remote:FireClient(player, {type = "soundCue", cue = "RareDiscovery"})
+        elseif command == "GardenMerchantBuy" then
+            remote:FireClient(player, {type = "soundCue", cue = "ComedySting"})
         elseif command == "GardenAssist" then
             remote:FireClient(player, {type = "soundCue", cue = "WeatherChime"})
         end
@@ -925,7 +935,7 @@ remote.OnServerEvent:Connect(function(player: Player, command: any, arg: any)
         if recipe and recipe.type == "feed" then
             feed(player, recipe.baseFood, arg)
         end
-    elseif command == "GardenBuySeed" or command == "GardenPlant" or command == "GardenHarvest"
+    elseif command == "GardenMerchantBuy" or command == "GardenBuySeed" or command == "GardenPlant" or command == "GardenHarvest"
        or command == "GardenFertilize" or command == "GardenCraft" or command == "GardenExperiment"
        or command == "GardenAssist" then
         gardenAction(player, command, arg)
