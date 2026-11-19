@@ -300,6 +300,49 @@ local function monsterAction()
     end
 end
 
+local function surpriseWeather()
+    local choice = rng:NextInteger(1, 6)
+    if choice == 1 then
+        notice("SUGAR RAIN! IT'S RAINING SPRINKLES!", Color3.fromRGB(255, 164, 205))
+        for i = 1, 5 do
+            local position = Vector3.new(rng:NextNumber(-60, 60), 15, rng:NextNumber(-60, 60))
+            World.burst(position, Config.Foods.Candy.color, 12, 17)
+        end
+        noise = math.min(Config.NOISE_MAX, noise + 5)
+    elseif choice == 2 then
+        notice("GIGGLES SNORES LIKE A TRACTOR!", Color3.fromRGB(200, 177, 255))
+        World.wave(Vector3.new(0, 11, 0), 65, Color3.fromRGB(200, 177, 255))
+        noise = math.min(Config.NOISE_MAX, noise + 11)
+    elseif choice == 3 then
+        notice("EVERY PET: CONGA LINE!!!", Color3.fromRGB(153, 238, 212))
+        for _, profile in pairs(profiles) do
+            profile.effect = "Spin"
+            profile.effectUntil = os.clock() + 4.5
+        end
+    elseif choice == 4 then
+        notice("THE FLOOR JUST BURPED. WHY?!", Color3.fromRGB(255, 216, 120))
+        World.wave(Vector3.new(0, 8, 0), 100, Color3.fromRGB(255, 237, 167))
+        nearbyKnock(Vector3.new(0, 4, 0), 115, 14)
+        noise = math.min(Config.NOISE_MAX, noise + 7)
+    elseif choice == 5 then
+        notice("MINI PET PARADE! LOOK AT THEM!", Color3.fromRGB(131, 220, 255))
+        for _, profile in pairs(profiles) do
+            if profile.pet and profile.pet.Parent then
+                profile.pet:ScaleTo(0.52)
+                profile.effect = "Mini"
+                profile.effectUntil = os.clock() + 5
+            end
+        end
+    else
+        notice("A JELLYFISH CLOUD JUST PASSED BY...", Color3.fromRGB(255, 196, 243))
+        for i = 1, 4 do
+            local theta = (i / 4) * math.pi * 2
+            local position = Vector3.new(math.cos(theta) * 35, 20, math.sin(theta) * 35)
+            World.burst(position, Color3.fromRGB(175, 226, 255), 15, 20)
+        end
+    end
+end
+
 local function startWake()
     phase = "AWAKE"
     noise = Config.NOISE_MAX
@@ -370,10 +413,16 @@ end)
 
 task.spawn(function()
     local actionCooldown = 0
+    local surpriseCooldown = rng:NextInteger(17, 29)
     while true do
         task.wait(1)
         secondsLeft = math.max(0, secondsLeft - 1)
         if phase == "SLEEP" then
+            surpriseCooldown -= 1
+            if surpriseCooldown <= 0 and noise < Config.NOISE_MAX then
+                surpriseWeather()
+                surpriseCooldown = rng:NextInteger(19, 33)
+            end
             if noise >= Config.NOISE_MAX or secondsLeft <= 0 then
                 startWake()
             end
