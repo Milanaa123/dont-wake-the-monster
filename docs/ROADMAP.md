@@ -20,13 +20,19 @@
 - Coins, purchased pets, equipped companion, daily claim and quest/discovery progress persist across rejoins in a published test experience.
 - Pet purchases spend the correct number of free coins and cannot be repeated for the same pet.
 - Each player has three hearts during a wake event; hits, fall-outs and death prevent the survival bonus.
-- Starter missions can be earned once, do not duplicate rewards after a rejoin, and catalog tracks all 10 pets.
+- Starter missions can be earned once, do not duplicate rewards after a rejoin, and catalog tracks all 30 pets.
 - New player sees feed buttons on touchscreens and collection/quest/daily interface without overlapping the HUD.
 - Each player receives nine garden plots; physical farm zones do not block the main island.
 - Ordinary seed packets use free coins; premium seed and fertilizer sales remain disabled until receipt verification.
 - Planting, growth while offline, fertilization, harvesting and crafted food produce deterministic amounts.
 - Baits create temporary wild visitors and the advertised noise/coin rewards, never random premium pets.
 - Garden inventory and plots survive rejoins; no seed duplication or loss during regular sessions.
+- A kitten obtained by two different players may have different seeded temperaments, habits and food tastes.
+- Ownership migration preserves existing 30-species collections and adds stable personality seeds to older saves.
+- Per-pet fears, mood, favorite/disliked food effects and temperament-specific reaction weighting work as expected.
+- Bond is earned through valid nearby interactions, cannot be increased by invalid remote commands, and survives a rejoin.
+- Social encounters only occur with two nearby players' pets; visual and noise effects are synchronized and rate-limited.
+- Mood bubbles, accessories, pet diary and actions are readable and usable on real mobile screens.
 - No purchases are charged before receipts and policy compliance are implemented.
 
 ## Next development targets

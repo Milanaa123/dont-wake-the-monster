@@ -9,7 +9,10 @@ A colorful, chaotic multiplayer Roblox prototype: feed your ridiculous pet, trig
 - **Gardening & Secret Alchemy v0.4**: 30 crops, 9 plots/player, 28 coin-earnable seed varieties, offline growth, staged art and 26 hidden experimental recipes.
 - The player's recipe book **starts empty**. Mixing 2–3 harvested ingredients discovers new formulas, and successful discoveries persist. Failed mixes create funny edible Oops Soup. No ingredient formulas are exposed in the client before discovery.
 - Four earnable fertilizer types speed up growth; two premium seed types and one premium fertilizer remain disabled previews.
-- Each animal has a distinctive look and one of six comedy temperaments affecting, but not determining, chaos outcomes.
+- **Living Pets v0.6**: every owned animal receives its own saved personality, not merely a species-wide type. 12 temperaments (from Kind to Grumpy and Wild), 12 habits, 7 fears, 7 ways of showing affection, favorite/disliked foods and six numerical character traits.
+- Pets respond to snacks, petting, play, calming and the monster; their changing happiness, energy, hunger, friendship level and current mood affect reactions. Two kittens of the same species may act completely differently.
+- **12 social encounter types** when nearby animals from different players meet, including dance-offs, friendships, pranks, arguments, hide-and-seek and naps. Social meetings can increase the shared noise gauge.
+- Smartphone **PET DIARY** reveals character traits, trust, moods and unlockable food tastes. Temperament-based accessories and 3D idle behavior offer visible differences.
 - Four mobile-friendly feed buttons, **12 reaction types**, food combos, and six spontaneous island-wide surprises.
 - Shared noise meter, randomized monster attacks, three-hit survival, and coins for surviving rounds.
 - **Co-op rescue challenge** every time Giggles wakes: race around the island to rescue runaway animals (2–5 target by player count). Server checks proximity, awards 8 free coins for a rescue, and pays participating survivors a 30-coin completion bonus.
@@ -19,7 +22,7 @@ A colorful, chaotic multiplayer Roblox prototype: feed your ridiculous pet, trig
 - Responsive touchscreen controls and keyboard support.
 - Automatic Luau compilation, Rojo `.rbxlx` build and source/invariant checks through GitHub Actions.
 
-**Status: v0.4 source-code MVP. GitHub CI builds, compiles and executes isolated garden rules, but Roblox Studio runtime/multiplayer/device testing has NOT been performed.** Procedural art is a placeholder for final optimized meshes and animations. NO real Robux payments or marketplace product IDs are connected. In-game coin prices are not Robux prices. Cross-server persistence needs session-lock hardening before public release.
+**Status: v0.6 source-code MVP. GitHub CI compiles, runs pure-Luau garden + personality tests and builds a .rbxlx; actual Roblox Studio runtime, appearance and multiplayer testing have NOT yet been performed.** Procedural art is a placeholder for final optimized meshes and animations. NO real Robux payments or marketplace product IDs are connected. In-game coin prices are not Robux prices. Cross-server persistence needs session-lock hardening before public release.
 
 ## No-computer workflow
 
@@ -33,7 +36,10 @@ A colorful, chaotic multiplayer Roblox prototype: feed your ridiculous pet, trig
 - `src/shared/Config.luau`: balance, feed items, creature types and reaction catalog.
 - `src/server/World.luau`: procedural world and monster art.
 - `src/server/Game.server.luau`: authoritative multiplayer game loop, hearts, boss damage, pet effects and saving.
-- `src/server/Progression.luau`: catalog, buying/equipping pets, daily rewards and gardening persistence.
+- `src/server/Progression.luau`: catalog, buying/equipping pets, daily rewards, gardening persistence and per-pet personality save migration.
+- `src/shared/PetPersonality.luau`: unique seeded genetics, mood, individual preferences, social scenes and bonding.
+- `src/client/PetDiary.client.luau`: touch-friendly detailed personality journal and pet/play/comfort actions.
+- `scripts/test_personality.py`: real Luau execution tests for deterministic temperament variety, bonding, food preferences and social outcomes.
 - `src/shared/GardenConfig.luau`: crop catalog, recipes and disabled premium product definitions.
 - `src/server/Garden.luau`: authoritative farming, hidden-recipe discovery and crafting.
 - `src/server/RecipeCatalog.luau`: **server-only** secret formulas, never replicated to the client.
@@ -69,4 +75,4 @@ In Studio, select **Play** to test; enable Studio API services only for isolated
 - [ ] Monetization IDs, purchase receipt handling and age/regional compliance
 - [ ] Mobile performance profiling, moderation and public release
 
-See [Gardening guide](docs/GARDENING.md), [Changelog](docs/CHANGELOG.md) and [Roadmap](docs/ROADMAP.md).
+See the [Living Pets character system](docs/PERSONALITIES.md), [Gardening guide](docs/GARDENING.md), [Changelog](docs/CHANGELOG.md) and [Roadmap](docs/ROADMAP.md).

@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.6 — Living Personalities (2026-11-19)
+- Gave every owned animal a unique, saved identity instead of using only one species-wide behavioral label.
+- 12 possible temperaments, 12 habits, seven fears, seven preferred kinds of affection, four snack tastes with a different favorite and disliked one, six independently varying traits.
+- Kittens Pip and Zuzu have cat whiskers and tails; two players' cats can be Grumpy, Kind, Wild, Curious, etc.
+- Real server behavior: feeding affects happiness and monster noise, 3 repeatable friendship interactions, mood-dependent idle animation, pet personality effects on weighted chaos reactions, fear response when the giant wakes.
+- Social pet meetings cause one of 12 kinds of spontaneous interactions and sometimes raise the noise meter; no repeatable money farming.
+- Introduced friendship ranks and a trust threshold for revealing a pet's food preferences.
+- The smartphone PET DIARY exposes the pet's changing needs, permanent traits, fears and habits.
+- Added pure Luau personality tests for seed reproducibility, 12x12 catalog variety, save restoration and social behavior. All paid products remain disabled.
+- Requires authorized Roblox Studio 3D/multiplayer testing and production DataStore safeguards before launch.
+
 ## v0.5 — Active Co-op Rescue (2026-11-19)
 - Each monster wake-up now spawns seven rescueable stray creatures around the island.
 - Players must rescue a server-population-scaled goal of two to five before the round ends.
