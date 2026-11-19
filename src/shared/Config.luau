@@ -58,6 +58,13 @@ Config.Pets = {
     {name = "Echo", color = Color3.fromRGB(137, 136, 230), ear = "pointy", price = 64000, description = "fruit bat"},
 }
 
+-- Each animal gets a different comedy temperament. All can trigger every
+-- reaction, but their likelihoods are different, creating distinct behavior.
+Config.PetQuirks = {"Trickster", "Dreamer", "Bouncer", "Sparkle", "Storm", "Gremlin"}
+for index, pet in ipairs(Config.Pets) do
+    pet.quirk = Config.PetQuirks[(index - 1) % #Config.PetQuirks + 1]
+end
+
 Config.Reactions = {
     {id = "Giant", title = "IT'S HUGE!", noise = 9, weight = 7},
     {id = "Mini", title = "TINY BABY!", noise = 3, weight = 7},
