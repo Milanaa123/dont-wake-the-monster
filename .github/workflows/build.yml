@@ -49,6 +49,13 @@ jobs:
             /tmp/luau/luau-compile "$script" > /dev/null
           done < <(find src -name '*.luau' -print0)
 
+      - name: Execute gardening rules in Luau runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x /tmp/luau/luau
+          python3 scripts/test_garden.py /tmp/luau/luau
+
       - name: Build playable-place file
         shell: bash
         run: |
