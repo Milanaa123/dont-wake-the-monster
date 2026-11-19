@@ -106,6 +106,38 @@ corner(fill, 7)
 
 local meterText = text(card, "Hold longer • surprise inside!", 15, 10, false)
 meterText.Position = UDim2.fromOffset(6, 139)
+-- Locally pose both shoulders toward the carried creature. The pet itself
+-- is positioned by the server, so everyone sees a real carried companion.
+local shoulderDefaults: {[Motor6D]: CFrame} = {}
+local poseActive = false
+local function poseShoulders(enabled: boolean)
+    if poseActive == enabled then return end
+    poseActive = enabled
+    local character = player.Character
+    if not character then return end
+    if enabled then
+        for _, joint in ipairs(character:GetDescendants()) do
+            if joint:IsA("Motor6D") and (joint.Name == "RightShoulder" or joint.Name == "LeftShoulder"
+                or joint.Name == "Right Shoulder" or joint.Name == "Left Shoulder") then
+                if not shoulderDefaults[joint] then shoulderDefaults[joint] = joint.C0 end
+                local side = if string.find(joint.Name, "Right", 1, true) then -1 else 1
+                local goal = shoulderDefaults[joint] * CFrame.Angles(math.rad(-49), math.rad(side * 8), math.rad(side * 13))
+                TweenService:Create(joint, TweenInfo.new(0.24, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {C0 = goal}):Play()
+            end
+        end
+    else
+        for joint, original in pairs(shoulderDefaults) do
+            if joint.Parent then
+                TweenService:Create(joint, TweenInfo.new(0.23, Enum.EasingStyle.Quad), {C0 = original}):Play()
+            end
+        end
+    end
+end
+player.CharacterAdded:Connect(function()
+    table.clear(shoulderDefaults)
+    poseActive = false
+end)
+
 local state = {carrying = false, petting = false, purr = 0, cat = false}
 local held = false
 local activeTouch: InputObject? = nil
@@ -152,6 +184,7 @@ carry.MouseButton1Click:Connect(function() remote:FireServer("ToggleCarry") end)
 remote.OnClientEvent:Connect(function(payload: any)
     if typeof(payload) ~= "table" or payload.type ~= "petCare" then return end
     state = payload
+    poseShoulders(state.carrying == true)
     carry.Text = if state.carrying then "👐 PUT DOWN" else "🤲 PICK UP"
     carry.BackgroundColor3 = if state.carrying then PURPLE else GREEN
     local purr = math.clamp(payload.purr or 0, 0, 1)
