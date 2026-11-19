@@ -29,7 +29,53 @@ def main():
     if not path.is_file() or path.stat().st_size == 0:
         raise SystemExit("No non-empty Rojo-generated .rbxlx file was found.")
 
+    backend = os.environ.get("ROBLOX_PUBLISH_BACKEND", "assets")
+    if backend not in ("assets", "universes"):
+        raise SystemExit("Unknown publish backend. Expected assets or universes.")
     published = upload_mode == "Published"
+
+    # Second, independently documented Roblox Open Cloud endpoint.
+    # Unlike Assets API, it requires BOTH Universe ID and Place ID, and the
+    # universe-places:write scope on the GitHub secret ROBLOX_API_KEY.
+    # Never automatically fall back after a failed response: the first API
+    # might have accepted the upload and an automatic retry could publish
+    # unexpectedly or create duplicate revisions.
+    if backend == "universes":
+        universe_id = os.environ.get("ROBLOX_UNIVERSE_ID", "")
+        if not universe_id.isdecimal() or int(universe_id) <= 0:
+            raise SystemExit("Universe API requires a positive ROBLOX_UNIVERSE_ID. This is not the Place ID.")
+        url = ("https://apis.roblox.com/universes/v1/" + universe_id +
+               "/places/" + place_id + "/versions?versionType=" + upload_mode)
+        print("Uploading an existing Roblox place through Universes API.", "Place:", place_id, "Mode:", upload_mode)
+        command = [
+            "curl", "--silent", "--show-error", "--fail-with-body",
+            "--request", "POST", "--url", url,
+            "--header", "x-api-key: " + api_key,
+            "--header", "Content-Type: application/xml",
+            "--data-binary", "@" + str(path),
+        ]
+        result = subprocess.run(command, capture_output=True, text=True, timeout=100)
+        if result.returncode:
+            # Never print curl arguments, which contain an API key.
+            print("Universe Place Publishing request rejected:", result.stderr[:500], file=sys.stderr)
+            try:
+                error = json.loads(result.stdout)
+                print("Roblox reason:", str(error.get("message", error.get("error", "HTTP error")))[:400], file=sys.stderr)
+            except (json.JSONDecodeError, AttributeError):
+                print("Roblox reported an HTTP error.", file=sys.stderr)
+            raise SystemExit(1)
+        try:
+            response = json.loads(result.stdout)
+        except json.JSONDecodeError as exc:
+            raise SystemExit("Universe API returned an invalid place-version response.") from exc
+        revision = response.get("versionNumber")
+        if not isinstance(revision, int) or revision < 1:
+            raise SystemExit("Universe API response did not contain a valid place revision.")
+        print("SUCCESS. Universe:", universe_id, "Place:", place_id, "Version:", revision)
+        print("Published revision:", published)
+        print("Public visibility is a SEPARATE Creator Dashboard audience setting.")
+        return
+
     request = {"assetId": int(place_id), "assetType": "Place", "published": published}
     url = "https://apis.roblox.com/assets/v1/assets/" + place_id
     print("Uploading Roblox place", place_id, "mode:", upload_mode, "(manual workflow)")
@@ -82,6 +128,7 @@ def main():
             print("SUCCESS. Roblox place:", place_id)
             print("Version:", payload.get("revisionId", "not provided"))
             print("Published:", actual_published)
+            print("Public visibility is a separate Creator Dashboard audience setting.")
             return
         if attempt % 4 == 0:
             print("Roblox is processing the place upload...")
