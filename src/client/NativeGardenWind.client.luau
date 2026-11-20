@@ -36,6 +36,10 @@ local function seedFor(part: BasePart): number
     for i = 1, #path do
         seed = (seed * 31 + string.byte(path, i)) % 65521
     end
+    -- Multiple leaves in the same bush share the same Roblox name. Include
+    -- their original coordinates so they do not all sway in sync as a block.
+    local p = part.Position
+    seed = (seed + math.floor(p.X*523 + p.Y*887 + p.Z*631)) % 65521
     return seed
 end
 
