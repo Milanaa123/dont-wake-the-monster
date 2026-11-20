@@ -103,6 +103,21 @@ local function makeVisual(source: MeshPart, parent: Instance, name: string,
     return mesh
 end
 
+function Bridge.applySleepingMonster(boss: Model): MeshPart?
+    local source = findMesh("World", "Environment_SleepingMonster")
+    if not source then return nil end
+    local height = 52
+    local mesh = makeVisual(source, boss, "ImportedSleepingMonster",
+        CFrame.new(0, 8 + height / 2, 0), height)
+    if not mesh then return nil end
+    for _, obj in ipairs(boss:GetDescendants()) do
+        if obj:IsA("BasePart") and obj ~= mesh then
+            obj.Transparency = 1
+        end
+    end
+    return mesh
+end
+
 function Bridge.applyOrchardTree(parent: Instance, index: number, ground: Vector3): boolean
     local source = findMesh("World", "Environment_OrangeTree")
     if not source then return false end
