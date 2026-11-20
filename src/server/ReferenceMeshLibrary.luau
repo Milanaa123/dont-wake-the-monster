@@ -94,7 +94,9 @@ local function makeVisual(source: MeshPart, parent: Instance, name: string,
         mesh:Destroy()
         return nil
     end
-    local ratio = height / math.max(mesh.Size.Y, 0.001)
+    local sourceSpan = if name == "ImportedWaterPond" then math.max(mesh.Size.X, mesh.Size.Z)
+        else mesh.Size.Y
+    local ratio = height / math.max(sourceSpan, 0.001)
     mesh.Size = mesh.Size * ratio
     mesh.CFrame = pivot
     mesh.Parent = parent
@@ -140,7 +142,7 @@ function Bridge.applySetDress(parent: Instance): number
 
     local placement = {
         {"GardenCottage", "CozyOrchardCottage", Vector3.new(37, 7, 88), 13},
-        {"WaterPond", "ShadedOrchardPond", Vector3.new(54, 7, 91), 4},
+        {"WaterPond", "ShadedOrchardPond", Vector3.new(54, 7, 91), 14},
     }
     for _, record in ipairs(placement) do
         local source = findMesh("World", "Environment_" .. record[1])
