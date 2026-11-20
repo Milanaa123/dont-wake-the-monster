@@ -15,7 +15,7 @@ type WindLeaf = {
 
 local leaves: {[BasePart]: WindLeaf} = {}
 local MAX_GARDEN = 88
-local MAX_SCENERY = 38
+local MAX_SCENERY = 48
 local gardenCount = 0
 local sceneryCount = 0
 local elapsed = 0
@@ -24,7 +24,7 @@ local function category(part: BasePart): string?
     local name = part.Name
     if name == "PaintedLeaf" then return "garden" end
     if name == "PaintedTaperedLeaf" or name == "PaintedAngularLeaf" or
-        name == "CanopyJaggedLeaf" then
+        name == "CanopyJaggedLeaf" or name == "PaintedOrchardLeaf" then
         return "scenery"
     end
     return nil
