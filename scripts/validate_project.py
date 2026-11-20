@@ -154,6 +154,11 @@ print(f"OK: {len(pet_prices)} pets, {len(reaction_defs)} reactions, 30 plants, 2
 assert "CottageStyle.decorateWorld(scenery)" in world, "Garden environment must be integrated into actual island"
 assert "CottageStyle.decorateFarm(model, center)" in world, "Physical garden fence decoration not integrated"
 assert "ReferenceMeshLibrary.applyPet(pet, species)" in world, "Imported mesh pets are not wired"
+assert "ReferenceMeshLibrary.applySleepingMonster(monster)" in world, "Sleeping 3D monster not linked"
+assert "ReferenceMeshLibrary.applyOrchardTree(scenery, index, position)" in world, "New orchard tree geometry not linked"
+assert "DWTM_World_8" in read("src/server/ReferenceMeshLibrary.luau"), "Eight-item world pack name mismatch"
+assert "local angle = (slot - 1) / 12 * math.pi * 2 + math.pi / 2" in world, "First garden no longer faces spawn"
+assert "CFrame.new(0, 9, 85)" in world, "First-play spawn overlaps garden"
 assert "ReferenceMeshLibrary.applyCrop(visual, center, p.seed, stage)" in world, "Imported 3D crops not wired"
 assert "ReferenceMeshLibrary.applySetDress(scenery)" in world, "Imported world set is not wired"
 mesh_bridge = read("src/server/ReferenceMeshLibrary.luau")
