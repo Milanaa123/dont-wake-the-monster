@@ -2,7 +2,7 @@
 -- Real Roblox geometry for the original orange orchard in the reference
 -- color language. The mesh pack, if installed in Studio, still takes priority.
 -- This replaces the four enormous "lollipop" spheres in the fallback scene.
--- One shared asset-free canopy per tree, bounded to <= 64 pieces.
+-- One shared asset-free canopy per tree, bounded to <= 48 pieces.
 local Orchard = {}
 
 local BARK = Color3.fromRGB(148, 103, 76)
@@ -58,7 +58,7 @@ function Orchard.build(parent: Instance, index: number, ground: Vector3): Model
 
     local colors = {DARK, MID, LIGHT, SUNLIGHT}
     -- Multiple overlapping irregular leaf masses rather than a smooth sphere.
-    for i = 1, 12 do
+    for i = 1, 11 do
         local a = i * 2.39996 + index * .17
         local distance = (i % 5) * .69 + 2.3
         local p = crown + Vector3.new(math.cos(a) * distance,
@@ -78,7 +78,7 @@ function Orchard.build(parent: Instance, index: number, ground: Vector3): Model
 
     -- 16 angular leaves: irregular directional silhouette is more important
     -- in the three-quarter camera than dozens of tiny expensive leaves.
-    for i = 1, 16 do
+    for i = 1, 14 do
         local a = i * 2.39996 + index * .31
         local p = crown + Vector3.new(math.cos(a) * rng:NextNumber(3.3, 6.1),
             rng:NextNumber(-3.4, 4.3),
@@ -101,7 +101,7 @@ function Orchard.build(parent: Instance, index: number, ground: Vector3): Model
     end
 
     -- Citrus hangs from the outer canopy instead of floating outside it.
-    for i = 1, 9 do
+    for i = 1, 8 do
         local a = i * 2.39996 + index * .24
         local radius = rng:NextNumber(3.2, 5.9)
         local fruitPos = crown + Vector3.new(
@@ -112,7 +112,7 @@ function Orchard.build(parent: Instance, index: number, ground: Vector3): Model
             if i % 3 == 0 then ORANGE_LIT else ORANGE)
         fruit.CastShadow = true
         -- Small paired dark/light sepals keep orange fruits visibly attached.
-        for j = 1, 2 do
+        for j = 1, 1 do
             local leaf = piece(tree, "OrangeSePal",
                 fruitPos + Vector3.new(if j == 1 then -.23 else .25,
                     .78, 0), Vector3.new(.49, .10, .27),
@@ -123,7 +123,7 @@ function Orchard.build(parent: Instance, index: number, ground: Vector3): Model
     end
 
     tree:SetAttribute("NativeOrchardTree", true)
-    tree:SetAttribute("DetailCountCap", 64)
+    tree:SetAttribute("DetailCountCap", 48)
     return tree
 end
 
