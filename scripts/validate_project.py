@@ -22,6 +22,7 @@ required = [
     "src/server/ReferenceCropArt.luau",
     "src/server/ReferenceMeshLibrary.luau",
     "src/server/ReferenceGroundLight.luau",
+    "src/server/OrganicGardenBeds.luau",
     "src/server/MonsterWakeVFX.luau",
     "src/server/GardenActionVFX.luau",
     "src/server/ReferenceGardenFallback.luau",
@@ -468,3 +469,29 @@ assert 'GardenActionVFX.play(workspace, spot, command == "GardenHarvest"' in ser
 assert "if ok then" in server.split('local function gardenAction(', 1)[1].split('World.setGardenPromptHandler(', 1)[0]
 assert "World.burst(spot +" not in server, "Old physical planting glow has been reintroduced"
 print("OK: no external asset dependencies, bounded leaf VFX only after garden mutation")
+
+# New physical gardens visually match a meadow instead of wooden tray boxes.
+# The original plot positions, persistent data and mobile proximity prompts
+# stay unchanged; small cosmetics must never obstruct the character.
+organic = read("src/server/OrganicGardenBeds.luau")
+world = read("src/server/World.luau")
+for marker in ("function Beds.decorateLawn(", "function Beds.decoratePlot(",
+               "PaintedFootpath", "PaintedWarmTopsoil", "LooseSoilPebble",
+               "SeedbedClover", "CanCollide = false", "CanQuery = false",
+               "Random.new(5713 + plotIndex * 67)"):
+    assert marker in organic, f"Organic crop bed reference geometry missing: {marker}"
+assert 'OrganicGardenBeds.decorateLawn(model, center)' in world
+assert 'OrganicGardenBeds.decoratePlot(plot, place, index)' in world
+assert 'part(plot, "WoodFrame"' not in world, "Large rectangular tray still blocks organic soil"
+assert 'lawn.CanCollide = true' in world, "Farm walkable grass physics disabled"
+assert 'plot:SetAttribute("PosX", place.Position.X)' in world, "Plot coordinates altered"
+crop_ref = read("src/server/ReferenceCropArt.luau")
+for marker in ("CurvedMelonStripe", "math.sqrt(math.max(.06",
+               "for sepal = 1, 5 do", "for i = 1, 5 do",
+               "StrawberrySeed"):
+    assert marker in crop_ref, f"Playable fruit detailing regressed: {marker}"
+assert '"StripedRind"' not in crop_ref, "Old detached straight watermelon stripes restored"
+mesh_bridge = read("src/server/ReferenceMeshLibrary.luau")
+assert "mesh.Size.X * 1.31" in mesh_bridge, "Dense imported strawberry foliage missing"
+assert "makeVisual(source, visual, \"ImportedCropMesh\"" in mesh_bridge
+print("OK: nine organic soil beds and playable fruit geometry replace square wooden trays")
