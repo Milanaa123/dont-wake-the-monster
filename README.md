@@ -7,6 +7,7 @@ A colorful, chaotic multiplayer Roblox prototype: feed your ridiculous pet, trig
 - Procedurally constructed floating island, decorations, glowing crystals, clouds and an enormous sleeping monster.
 - **Cottage Garden art direction (v0.7)** inspired by the player's green, sunlit gardening reference: soft golden-hour color grading, warm atmospheric haze, original orange orchard, strawberry bushes, melons, wheat, flower patches and dirt paths. Personal gardens have wood fencing and more recognizable crop details.
 - **Reference art pass (20 Nov 2026)**: distinct procedural three-stage silhouettes for all 30 crop IDs (leafy strawberry bushes, melons, carrots, corn, flowers, mushrooms and fantasy crops), original face/body details for 17 companion species, painted-looking clover and paths, a small orchard cottage and pond. Giggles has closed eyes when sleeping and triggers a temporary cool lighting transition on waking. These are **real Luau world-generator changes**, but **not** imported custom meshes or a verified Roblox Studio render; mobile performance and final reference-level fidelity remain untested.
+- **Original 3D asset pipeline (20 Nov 2026):** 30 textured animal meshes, 90 crop meshes across three stages, 6 environment meshes. Three reproducible glTF/GLB bundles are built and validated by GitHub Actions; Roblox requires a one-time authorized 3D Importer action before the game renders them. The server then replaces the old cosmetic primitives with the imported MeshParts. See [3D import instructions](docs/ROBLOX_3D_ASSET_IMPORT.md).
 - **Optional 3/4 garden-view camera** enabled by default, switch to follow camera with the on-screen button or V key. This is actual Roblox client code, not a generated mockup.
 - Thirty collectible, differently styled companion pets with procedural cosmetic details, bought using **in-game coins only**.
 - **Gardening & Secret Alchemy v0.4**: 30 crops, 9 plots/player, 28 coin-earnable seed varieties, offline growth, staged art and 26 hidden experimental recipes.
@@ -35,6 +36,10 @@ A colorful, chaotic multiplayer Roblox prototype: feed your ridiculous pet, trig
 
 **Status: v1.0 source-code MVP. GitHub CI compiles, runs pure-Luau garden + personality tests and builds a .rbxlx; actual Roblox Studio runtime, appearance and multiplayer testing have NOT yet been performed.** Procedural art is a placeholder for final optimized meshes and animations. NO real Robux payments or marketplace product IDs are connected. In-game coin prices are not Robux prices. Cross-server persistence needs session-lock hardening before public release.
 
+## 3D art pack
+
+Download the latest **dwtm-original-3d-art** artifact from **Build original 3D art library** in Actions. It contains 30 pets, 90 crop growth stages, 6 world props, the model manifest and a Roblox Studio install guide. Run scripts/generate_reference_glb.py to rebuild from first-party source. GitHub creates real GLB files; this is not a Roblox Studio render or a live upload to the creator account.
+
 ## No-computer workflow
 
 1. Open the repository's **Actions** tab and select **Build Roblox place**.
@@ -49,6 +54,9 @@ A colorful, chaotic multiplayer Roblox prototype: feed your ridiculous pet, trig
 - `src/server/CottageGardenStyle.luau`: original warm landscaping, orchard, berry patches, fencing, lighting and crop details.
 - `src/server/ReferenceCropArt.luau`: decorative crop silhouettes per seed family and three growth stages; does not affect farming mechanics.
 - `src/server/StorybookPetArt.luau`: original animal-character details for 17 species using engine-native cosmetic geometry.
+- `src/server/ReferenceMeshLibrary.luau`: auto-stage imported GLB packs and use real MeshPart assets, while preserving the old art as an uninstalled fallback.
+- `scripts/generate_reference_glb.py`: generate original textured mesh library for 30 animals, 90 growing crop instances, 6 world items.
+- `.github/workflows/art-library.yml`: generation, format integrity and downloadable art pack.
 - `src/client/CottageCamera.client.luau`: 3/4 garden view with optional third-person toggle.
 - `src/server/Game.server.luau`: authoritative multiplayer game loop, hearts, boss damage, pet effects and saving.
 - `src/server/ProfileStore.luau`: guarded persistence initialization and per-profile save coordination; cross-server session locking remains pending.
@@ -103,7 +111,8 @@ In Studio, select **Play** to test; enable Studio API services only for isolated
 - [x] Gameplay code, world generator, client HUD drafted
 - [x] GitHub Actions Rojo build and Luau syntax checks verified
 - [ ] Roblox Studio runtime / multiplayer playtest
-- [ ] Custom creature and environment art
+- [x] Original GLB creature and environment asset library (126 source-generated meshes)
+- [ ] Import 3D assets into a signed-in Roblox Studio game, visually correct and rig/animate them
 - [ ] Production DataStore & economy tests
 - [ ] Monetization IDs, purchase receipt handling and age/regional compliance
 - [ ] Mobile performance profiling, moderation and public release
