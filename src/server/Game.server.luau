@@ -1191,7 +1191,7 @@ RunService.Heartbeat:Connect(function(dt: number)
                 sendStats(player)
                 remote:FireClient(player, {type = "notice", text = "SPLASH! OUT FOR THIS ROUND!", color = Color3.fromRGB(152, 230, 255)})
             end
-            root.CFrame = CFrame.new(0, 16, 74)
+            root.CFrame = CFrame.new(0, 16, 85)
             root.AssemblyLinearVelocity = Vector3.zero
         end
         if root and pet and pet.Parent and pet.PrimaryPart then
