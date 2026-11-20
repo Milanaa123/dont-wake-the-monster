@@ -3,6 +3,9 @@ on:
   push:
     paths:
       - "scripts/generate_reference_glb.py"
+      - "scripts/creature_shapes_v2.py"
+      - "scripts/crop_shapes_v2.py"
+      - "scripts/world_shapes_v2.py"
       - ".github/workflows/art-library.yml"
   workflow_dispatch:
 
@@ -25,7 +28,7 @@ jobs:
           doc = json.loads((root / "manifest.json").read_text())
           assert len(doc["pets"]) == 30
           assert len(doc["crops"]) == 90
-          assert len(doc["environment"]) == 6
+          assert len(doc["environment"]) == 8
           for pack in doc["packs"]:
               data = (root / pack["file"]).read_bytes()
               magic, version, total = struct.unpack_from("<4sII", data)
@@ -38,7 +41,7 @@ jobs:
               assert all(len(m["primitives"]) == 1 for m in scene["meshes"])
               assert all("TEXCOORD_0" in m["primitives"][0]["attributes"] for m in scene["meshes"])
               assert all(a["count"] > 0 for a in scene["accessors"])
-          print("PASS: 126 textured 3D meshes, one primitive per Roblox asset")
+          print("PASS: 128 textured 3D meshes, one primitive per Roblox asset")
           PY
           cp docs/ROBLOX_3D_ASSET_IMPORT.md dist/visual-library/INSTALL_IN_ROBLOX.md
       - name: Upload original art library for Roblox Studio Importer
