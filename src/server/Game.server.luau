@@ -827,6 +827,7 @@ local function gardenAction(player: Player, command: string, arg: any)
         end
     end
     remote:FireClient(player, {type = if newlyDiscovered then "questToast" else "notice", text = message, color = if ok then Color3.fromRGB(164, 255, 186) else Color3.fromRGB(255, 196, 143)})
+    return ok == true
 end
 
 -- Playable farming at the actual 3D soil beds. Roblox ProximityPrompt
@@ -854,8 +855,8 @@ World.setGardenPromptHandler(function(player: Player, ownerId: number, index: nu
     if plot then
         if os.time() >= plot.readyAt then
             local crop = GardenConfig.Crops[plot.seed]
-            gardenAction(player, "GardenHarvest", index)
-            if crop then
+            local harvested = gardenAction(player, "GardenHarvest", index)
+            if harvested and crop then
                 World.burst(spot + Vector3.new(0, 1.9, 0), crop.color, 12, 6)
             end
         else
@@ -876,8 +877,10 @@ World.setGardenPromptHandler(function(player: Player, ownerId: number, index: nu
         end
     end
     if chosen then
-        gardenAction(player, "GardenPlant", {plot = index, seed = chosen})
-        World.burst(spot + Vector3.new(0, 0.8, 0), Color3.fromRGB(158, 209, 119), 6, 4)
+        local planted = gardenAction(player, "GardenPlant", {plot = index, seed = chosen})
+        if planted then
+            World.burst(spot + Vector3.new(0, 0.8, 0), Color3.fromRGB(158, 209, 119), 6, 4)
+        end
     else
         remote:FireClient(player, {
             type = "notice",
