@@ -31,6 +31,40 @@ def sculpt_crop(name, stage, S):
             lf("leafdeep",(center[0],center[1]+.20*s,center[2]),
                (center[0]+sin(a)*.38*s,center[1]+.13*s,
                 center[2]+cos(a)*.35*s),.13*s)
+    def strawberry_shape(p,s,mat,ripe):
+        # A true tapered berry silhouette, not a red sphere. The tiny seed
+        # marks are low-poly diamonds that follow the actual fruit surface.
+        cx,cy,cz=p
+        heights=[-.37,-.30,-.15,.10,.31,.37]
+        radii=[.025,.19,.285,.31,.19,.025]
+        sides=14
+        for band in range(len(heights)-1):
+            for j in range(sides):
+                a=2*pi*j/sides
+                b=2*pi*(j+1)/sides
+                def v(k,angle):
+                    return (cx+sin(angle)*radii[k]*s,
+                            cy+heights[k]*s,
+                            cz-cos(angle)*radii[k]*s)
+                g.quad(mat,v(band,a),v(band,b),
+                       v(band+1,b),v(band+1,a))
+        if ripe:
+            for row,yr in enumerate((-.22,-.04,.14,.26)):
+                # The front-most small diamonds sit just outside the hull.
+                hi=next(i for i in range(len(heights)-1)
+                        if heights[i]<=yr<=heights[i+1])
+                fraction=(yr-heights[hi])/(heights[hi+1]-heights[hi])
+                rad=radii[hi]+(radii[hi+1]-radii[hi])*fraction
+                for j in range(3):
+                    xf=(j-1)*.56 + (row%2)*.15
+                    x=cx+rad*s*xf
+                    z=cz-rad*s*(1-xf*xf)**.5-.011*s
+                    y=cy+yr*s
+                    w=.022*s;hh=.037*s
+                    g.tri("cream",(x,y+hh,z),(x-w,y,z),
+                          (x,y-hh,z))
+                    g.tri("cream",(x,y+hh,z),(x,y-hh,z),
+                          (x+w,y,z))
     def melon(p,r,mat):
         ell(mat,p,(r*1.16,r*.92,r),19,11)
         # Banded rind, following the surface, including both ends.
@@ -39,10 +73,11 @@ def sculpt_crop(name, stage, S):
             pts=[]
             for j in range(7):
                 a=pi*j/6
-                pts.append((p[0]+sin(ang)*r*1.16*sin(a),
-                            p[1]+cos(a)*r*.91,
-                            p[2]-cos(ang)*r*.995*sin(a)))
-            g.tube("leafdeep",pts,[.028*r]*7,5)
+                wobble=ang+.055*sin(a*6+i*.8)
+                pts.append((p[0]+sin(wobble)*r*1.16*sin(a),
+                            p[1]+cos(a)*r*.915,
+                            p[2]-cos(wobble)*r*.999*sin(a)))
+            g.tube("leafdeep",pts,[.052*r]*7,5)
         cap((p[0],p[1]+r*.82,p[2]),r)
     # distinguish plant type by original reference silhouettes
     typ = (
@@ -70,15 +105,9 @@ def sculpt_crop(name, stage, S):
             if stage>=2:
                 fruit=(ox*.95+sin(a+1)*.33,(.30+(.12 if i%2 else 0))*h,oz*.94-.22)
                 stem(top,(fruit[0],fruit[1]+.14*h,fruit[2]),.033)
-                ell("red" if name=="Berry" else "sky",fruit,
-                    (.29*h,.35*h,.26*h),15,10)
+                strawberry_shape(fruit,h,
+                    "red" if name=="Berry" else "sky",stage==3)
                 cap(fruit,h)
-                if stage==3:
-                    for j in range(4):
-                        seedpos=(fruit[0]+(j-1.5)*.102*h,
-                                 fruit[1]+(.03 if j%2 else -.11)*h,
-                                 fruit[2]-.252*h+abs(j-2)*.032*h)
-                        ell("cream",seedpos,(.034*h,.047*h,.019*h),8,5)
             elif i%2==1:
                 flower((top[0],top[1]+.07,top[2]-.18),scale=.55)
         if stage == 3:
