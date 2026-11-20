@@ -8,6 +8,7 @@ local StorybookPetArt = require(script.Parent:WaitForChild("StorybookPetArt"))
 local ReferenceCropArt = require(script.Parent:WaitForChild("ReferenceCropArt"))
 local ReferenceMeshLibrary = require(script.Parent:WaitForChild("ReferenceMeshLibrary"))
 local NativeReferenceGarden = require(script.Parent:WaitForChild("ReferenceGardenFallback"))
+local NativeReferenceBackdrop = require(script.Parent:WaitForChild("ReferenceBackdropFallback"))
 
 local World = {}
 local scenery: Folder
@@ -189,6 +190,7 @@ function World.build()
     local importedBeds = ReferenceMeshLibrary.decorateEntrance(scenery)
     if importedBeds == 0 then
         NativeReferenceGarden.build(scenery)
+        NativeReferenceBackdrop.build(scenery)
     end
 
     monster = Instance.new("Model")
