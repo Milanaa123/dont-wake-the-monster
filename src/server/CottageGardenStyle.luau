@@ -25,6 +25,7 @@ local function part(parent: Instance, name: string, position: Vector3, size: Vec
     p.Anchored = true
     p.CanCollide = false
     p.CanTouch = false
+    p.CanQuery = false
     p.Material = material or Enum.Material.SmoothPlastic
     p.Color = color
     p.Shape = shape or Enum.PartType.Block
@@ -80,12 +81,13 @@ local function fruitTree(parent: Instance, pos: Vector3, index: number, rng: Ran
     local tall = rng:NextNumber(13, 19)
     local trunk = part(parent, "OrchardTrunk", pos + Vector3.new(0, tall * 0.51, 0),
         Vector3.new(2.2, tall, 2.2), WOOD, Enum.Material.Wood)
-    trunk.CFrame *= CFrame.Angles(0, rng:NextNumber(-0.15, 0.15), 0)
+    trunk.Shape = Enum.PartType.Cylinder
+    trunk.CFrame *= CFrame.Angles(0, 0, math.rad(90))
     local colors = {LEAF, LEAF_DARK, LEAF_LIGHT}
     local canopy = pos + Vector3.new(0, tall + 2, 0)
     ball(parent, "OrchardCanopy", canopy, Vector3.new(16, 13, 15), colors[index % 3 + 1])
-    for i = 1, 3 do
-        local a = i * 2.094 + index * 0.4
+    for i = 1, 4 do
+        local a = i * 1.5708 + index * 0.4
         local off = Vector3.new(math.cos(a) * 5.5, rng:NextNumber(-1.4, 2.3), math.sin(a) * 5.5)
         ball(parent, "FoliageCluster", canopy + off, Vector3.new(9.8, 9.4, 10.8), colors[(i + index) % 3 + 1])
     end
@@ -206,8 +208,9 @@ function Cottage.decorateWorld(world: Instance)
     local rng = Random.new(45721)
     -- Ground level of the existing island = 7; no surprise colliders.
     for z = 34, 67, 6 do
-        local stone = part(folder, "WarmGardenPath", Vector3.new(rng:NextNumber(-0.35, 0.35), 7.16, z),
-            Vector3.new(rng:NextNumber(9, 11), 0.2, rng:NextNumber(5, 6.2)), PATH, Enum.Material.Sand)
+        local stone = ball(folder, "WarmGardenPath", Vector3.new(rng:NextNumber(-0.35, 0.35), 7.15, z),
+            Vector3.new(rng:NextNumber(10.5, 12), 0.24, rng:NextNumber(7.1, 8.2)), PATH)
+        stone.Material = Enum.Material.Sand
         stone.CFrame *= CFrame.Angles(0, rng:NextNumber(-0.045, 0.045), 0)
     end
     -- Branches to personal gardens keep the center visually clear for the boss.
@@ -215,7 +218,8 @@ function Cottage.decorateWorld(world: Instance)
         local a = (k - 1) / 12 * math.pi * 2
         for radius = 34, 51, 8 do
             local pos = Vector3.new(math.cos(a) * radius, 7.14, math.sin(a) * radius)
-            local p = part(folder, "PathToGardens", pos, Vector3.new(6.8, 0.12, 7.5), Color3.fromRGB(220, 184, 138), Enum.Material.Sand)
+            local p = ball(folder, "PathToGardens", pos, Vector3.new(7.5, 0.18, 8.7), Color3.fromRGB(220, 184, 138))
+            p.Material = Enum.Material.Sand
             p.CFrame *= CFrame.Angles(0, -a, 0)
         end
     end
@@ -247,6 +251,25 @@ function Cottage.decorateWorld(world: Instance)
         local pos = Vector3.new(math.cos(a) * r, 7, math.sin(a) * r)
         flower(folder, pos, if i % 3 == 0 then WHITE elseif i % 3 == 1 then
             Color3.fromRGB(251, 204, 202) else Color3.fromRGB(255, 235, 145), rng:NextNumber(0.7, 1.2))
+    end
+    -- Irregular overlapping shapes give the bare island ground small patches
+    -- of painterly grass and clover without introducing textures or colliders.
+    for i = 1, 52 do
+        local a = rng:NextNumber(0, math.pi * 2)
+        local r = if i % 2 == 0 then rng:NextNumber(36, 44) else rng:NextNumber(96, 106)
+        local pos = Vector3.new(math.cos(a) * r, 7.2, math.sin(a) * r)
+        local shade = if i % 3 == 0 then LEAF_LIGHT elseif i % 3 == 1 then LEAF else LEAF_DARK
+        local patch = ball(folder, "MeadowGrassPatch", pos,
+            Vector3.new(rng:NextNumber(2.2, 4.8), 0.15, rng:NextNumber(1.7, 3.5)), shade)
+        patch.CastShadow = false
+        if i % 3 ~= 0 then
+            for leafIndex = 1, 3 do
+                local theta = leafIndex * 2.094
+                local leafCenter = pos + Vector3.new(math.cos(theta) * 0.42, 0.14, math.sin(theta) * 0.38)
+                local clover = ball(folder, "CloverLeaf", leafCenter, Vector3.new(0.62, 0.12, 0.48), LEAF_LIGHT)
+                clover.CastShadow = false
+            end
+        end
     end
     for i = 1, 19 do
         local a = rng:NextNumber(0, math.pi * 2)
