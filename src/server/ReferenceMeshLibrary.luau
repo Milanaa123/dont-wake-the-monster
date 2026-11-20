@@ -10,7 +10,62 @@ local ServerStorage = game:GetService("ServerStorage")
 local Bridge = {}
 local ROOT_NAME = "DWTM_ArtLibrary"
 
+local staged = false
+local function stageImportedPacks()
+    if staged then return end
+    staged = true
+    -- Studio Importer (File > Import) can insert the three original GLB packs
+    -- into Workspace. On Play, move those verified mesh assets to ServerStorage.
+    -- Does not need a plugin, API key, or any new permissions.
+    local known = {
+        {pack = "DWTM_Pets_30", folder = "Pets", prefix = "Pet_"},
+        {pack = "DWTM_Crops_30x3", folder = "Crops", prefix = "Crop_"},
+        {pack = "DWTM_World_6", folder = "World", prefix = "Environment_"},
+    }
+    local root = ServerStorage:FindFirstChild(ROOT_NAME)
+    for _, item in ipairs(known) do
+        for _, container in ipairs(workspace:GetChildren()) do
+            if string.sub(container.Name, 1, #item.pack) == item.pack then
+                local found = {}
+                if container:IsA("MeshPart") then
+                    table.insert(found, container)
+                end
+                for _, descendant in ipairs(container:GetDescendants()) do
+                    if descendant:IsA("MeshPart") and
+                        string.sub(descendant.Name, 1, #item.prefix) == item.prefix then
+                        table.insert(found, descendant)
+                    end
+                end
+                if #found > 0 then
+                    if not root then
+                        root = Instance.new("Folder")
+                        root.Name = ROOT_NAME
+                        root.Parent = ServerStorage
+                    end
+                    local folder = root:FindFirstChild(item.folder)
+                    if not folder then
+                        folder = Instance.new("Folder")
+                        folder.Name = item.folder
+                        folder.Parent = root
+                    end
+                    for _, mesh in ipairs(found) do
+                        if string.sub(mesh.Name, 1, #item.prefix) == item.prefix then
+                            mesh.Anchored = true
+                            mesh.CanCollide = false
+                            mesh.CanTouch = false
+                            mesh.CanQuery = false
+                            mesh.Parent = folder
+                        end
+                    end
+                    if container.Parent == workspace then container:Destroy() end
+                end
+            end
+        end
+    end
+end
+
 local function findMesh(groupName: string, assetName: string): MeshPart?
+    stageImportedPacks()
     local root = ServerStorage:FindFirstChild(ROOT_NAME)
     if not root then return nil end
     local group = root:FindFirstChild(groupName)
@@ -76,6 +131,7 @@ function Bridge.applyCrop(visual: Model, center: Vector3,
 end
 
 function Bridge.applySetDress(parent: Instance): number
+    stageImportedPacks()
     local root = ServerStorage:FindFirstChild(ROOT_NAME)
     if not root then return 0 end
     local applied = 0
