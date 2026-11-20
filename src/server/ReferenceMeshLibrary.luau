@@ -185,7 +185,23 @@ function Bridge.applySetDress(parent: Instance): number
             if previous then previous:Destroy() end
             local mesh = makeVisual(source, environment, "Imported" .. record[1],
                 CFrame.new(record[3]), record[4])
-            if mesh then applied += 1 end
+            if mesh then
+                applied += 1
+                if record[1] == "GardenCottage" then
+                    -- Decorative cottage is closed: players should not walk
+                    -- through a house just because its 3D mesh is cosmetic.
+                    local collision = Instance.new("Part")
+                    collision.Name = "CottageInvisibleWalls"
+                    collision.Size = Vector3.new(14, 8.5, 12)
+                    collision.CFrame = CFrame.new(37, 11.25, 88)
+                    collision.Transparency = 1
+                    collision.Anchored = true
+                    collision.CanCollide = true
+                    collision.CanQuery = false
+                    collision.CanTouch = false
+                    collision.Parent = environment
+                end
+            end
         end
     end
     return applied
