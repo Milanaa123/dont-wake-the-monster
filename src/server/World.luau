@@ -198,7 +198,7 @@ function World.build()
     end
     for _, side in ipairs({-1, 1}) do
         orb(monster, "VelvetInnerEar",
-            Vector3.new(side * 12, 61.6, -9), Vector3.new(5.4, 9.3, 0.8), PINK:Lerp(CREAM, 0.27))
+            Vector3.new(side * 12, 61.6, -9), Vector3.new(5.4, 9.3, 0.8), PINK:Lerp(Color3.fromRGB(253, 238, 197), 0.27))
         orb(monster, "SleepingCheek",
             Vector3.new(side * 11.3, 43.1, -14.5), Vector3.new(5.7, 3.1, 1.2), PINK)
     end
