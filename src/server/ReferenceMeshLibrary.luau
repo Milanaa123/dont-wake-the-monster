@@ -20,7 +20,7 @@ local function stageImportedPacks()
     local known = {
         {pack = "DWTM_Pets_30", folder = "Pets", prefix = "Pet_"},
         {pack = "DWTM_Crops_30x3", folder = "Crops", prefix = "Crop_"},
-        {pack = "DWTM_World_6", folder = "World", prefix = "Environment_"},
+        {pack = "DWTM_World_8", folder = "World", prefix = "Environment_"},
     }
     local root = ServerStorage:FindFirstChild(ROOT_NAME)
     for _, item in ipairs(known) do
