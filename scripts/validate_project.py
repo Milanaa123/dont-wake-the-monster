@@ -24,6 +24,8 @@ required = [
     "src/server/MonsterWakeVFX.luau",
     "src/server/ReferenceGardenFallback.luau",
     "src/server/ReferenceBackdropFallback.luau",
+    "src/server/ReferenceFoliageLayer.luau",
+    "src/client/NativePetIdle.client.luau",
     "src/server/NativeGardenerAvatar.luau",
     "src/server/NativePetSilhouettes.luau",
     "src/client/CottageCamera.client.luau",
@@ -358,3 +360,20 @@ assert 'MonsterWakeVFX.wake(scenery, Vector3.new(0, 8, 0))' in world_vfx
 assert 'MonsterWakeVFX.groundPulse(scenery, position, radius)' in world_vfx
 assert "local b = orb(scenery, \"Shockwave\"" not in world_vfx, "Old spherical VFX not removed"
 print("OK: real native Roblox wake VFX linked; in-engine appearance not verified")
+
+
+# Native visual fidelity pass: real Studio parts and client animation, not pictures.
+foliage = read("src/server/ReferenceFoliageLayer.luau")
+idle = read("src/client/NativePetIdle.client.luau")
+world = read("src/server/World.luau")
+assert "ReferenceFoliageLayer.build(scenery)" in world, "New native foliage is not shown in the place"
+assert 'local LIMIT = 410' in foliage and 'if used >= LIMIT then return end' in foliage, "Foliage budget removed"
+for token in ("WedgePart", "PaintedAngularLeaf", "berryLeafPass", "orchardLeaves",
+              "groundDetails", "CanCollide = false", "CanQuery = false"):
+    assert token in foliage, f"Missing native reference leaf layer: {token}"
+for token in ("NativeSpeciesStyled", "MAX_DISTANCE = 100", "MAX_PARTS_PER_PET = 7",
+              "RenderStepped", "rootCF * piece.offset * sway", "FluffyRisingTail",
+              "FeatheredWing", "WaterGills"):
+    assert token in idle, f"Native pet idle animation regressed: {token}"
+assert "1 / 20" in idle, "Cosmetic idle no longer has 20 FPS throttle"
+print("OK: bounded native foliage and original in-place pet animation are integrated (not Studio tested)")
