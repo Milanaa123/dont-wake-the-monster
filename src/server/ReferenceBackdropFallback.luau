@@ -155,12 +155,12 @@ function Dressing.build(world: Instance): Folder
     orangeTree(folder,Vector3.new(16.5,7.15,65),4122)
     orangeTree(folder,Vector3.new(34,7.15,64),4833)
     orangeTree(folder,Vector3.new(-34,7.15,59),6401)
-    woodFence(folder,Vector3.new(-33,7.23,62),
-        Vector3.new(-7,7.23,62),6)
-    woodFence(folder,Vector3.new(11,7.23,62),
+    woodFence(folder,Vector3.new(-36,7.23,62),
+        Vector3.new(-17,7.23,62),5)
+    woodFence(folder,Vector3.new(17,7.23,62),
         Vector3.new(39,7.23,62),6)
     -- The toucan stands behind the first strawberry bed (not on the path).
-    toucan(folder,Vector3.new(-7.4,7.14,69.0))
+    toucan(folder,Vector3.new(-17.7,7.14,66.0))
     folder:SetAttribute("ArtSource","NativeGeometryNoExternalAssets")
     return folder
 end
