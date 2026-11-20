@@ -201,6 +201,91 @@ function Cottage.applyLighting()
     rays.Spread = 0.78
 end
 
+-- Small original stage set behind the spawn-side garden, designed to avoid
+-- the central monster arena and the three seed-hunt biome centres.
+local function storybookCottage(parent: Instance)
+    local model = Instance.new("Model")
+    model.Name = "CozyOrchardCottage"
+    model.Parent = parent
+    local x, y, z = 37, 7, 88
+    local wall = part(model, "HoneyCottageWalls", Vector3.new(x, y + 4.4, z),
+        Vector3.new(14.5, 9.0, 12.5), Color3.fromRGB(226, 185, 138), Enum.Material.WoodPlanks)
+    wall.CanCollide = true
+    local footing = part(model, "CottageStoneBase", Vector3.new(x, y + 0.2, z),
+        Vector3.new(15.3, 0.6, 13.2), Color3.fromRGB(193, 173, 143), Enum.Material.Slate)
+    footing.CanCollide = true
+    for _, side in ipairs({-1, 1}) do
+        local roof = part(model, "BlueSlateRoof", Vector3.new(x + side * 3.9, y + 10.1, z),
+            Vector3.new(8.7, 0.82, 15.2), Color3.fromRGB(122, 136, 157), Enum.Material.Slate)
+        roof.CFrame *= CFrame.Angles(0, 0, math.rad(side * 25))
+        roof.CanCollide = true
+        local eave = part(model, "CottageWhiteEave", Vector3.new(x + side * 6.9, y + 8.1, z),
+            Vector3.new(1.0, 0.48, 15.7), CREAM, Enum.Material.Wood)
+        eave.CanCollide = true
+    end
+    -- Exterior door is a decorative facade; it is not presented as interactive.
+    local door = part(model, "WarmOakDoor", Vector3.new(x, y + 3.1, z - 6.39),
+        Vector3.new(3.0, 6.1, 0.3), Color3.fromRGB(137, 97, 75), Enum.Material.WoodPlanks)
+    door.CanCollide = true
+    ball(model, "DoorKnob", Vector3.new(x + 1.05, y + 3.25, z - 6.64),
+        Vector3.new(0.28, 0.28, 0.24), CREAM)
+    for _, side in ipairs({-1, 1}) do
+        local glass = part(model, "LanternWindow", Vector3.new(x + side * 4.2, y + 5.1, z - 6.39),
+            Vector3.new(2.6, 2.8, 0.32), Color3.fromRGB(253, 220, 151), Enum.Material.Glass)
+        glass.Transparency = 0.18
+        for _, height in ipairs({3.55, 6.68}) do
+            part(model, "WindowFrame", Vector3.new(x + side * 4.2, y + height, z - 6.59),
+                Vector3.new(3.2, 0.34, 0.40), CREAM, Enum.Material.Wood)
+        end
+        part(model, "WindowCrossbar", Vector3.new(x + side * 4.2, y + 5.1, z - 6.64),
+            Vector3.new(0.28, 3.1, 0.4), CREAM, Enum.Material.Wood)
+        local potCenter = Vector3.new(x + side * 5.4, y + 0.7, z - 8)
+        local pot = part(model, "CottageFlowerPot", potCenter,
+            Vector3.new(1.45, 1.2, 1.4), Color3.fromRGB(183, 107, 83),
+            Enum.Material.Brick, Enum.PartType.Cylinder)
+        pot.CFrame *= CFrame.Angles(0, 0, math.rad(90))
+        flower(model, potCenter + Vector3.new(0, 0.64, 0),
+            if side == 1 then WHITE else Color3.fromRGB(248, 181, 197), 0.71)
+    end
+    part(model, "CottageChimney", Vector3.new(x + 4.5, y + 12, z + 2.6),
+        Vector3.new(2.4, 5.4, 2.4), Color3.fromRGB(187, 137, 116), Enum.Material.Brick)
+    for i = 1, 4 do
+        local p = Vector3.new(x - 2.5 + i * 1.15, 7.26, z - 9.5 - i * 1.2)
+        local steppingStone = ball(model, "CottageWalkway", p, Vector3.new(3.4, 0.16, 3.6), PATH)
+        steppingStone.Material = Enum.Material.Sand
+    end
+end
+
+local function orchardPond(parent: Instance)
+    local model = Instance.new("Model")
+    model.Name = "ShadedOrchardPond"
+    model.Parent = parent
+    local center = Vector3.new(54, 7.2, 91)
+    local shore = ball(model, "PondSandyShore", center,
+        Vector3.new(14.4, 0.21, 10.8), Color3.fromRGB(191, 184, 139))
+    shore.Material = Enum.Material.Sand
+    local water = ball(model, "PondSurface", center + Vector3.new(0, 0.18, 0),
+        Vector3.new(11.9, 0.16, 8.3), Color3.fromRGB(131, 186, 185))
+    water.Material = Enum.Material.Glass
+    water.Transparency = 0.20
+    water.CastShadow = false
+    for i = 1, 9 do
+        local a = i * 2 * math.pi / 9
+        local pos = center + Vector3.new(math.cos(a) * 6.9, 0.12, math.sin(a) * 5.0)
+        pebble(model, pos, 0.9)
+        if i % 3 == 0 then
+            flower(model, pos + Vector3.new(0.6, 0.02, 0), WHITE, 0.55)
+        end
+    end
+    for i = 1, 3 do
+        local a = i * 2.094
+        local pad = ball(model, "WaterLilyPad",
+            center + Vector3.new(math.cos(a) * 3, 0.31, math.sin(a) * 2.2),
+            Vector3.new(1.9, 0.12, 1.7), LEAF_DARK)
+        pad.CastShadow = false
+    end
+end
+
 function Cottage.decorateWorld(world: Instance)
     local folder = Instance.new("Folder")
     folder.Name = "CottageGardenEnvironment"
@@ -227,7 +312,11 @@ function Cottage.decorateWorld(world: Instance)
     for i = 1, 11 do
         local a = (i / 11) * math.pi * 2 + 0.17
         local r = rng:NextNumber(91, 102)
-        fruitTree(folder, Vector3.new(math.cos(a) * r, 7, math.sin(a) * r), i, rng)
+        local treePos = Vector3.new(math.cos(a) * r, 7, math.sin(a) * r)
+        if (treePos - Vector3.new(37, 7, 88)).Magnitude > 21
+            and (treePos - Vector3.new(54, 7, 91)).Magnitude > 14 then
+            fruitTree(folder, treePos, i, rng)
+        end
     end
     for i = 1, 21 do
         local a = rng:NextNumber(0, math.pi * 2)
@@ -271,6 +360,8 @@ function Cottage.decorateWorld(world: Instance)
             end
         end
     end
+    storybookCottage(folder)
+    orchardPond(folder)
     for i = 1, 19 do
         local a = rng:NextNumber(0, math.pi * 2)
         local r = rng:NextNumber(78, 110)
