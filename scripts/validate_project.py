@@ -158,7 +158,7 @@ assert "ReferenceMeshLibrary.applyCrop(visual, center, p.seed, stage)" in world,
 assert "ReferenceMeshLibrary.applySetDress(scenery)" in world, "Imported world set is not wired"
 mesh_bridge = read("src/server/ReferenceMeshLibrary.luau")
 for marker in ("ServerStorage", "DWTM_ArtLibrary", "DWTM_Pets_30", "DWTM_Crops_30x3",
-               "DWTM_World_6", "ImportedCharacterMesh", "ImportedCropMesh",
+               "DWTM_World_8", "ImportedCharacterMesh", "ImportedCropMesh",
                "CanCollide = false", "CanQuery = false"):
     assert marker in mesh_bridge, f"Missing safe import bridge: {marker}"
 assert "ReferenceCropArt.draw(visual, center, p.seed, stage, crop.color)" in world, "Old crops missing as test fallback"
