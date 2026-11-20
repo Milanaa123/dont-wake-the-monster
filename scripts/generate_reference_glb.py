@@ -418,11 +418,11 @@ def _roughness_png(keys, cell=16):
                 stipple=.018*math.sin(x*.73+y*1.11+len(key))
                 rough=max(.12,min(.98,base+stipple))
                 scan.extend((255,round(255*rough),0))
-        rows.append(b"\\x00"+bytes(scan))
+        rows.append(b"\x00"+bytes(scan))
     payload=b"".join(rows)
     def chunk(tag,data):
         return struct.pack(">I",len(data))+tag+data+struct.pack(">I",zlib.crc32(tag+data)&0xffffffff)
-    return (b"\\x89PNG\\r\\n\\x1a\\n"+
+    return (b"\x89PNG\r\n\x1a\n"+
         chunk(b"IHDR",struct.pack(">IIBBBBB",width,height,8,2,0,0,0))+
         chunk(b"IDAT",zlib.compress(payload,9))+chunk(b"IEND",b""))
 
