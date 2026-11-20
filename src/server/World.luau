@@ -5,6 +5,7 @@ local Lighting = game:GetService("Lighting")
 local Debris = game:GetService("Debris")
 local CottageStyle = require(script.Parent:WaitForChild("CottageGardenStyle"))
 local StorybookPetArt = require(script.Parent:WaitForChild("StorybookPetArt"))
+local ReferenceCropArt = require(script.Parent:WaitForChild("ReferenceCropArt"))
 
 local World = {}
 local scenery: Folder
@@ -449,13 +450,13 @@ function World.createGarden(userId: number, ownerName: string, slot: number): bo
         mini.Transparency = 1
         local tag = Instance.new("BillboardGui")
         tag.Size = UDim2.fromOffset(84, 24)
-        tag.MaxDistance = 75
-        tag.AlwaysOnTop = true
+        tag.MaxDistance = 28
+        tag.AlwaysOnTop = false
         tag.Parent = mini
         local t = Instance.new("TextLabel")
         t.Size = UDim2.fromScale(1, 1)
         t.BackgroundColor3 = Color3.fromRGB(255, 252, 224)
-        t.BackgroundTransparency = 0.1
+        t.BackgroundTransparency = 0.28
         t.TextColor3 = Color3.fromRGB(69, 43, 64)
         t.Text = "PLOT " .. index
         t.TextScaled = true
@@ -506,51 +507,12 @@ function World.updateGarden(userId: number, garden: any, cropConfig: any)
             visual.Parent = plot
             local center = Vector3.new(plot:GetAttribute("PosX"), plot:GetAttribute("PosY"), plot:GetAttribute("PosZ"))
             local crop = cropConfig.Crops[p.seed]
+            -- All 30 crop IDs keep their gameplay identity and stage timing.
+            -- Unlike the old giant glowing spheres, these are original leafy silhouettes.
             local height = 1.2 + stage * 1.0
-            part(visual, "Stem", Vector3.new(0.65, height, 0.65), CFrame.new(center + Vector3.new(0, 0.8 + height / 2, 0)), Color3.fromRGB(84, 173, 100))
-            for side = -1, 1, 2 do
-                local leaf = orb(visual, "Leaf", center + Vector3.new(side * 1.0, 0.8 + height * 0.6, 0), Vector3.new(2.2, 0.45, 1.1), Color3.fromRGB(98, 203, 118))
-                leaf.CFrame = leaf.CFrame * CFrame.Angles(0, 0, math.rad(side * 23))
-            end
             local size = 0.75 + stage * 0.65
             local head = center + Vector3.new(0, height + 0.8, 0)
-            -- Ripe crops should look like painted fruit, not glowing lamps.
-            local glow = Enum.Material.SmoothPlastic
-            local seedType = p.seed
-            local isBloom = seedType == "Sunflower" or seedType == "Starbloom" or seedType == "MoonLotus" or seedType == "CloudCotton"
-            local isMushroom = seedType == "Moonshroom" or seedType == "NeonMushroom"
-            local isStalk = seedType == "Corn" or seedType == "WhisperWheat" or seedType == "CandyCane" or seedType == "StardustRice"
-            local isCactus = seedType == "JellyCactus" or seedType == "BubbleCabbage" or seedType == "CrystalMint"
-            if isBloom then
-                orb(visual, "FlowerHeart", head, Vector3.new(size * 1.4, size * 1.4, size), crop.color, glow)
-                for i = 1, 6 do
-                    local theta = i / 6 * math.pi * 2
-                    orb(visual, "Petal", head + Vector3.new(math.cos(theta) * size * 1.15, math.sin(theta) * size * 1.15, 0), Vector3.new(size * 1.15, size * 1.2, size * 0.6), crop.color, glow)
-                end
-            elseif isMushroom then
-                orb(visual, "MushroomCap", head, Vector3.new(size * 3.5, size * 1.3, size * 3.4), crop.color, glow)
-                for i = 1, 4 do
-                    local theta = i * math.pi * 0.5
-                    orb(visual, "MushroomDots", head + Vector3.new(math.cos(theta) * size, size * 0.45, math.sin(theta) * size), Vector3.new(size * 0.45, size * 0.4, size * 0.45), Color3.fromRGB(255, 247, 224))
-                end
-            elseif isStalk then
-                for i = 1, 3 do
-                    orb(visual, "Grain", head + Vector3.new(math.sin(i * 2) * 0.7, i * size * 0.65, 0), Vector3.new(size * 1.1, size * 1.4, size * 0.9), crop.color, glow)
-                end
-            elseif isCactus then
-                orb(visual, "CactusHeart", head, Vector3.new(size * 1.8, size * 2.3, size * 1.6), crop.color, glow)
-                for _, side in ipairs({-1, 1}) do
-                    orb(visual, "CactusBud", head + Vector3.new(side * 1.5 * size, size * 0.4, 0), Vector3.new(size, size * 0.9, size), crop.color)
-                end
-            else
-                orb(visual, "HarvestFruit", head, Vector3.new(size * 2, size * 1.5, size * 2), crop.color, glow)
-                if seedType == "GummyGrape" or seedType == "Jellybean" or seedType == "FrostBerry" or seedType == "Berry" then
-                    for i = 1, 3 do
-                        orb(visual, "FruitCluster", head + Vector3.new((i - 2) * size, -size * 0.6, size * 0.8), Vector3.new(size * 0.9, size * 1.1, size * 0.9), crop.color, glow)
-                    end
-                end
-            end
-            CottageStyle.decorateCrop(visual, center, seedType, stage)
+            ReferenceCropArt.draw(visual, center, p.seed, stage, crop.color)
             if p.mutation then
                 local variations = {
                     Golden = Color3.fromRGB(255, 224, 107),
@@ -567,9 +529,7 @@ function World.updateGarden(userId: number, garden: any, cropConfig: any)
                     bubble.CanCollide = false
                 end
             end
-            if stage == 3 then
-                orb(visual, "HarvestGlow", center + Vector3.new(0, height + 2.4, 0), Vector3.new(0.8, 0.8, 0.8), Color3.fromRGB(255, 248, 187), Enum.Material.Neon)
-            end
+            -- Ripeness is visible on the fruit itself; no floating neon marker.
         end
     end
 end
