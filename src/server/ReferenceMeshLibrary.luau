@@ -110,14 +110,16 @@ function Bridge.applyPet(pet: Model, species: string): boolean
     local root = pet.PrimaryPart
     local visual = makeVisual(source, pet, "ImportedCharacterMesh", root.CFrame, 4.1)
     if not visual then return false end
-    -- Hide only old decoration, not UI or our movement pivot. Keep the old
-    -- movement root and the whole server-owned pet/character system intact.
+    -- The legacy blob art is removed once the real mesh has been cloned.
+    -- Retain the movement root, name tag and sound; avoid replicating dozens
+    -- of hidden old parts to phones.
     for _, obj in ipairs(pet:GetDescendants()) do
-        if obj:IsA("BasePart") and obj ~= visual then
-            obj.Transparency = 1
-            obj.CastShadow = false
+        if obj:IsA("BasePart") and obj ~= visual and obj ~= root then
+            obj:Destroy()
         end
     end
+    root.Transparency = 1
+    root.CastShadow = false
     return true
 end
 
