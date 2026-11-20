@@ -6,6 +6,7 @@ local Debris = game:GetService("Debris")
 local CottageStyle = require(script.Parent:WaitForChild("CottageGardenStyle"))
 local StorybookPetArt = require(script.Parent:WaitForChild("StorybookPetArt"))
 local ReferenceCropArt = require(script.Parent:WaitForChild("ReferenceCropArt"))
+local ReferenceMeshLibrary = require(script.Parent:WaitForChild("ReferenceMeshLibrary"))
 
 local World = {}
 local scenery: Folder
@@ -171,6 +172,7 @@ function World.build()
     end
 
     CottageStyle.decorateWorld(scenery)
+    ReferenceMeshLibrary.applySetDress(scenery)
 
     monster = Instance.new("Model")
     monster.Name = "GigglesTheGiant"
@@ -429,6 +431,7 @@ function World.makePet(name: string, color: Color3, pointy: boolean): Model
     light.Brightness = 0.4
     light.Color = color
     light.Parent = body
+    ReferenceMeshLibrary.applyPet(pet, species)
     return pet
 end
 
@@ -564,7 +567,9 @@ function World.updateGarden(userId: number, garden: any, cropConfig: any)
             local height = 1.2 + stage * 1.0
             local size = 0.75 + stage * 0.65
             local head = center + Vector3.new(0, height + 0.8, 0)
-            ReferenceCropArt.draw(visual, center, p.seed, stage, crop.color)
+            if not ReferenceMeshLibrary.applyCrop(visual, center, p.seed, stage) then
+                ReferenceCropArt.draw(visual, center, p.seed, stage, crop.color)
+            end
             if p.mutation then
                 local variations = {
                     Golden = Color3.fromRGB(255, 224, 107),
