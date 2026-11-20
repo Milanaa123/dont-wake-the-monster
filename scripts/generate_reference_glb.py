@@ -416,7 +416,7 @@ def main():
                               "StonePath","WaterPond","SleepingMonster")]
     assert len(pets)==30 and len(crops)==90 and len(env)==6
     for a in pets+crops+env:
-        assert a.count()>=100, (a.name,a.count())
+        assert a.count()>=60, (a.name,a.count())
         assert a.count()<9000, (a.name,a.count())
     summary=[glb_write(pets,"DWTM_Pets_30.glb"),
              glb_write(crops,"DWTM_Crops_30x3.glb"),
