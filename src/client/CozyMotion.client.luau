@@ -30,9 +30,11 @@ local function track(descendant: Instance)
     local kind = kindFor(descendant)
     if not kind then return end
     local seed = 0
-    for i = 1, #descendant.Name do
-        seed += string.byte(descendant.Name, i) * i
+    local identity = descendant:GetFullName()
+    for i = 1, #identity do
+        seed += string.byte(identity, i) * (i % 17 + 1)
     end
+    seed += math.floor(descendant.Position.X * 7 + descendant.Position.Z * 13)
     animated[descendant] = {
         mesh = descendant,
         base = descendant.CFrame,
@@ -75,15 +77,26 @@ RunService.RenderStepped:Connect(function(dt: number)
         end
         local offsetTime = now + entry.seed * 0.31
         if entry.kind == "pet" then
-            -- Current frame follows the authoritative root, not the previous
-            -- rendered CFrame; this avoids a drifting pet during long sessions.
+            -- Each family has its own motion rhythm while remaining attached
+            -- to the server-authoritative movement root.
             local parent = mesh.Parent
             local root = if parent and parent:IsA("Model") then parent.PrimaryPart else nil
             if root and root:IsA("BasePart") then
-                local wobble = math.sin(offsetTime * 3.7) * 0.08
-                local tilt = math.sin(offsetTime * 2.6) * 0.037
-                mesh.CFrame = root.CFrame * CFrame.new(0, wobble, 0)
+                local species = parent.Name:match("^[^_]+") or ""
+                local isBird = species == "Swoop" or species == "Puffin"
+                    or species == "Nugget" or species == "Twinkle"
+                    or species == "Echo"
+                local isCalm = species == "Pebble" or species == "Mallow"
+                    or species == "Floofle"
+                local rate = if isBird then 5.9 elseif isCalm then 1.85 else 3.35
+                local amount = if isBird then 0.18 elseif isCalm then 0.05 else 0.09
+                local bob = math.sin(offsetTime * rate) * amount
+                local tilt = math.sin(offsetTime * rate * .74) *
+                    (if isBird then .058 else if isCalm then .018 else .043)
+                mesh.CFrame = root.CFrame * CFrame.new(0, bob, 0)
                     * CFrame.Angles(0, 0, tilt)
+                local inhale = 1 + .012 * math.sin(offsetTime * 2.8)
+                mesh.Size = entry.size * Vector3.new(inhale, 1 / inhale, inhale)
             end
         elseif entry.kind == "plant" then
             local tilt = math.sin(offsetTime * 1.27) * 0.018
