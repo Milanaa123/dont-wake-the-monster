@@ -422,3 +422,37 @@ for feature in ("CurvedMelonRind", "TinyCloverLeaf", "GardenSoilPebble",
     assert feature in native_farm, f"Native garden missing reference detail: {feature}"
 assert "MelonRindStripe" not in native_farm, "Old floating straight melon bands remain"
 print("OK: curved melon rind, fruit crowns and ground-cover geometry included")
+
+# Hands-on gardening uses Roblox's built-in mobile/gamepad/keyboard prompts.
+# Strict server-side ownership and range validation is mandatory. This is a
+# static integration check; only Studio Play can confirm real prompt behavior.
+world = read("src/server/World.luau")
+server = read("src/server/Game.server.luau")
+for marker in (
+    'prompt.Name = "GardenPlotInteract"',
+    'Instance.new("ProximityPrompt")',
+    'prompt.GamepadKeyCode = Enum.KeyCode.ButtonX',
+    'prompt.MaxActivationDistance = 8',
+    'prompt.Triggered:Connect(function(player: Player)',
+    'if handler then handler(player, userId, index) end',
+    'function World.setGardenPromptHandler(',
+    'function World.plotPosition(',
+    'prompt.ActionText = if not p then "Plant seed"',
+):
+    assert marker in world, f"Physical garden interaction missing: {marker}"
+for marker in (
+    'World.setGardenPromptHandler(function(player: Player, ownerId: number, index: number)',
+    'if player.UserId ~= ownerId then',
+    'local spot = World.plotPosition(ownerId, index)',
+    '(root.Position - spot).Magnitude > 11',
+    'if not humanoid or humanoid.Health <= 0 or profile.knockedOut then return end',
+    'if phase == "AWAKE" then',
+    'local harvested = gardenAction(player, "GardenHarvest", index)',
+    'local planted = gardenAction(player, "GardenPlant", {plot = index, seed = chosen})',
+    'if harvested and crop then',
+    'if planted then',
+    'return ok == true',
+):
+    assert marker in server, f"Server-authoritative garden prompt check missing: {marker}"
+assert "Garden.plotPosition(" not in server, "Plot coordinates must come from World, not client"
+print("OK: nine in-world planting/harvesting prompts, owner/range checks, no free reward before success")
