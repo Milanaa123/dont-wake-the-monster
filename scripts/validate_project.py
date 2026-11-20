@@ -166,6 +166,11 @@ assert "ReferenceMeshLibrary.applyPet(pet, species)" in world, "Imported mesh pe
 assert "ReferenceMeshLibrary.applySleepingMonster(monster)" in world, "Sleeping 3D monster not linked"
 assert "ReferenceMeshLibrary.applyOrchardTree(scenery, index, position)" in world, "New orchard tree geometry not linked"
 assert "DWTM_World_8" in read("src/server/ReferenceMeshLibrary.luau"), "Eight-item world pack name mismatch"
+mesh_bridge = read("src/server/ReferenceMeshLibrary.luau")
+for name in ("Environment_OrangeTree", "Environment_WoodFence",
+             "ImportedHeroCitrus_", "ImportedGardenFence_"):
+    assert name in mesh_bridge, f"Full import loses a reference backdrop element: {name}"
+assert "if applied == 4 then" in mesh_bridge, "Partial GLB imports must preserve fallback"
 assert "local angle = (slot - 1) / 12 * math.pi * 2 + math.pi / 2" in world, "First garden no longer faces spawn"
 assert r"spawn.\n    -- Remaining plots" not in world, "Escaped newline accidentally comments out garden angle"
 assert "CFrame.new(0, 9, 85)" in world, "First-play spawn overlaps garden"
