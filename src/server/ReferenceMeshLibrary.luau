@@ -254,8 +254,8 @@ function Bridge.decorateEntrance(world: Instance): number
     end
     -- Central x in [-8,8] stays completely open for the spawn walkway.
     for row = 1, 3 do
-        for col = 1, 4 do
-            local x = -27 + col * 4.15
+        for col = 1, 3 do
+            local x = -30 + col * 4.0
             local z = 67 + row * 4.65
             place(berry, "StrawberryPatch_" .. row .. "_" .. col,
                 Vector3.new(x, 7.18, z), 3.4, (row+col)*0.67)
@@ -276,7 +276,7 @@ function Bridge.decorateEntrance(world: Instance): number
     for i = 1, 4 do
         local z = 68 + i * 4.7
         place(berry, "OrchardBerries_" .. i,
-            Vector3.new(14.8, 7.16, z), 2.65, i * 0.6)
+            Vector3.new(18.5, 7.16, z), 2.65, i * 0.6)
     end
     return count
 end
