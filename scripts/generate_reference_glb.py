@@ -350,51 +350,103 @@ def make_env(key):
         g.blob("rose",(0,3.18,-2.61),(.37,.26,.12),12,8)
     return g
 
+def _palette_png(keys, cell=8):
+    # Lossless nearest-neighbour palette atlas. One textured primitive per
+    # animal/plant, so Roblox Studio will not split it by material slots.
+    import zlib
+    width = len(keys) * cell
+    height = 4
+    row = bytearray()
+    for key in keys:
+        c = bytes(int(v * 255) for v in rgb(MAT[key]))
+        row.extend(c * cell)
+    payload = b"".join(b"\x00" + bytes(row) for _ in range(height))
+    def chunk(tag, data):
+        return (struct.pack(">I", len(data)) + tag + data
+                + struct.pack(">I", zlib.crc32(tag + data) & 0xffffffff))
+    return (b"\x89PNG\r\n\x1a\n"
+            + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(payload, 9))
+            + chunk(b"IEND", b""))
+
 def glb_write(items,filename):
-    # Distinct real meshes in one .glb per category, to keep Studio imports to 3 clicks.
-    doc={"asset":{"version":"2.0","generator":"DWTM original code-based 3D art"},
-      "scene":0,"scenes":[{"nodes":[]}],"nodes":[],"meshes":[],
-      "materials":[],"buffers":[{"byteLength":0}],"bufferViews":[],"accessors":[]}
-    materials={}
+    # Each named asset = ONE MeshPart with texture atlas, not multiple colored
+    # MeshParts. Preserves recognizable colors in Roblox's glTF Importer.
+    keys = sorted(MAT)
+    index_of = {k:i for i,k in enumerate(keys)}
+    palette = _palette_png(keys)
+    tex_width = len(keys)*8
+    doc = {
+        "asset":{"version":"2.0","generator":"DWTM original textured 3D mesh library"},
+        "scene":0,"scenes":[{"nodes":[]}],"nodes":[],"meshes":[],
+        "materials":[{
+            "name":"DWTM_PaintedSurface",
+            "pbrMetallicRoughness":{"baseColorFactor":[1,1,1,1],
+                "baseColorTexture":{"index":0,"texCoord":0},
+                "metallicFactor":0.0,"roughnessFactor":0.86},
+            "doubleSided":True
+        }],
+        "textures":[{"sampler":0,"source":0}],
+        "samplers":[{"magFilter":9728,"minFilter":9728,"wrapS":33071,"wrapT":33071}],
+        "images":[],
+        "buffers":[{"byteLength":0}],"bufferViews":[],"accessors":[]
+    }
     blob=bytearray()
-    def store(raw,target):
+    def store(raw,target=None):
         while len(blob)%4:blob.append(0)
         off=len(blob);blob.extend(raw)
         idx=len(doc["bufferViews"])
-        doc["bufferViews"].append({"buffer":0,"byteOffset":off,"byteLength":len(raw),"target":target})
+        bv={"buffer":0,"byteOffset":off,"byteLength":len(raw)}
+        if target is not None:bv["target"]=target
+        doc["bufferViews"].append(bv)
+        return idx
+    image_view=store(palette)
+    doc["images"].append({"name":"DWTM_Original_Color_Palette",
+                           "mimeType":"image/png","bufferView":image_view})
+    def access(view,count,typ,ctype,lo=None,hi=None):
+        idx=len(doc["accessors"])
+        a={"bufferView":view,"componentType":ctype,"count":count,"type":typ}
+        if lo is not None:a["min"]=lo;a["max"]=hi
+        doc["accessors"].append(a)
         return idx
     for asset in items:
-        prim=[]
-        for mat, (verts,normals) in asset.data.items():
-            if not verts:continue
-            if mat not in materials:
-                materials[mat]=len(doc["materials"])
-                doc["materials"].append({"name":mat,"pbrMetallicRoughness":{
-                    "baseColorFactor":rgb(MAT[mat])+[1.0],"metallicFactor":0.0,"roughnessFactor":0.86},
-                    "doubleSided":True})
-            flat=[c for p in verts for c in p]
-            normal_flat=[c for p in normals for c in p]
-            pos=store(struct.pack("<"+"f"*len(flat),*flat),34962)
-            nrm=store(struct.pack("<"+"f"*len(normal_flat),*normal_flat),34962)
-            inds=list(range(len(verts)))
-            indices=store(struct.pack("<"+"I"*len(inds),*inds),34963)
-            def access(bv,count,typ,component,minimum=None,maximum=None):
-                idx=len(doc["accessors"])
-                a={"bufferView":bv,"componentType":component,"count":count,"type":typ}
-                if minimum is not None:a["min"]=minimum;a["max"]=maximum
-                doc["accessors"].append(a)
-                return idx
-            mi=[min(flat[i::3]) for i in range(3)]
-            ma=[max(flat[i::3]) for i in range(3)]
-            ap=access(pos,len(verts),"VEC3",5126,mi,ma)
-            an=access(nrm,len(verts),"VEC3",5126)
-            ai=access(indices,len(inds),"SCALAR",5125)
-            prim.append({"attributes":{"POSITION":ap,"NORMAL":an},
-                         "indices":ai,"material":materials[mat],"mode":4})
-        node=len(doc["nodes"])
-        doc["meshes"].append({"name":asset.name,"primitives":prim})
+        verts=[];normals=[];uvs=[]
+        for mat,(v,n) in asset.data.items():
+            if not v:continue
+            u=(index_of[mat]*8+4)/tex_width
+            verts.extend(v)
+            normals.extend(n)
+            uvs.extend([(u,0.5)]*len(v))
+        assert verts and len(verts)==len(normals)==len(uvs)
+        flat=[c for p in verts for c in p]
+        normal_flat=[c for p in normals for c in p]
+        uv_flat=[c for p in uvs for c in p]
+        pos=store(struct.pack("<"+"f"*len(flat),*flat),34962)
+        nrm=store(struct.pack("<"+"f"*len(normal_flat),*normal_flat),34962)
+        uvs_buffer=store(struct.pack("<"+"f"*len(uv_flat),*uv_flat),34962)
+        inds=list(range(len(verts)))
+        if len(inds)<=65535:
+            component=5123
+            indexes=struct.pack("<"+"H"*len(inds),*inds)
+        else:
+            component=5125
+            indexes=struct.pack("<"+"I"*len(inds),*inds)
+        indices=store(indexes,34963)
+        mi=[min(flat[i::3]) for i in range(3)]
+        ma=[max(flat[i::3]) for i in range(3)]
+        ap=access(pos,len(verts),"VEC3",5126,mi,ma)
+        an=access(nrm,len(verts),"VEC3",5126)
+        au=access(uvs_buffer,len(verts),"VEC2",5126)
+        ai=access(indices,len(inds),"SCALAR",component)
+        doc["meshes"].append({
+            "name":asset.name,
+            "primitives":[{
+                "attributes":{"POSITION":ap,"NORMAL":an,"TEXCOORD_0":au},
+                "indices":ai,"material":0,"mode":4
+            }]
+        })
         doc["nodes"].append({"name":asset.name,"mesh":len(doc["meshes"])-1})
-        doc["scenes"][0]["nodes"].append(node)
+        doc["scenes"][0]["nodes"].append(len(doc["nodes"])-1)
     while len(blob)%4:blob.append(0)
     doc["buffers"][0]["byteLength"]=len(blob)
     js=json.dumps(doc,separators=(",",":"),ensure_ascii=False).encode("utf-8")
@@ -409,6 +461,7 @@ def glb_write(items,filename):
     return {"file":filename,"bytes":len(data),
       "meshes":len(items),"triangles":sum(a.count() for a in items),
       "sha256":hashlib.sha256(data).hexdigest()}
+
 def main():
     pets=[make_pet(*x) for x in PET_SPECS]
     crops=[make_crop(k,st) for k in CROP_NAMES for st in (1,2,3)]
