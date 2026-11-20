@@ -496,19 +496,23 @@ def main():
     crops=[sculpt_crop(k,st,Sculpt) for k in CROP_NAMES for st in (1,2,3)]
     from world_shapes_v2 import sculpt_world,ASSET_NAMES
     env=[sculpt_world(k,Sculpt) for k in ASSET_NAMES]
-    assert len(pets)==30 and len(crops)==90 and len(env)==8
+    from gardener_avatar_v1 import create_gardener_pack
+    avatar=create_gardener_pack(Sculpt)
+    assert len(pets)==30 and len(crops)==90 and len(env)==8 and len(avatar)==15
     assert len(set(a.name for a in pets)) == 30
-    for a in pets+crops+env:
+    for a in pets+crops+env+avatar:
         assert a.count()>=60, (a.name,a.count())
         # The single hero cottage uses more polygons than reusable crop/animal props.
         limit = 12000 if a.name == "Environment_GardenCottage" else 9000
         assert a.count() < limit, (a.name,a.count(),limit)
     summary=[glb_write(pets,"DWTM_Pets_30.glb"),
              glb_write(crops,"DWTM_Crops_30x3.glb"),
-             glb_write(env,"DWTM_World_8.glb")]
+             glb_write(env,"DWTM_World_8.glb"),
+             glb_write(avatar,"DWTM_Gardener_Avatar_15.glb")]
     (OUT/"manifest.json").write_text(json.dumps({
         "version":"2026-11-20","art_pass":"cozy-garden-shapes-v2", "coordinate_system":"glTF Y-up",
         "pets":[a.name for a in pets],"crops":[a.name for a in crops],
-        "environment":[a.name for a in env],"packs":summary},indent=2),encoding="utf-8")
+        "environment":[a.name for a in env],
+        "avatar":[a.name for a in avatar],"packs":summary},indent=2),encoding="utf-8")
     print(json.dumps(summary,indent=2))
 if __name__=="__main__":main()
