@@ -12,6 +12,14 @@
       "StarterPlayerScripts": {
         "$path": "src/client"
       }
+    },
+    "Workspace": {
+      "$className": "Workspace",
+      "$properties": {
+        "StreamingEnabled": true,
+        "StreamingMinRadius": 64,
+        "StreamingTargetRadius": 128
+      }
     }
   }
 }
