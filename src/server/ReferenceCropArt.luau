@@ -219,9 +219,27 @@ local function grain(parent: Instance, origin: Vector3, s: number, stage: number
                     Vector3.new(0.82, 1.45, 0.79) * s, tint)
                 leaf(parent, pos + Vector3.new(0.6 * s, h * 0.48, 0), 1.16 * s, 0.5 * s, 40, GREEN)
             else
-                for j = 1, 3 do
-                    piece(parent, "GoldenGrain", pos + Vector3.new((j - 2) * 0.2 * s, (h + j * 0.29) * s / s, 0),
-                        Vector3.new(0.34, 0.63, 0.32) * s, if kind == "WhisperWheat" then STRAW else tint)
+                -- A tapered wheat ear: paired small spikelets, directional
+                -- long awns and a visible straw-colored spike. This avoids
+                -- the old three round yellow beads perched on each stalk.
+                local golden = if kind == "WhisperWheat" then STRAW else tint
+                local tipY = h * .94
+                for j = 1, 4 do
+                    local y = tipY + j * .24 * s
+                    local width = (.21 - j * .025) * s
+                    for side = -1, 1, 2 do
+                        local grain = piece(parent, "WheatSpikelet",
+                            pos + Vector3.new(side * width * .55, y,
+                                side * .06 * s),
+                            Vector3.new(.25, .41, .26) * s, golden)
+                        grain.CFrame *= CFrame.Angles(0, 0,
+                            math.rad(side * (16 + j * 5)))
+                    end
+                end
+                for awn = -1, 1, 2 do
+                    leaf(parent, pos + Vector3.new(awn * .24 * s,
+                        tipY + 1.04 * s, 0),
+                        .65 * s, .13 * s, awn * 19, golden)
                 end
             end
         end
