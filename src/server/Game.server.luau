@@ -12,6 +12,7 @@ local Config = require(ReplicatedStorage:WaitForChild("Config"))
 local Personality = require(ReplicatedStorage:WaitForChild("PetPersonality"))
 local Affection = require(ReplicatedStorage:WaitForChild("PetAffection"))
 local World = require(script.Parent:WaitForChild("World"))
+local ArtLibrary = require(script.Parent:WaitForChild("ReferenceMeshLibrary"))
 local Progression = require(script.Parent:WaitForChild("Progression"))
 local ProfileStore = require(script.Parent:WaitForChild("ProfileStore"))
 local Garden = require(script.Parent:WaitForChild("Garden"))
@@ -364,8 +365,13 @@ local function onPlayerAdded(player: Player)
                 end
             end)
         end
-        task.wait(0.5)
-        if player.Character == character then movePetNearPlayer(player) end
+        task.wait(1.0)
+        if player.Character == character then
+            -- Display chibi gardener only when all creator-owned imported mesh
+            -- components exist; otherwise leave Roblox avatar untouched.
+            ArtLibrary.applyGardenerAvatar(character)
+            movePetNearPlayer(player)
+        end
     end
     player.CharacterAdded:Connect(function(character: Model)
         task.spawn(characterReady, character)
