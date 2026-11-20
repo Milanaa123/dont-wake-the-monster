@@ -5,8 +5,8 @@ The source generator is scripts/generate_reference_glb.py.
 Each build produces 3 importable GLB packs:
 - DWTM_Pets_30.glb — 30 individually named animal meshes.
 - DWTM_Crops_30x3.glb — 30 crop species at three growth stages (90 meshes).
-- DWTM_World_6.glb — orchard tree, wood fence, cottage, stone path,
-  pond and sleeping monster (6 meshes).
+- DWTM_World_8.glb — orchard tree, wood fence, cottage, stone path,
+  pond and sleeping monster (8 meshes).
 - manifest.json — hashes, mesh counts, triangle counts.
 
 All art is original procedural 3D geometry with a UV color-atlas texture;
@@ -19,7 +19,7 @@ it does not retexture the supplied reference image.
 2. Open the newest game .rbxlx in an authenticated Roblox Studio session.
 3. In Studio select File > Import. Select the three GLB files.
    Keep "Import Only As Model" enabled. Leave resulting imported models in Workspace.
-   Their names must begin with DWTM_Pets_30, DWTM_Crops_30x3 and DWTM_World_6.
+   Their names must begin with DWTM_Pets_30, DWTM_Crops_30x3 and DWTM_World_8.
 4. To make mesh resources usable by a published experience, use the experience
    owner/group under Creator and enable Upload to Roblox. Upload requires a
    signed-in creator and is subject to asset moderation.
