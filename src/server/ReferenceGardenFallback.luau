@@ -228,21 +228,19 @@ function NativeGarden.build(parent: Instance): Folder
 
     -- All beds are outside x [-9,9] so character movement remains unobstructed.
     for row=1,3 do
-        for col=1,4 do
-            strawberry(garden,Vector3.new(-49+col*5.75,7.17,55+row*6.15),
+        for col=1,3 do
+            strawberry(garden,Vector3.new(-27+col*4.75,7.17,67+row*4.65),
                 row*1703+col*23)
         end
     end
-    for i=1,4 do
-        melon(garden,Vector3.new(-48+i*8.1,7.12,86.0),
-            500+i)
-    end
-    for i=1,4 do
-        wheat(garden,Vector3.new(-48+(i%2)*5.0,7.15,46+math.floor((i-1)/2)*8.2),
+    -- Exactly one compact vine cluster already carries three ripe melons.
+    melon(garden, Vector3.new(-21.7, 7.12, 89.0), 501)
+    for i=1,3 do
+        wheat(garden,Vector3.new(-26+(i%2)*4.6,7.15,63+math.floor((i-1)/2)*6.2),
             111+i)
     end
-    for i=1,4 do
-        carrots(garden,Vector3.new(-48+i*7.2,7.15,97.0),i)
+    for i=1,3 do
+        carrots(garden,Vector3.new(-27+i*5.4,7.15,95.0),i)
     end
     -- Flowers and ground greenery soften edges but never obscure the walkway.
     for i=1,31 do
