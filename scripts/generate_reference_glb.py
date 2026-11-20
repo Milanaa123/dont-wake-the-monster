@@ -476,7 +476,8 @@ def glb_write(items,filename):
 def main():
     from creature_shapes_v2 import sculpt_species
     pets=[sculpt_species(name,base,secondary,Sculpt) for name,kind,base,secondary in PET_SPECS]
-    crops=[make_crop(k,st) for k in CROP_NAMES for st in (1,2,3)]
+    from crop_shapes_v2 import sculpt_crop
+    crops=[sculpt_crop(k,st,Sculpt) for k in CROP_NAMES for st in (1,2,3)]
     env=[make_env(k) for k in ("OrangeTree","WoodFence","GardenCottage",
                               "StonePath","WaterPond","SleepingMonster")]
     assert len(pets)==30 and len(crops)==90 and len(env)==6
@@ -488,7 +489,7 @@ def main():
              glb_write(crops,"DWTM_Crops_30x3.glb"),
              glb_write(env,"DWTM_World_6.glb")]
     (OUT/"manifest.json").write_text(json.dumps({
-        "version":"2026-11-20","art_pass":"distinct-silhouettes-v2", "coordinate_system":"glTF Y-up",
+        "version":"2026-11-20","art_pass":"cozy-garden-shapes-v2", "coordinate_system":"glTF Y-up",
         "pets":[a.name for a in pets],"crops":[a.name for a in crops],
         "environment":[a.name for a in env],"packs":summary},indent=2),encoding="utf-8")
     print(json.dumps(summary,indent=2))
