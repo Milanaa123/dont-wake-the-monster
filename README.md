@@ -6,6 +6,7 @@ A colorful, chaotic multiplayer Roblox prototype: feed your ridiculous pet, trig
 
 - Procedurally constructed floating island, decorations, glowing crystals, clouds and an enormous sleeping monster.
 - **Cottage Garden art direction (v0.7)** inspired by the player's green, sunlit gardening reference: soft golden-hour color grading, warm atmospheric haze, original orange orchard, strawberry bushes, melons, wheat, flower patches and dirt paths. Personal gardens have wood fencing and more recognizable crop details.
+- **Reference art pass (20 Nov 2026)**: distinct procedural three-stage silhouettes for all 30 crop IDs (leafy strawberry bushes, melons, carrots, corn, flowers, mushrooms and fantasy crops), original face/body details for 17 companion species, painted-looking clover and paths, a small orchard cottage and pond. Giggles has closed eyes when sleeping and triggers a temporary cool lighting transition on waking. These are **real Luau world-generator changes**, but **not** imported custom meshes or a verified Roblox Studio render; mobile performance and final reference-level fidelity remain untested.
 - **Optional 3/4 garden-view camera** enabled by default, switch to follow camera with the on-screen button or V key. This is actual Roblox client code, not a generated mockup.
 - Thirty collectible, differently styled companion pets with procedural cosmetic details, bought using **in-game coins only**.
 - **Gardening & Secret Alchemy v0.4**: 30 crops, 9 plots/player, 28 coin-earnable seed varieties, offline growth, staged art and 26 hidden experimental recipes.
@@ -46,6 +47,8 @@ A colorful, chaotic multiplayer Roblox prototype: feed your ridiculous pet, trig
 - `src/shared/Config.luau`: balance, feed items, creature types and reaction catalog.
 - `src/server/World.luau`: procedural world and monster art.
 - `src/server/CottageGardenStyle.luau`: original warm landscaping, orchard, berry patches, fencing, lighting and crop details.
+- `src/server/ReferenceCropArt.luau`: decorative crop silhouettes per seed family and three growth stages; does not affect farming mechanics.
+- `src/server/StorybookPetArt.luau`: original animal-character details for 17 species using engine-native cosmetic geometry.
 - `src/client/CottageCamera.client.luau`: 3/4 garden view with optional third-person toggle.
 - `src/server/Game.server.luau`: authoritative multiplayer game loop, hearts, boss damage, pet effects and saving.
 - `src/server/ProfileStore.luau`: guarded persistence initialization and per-profile save coordination; cross-server session locking remains pending.
