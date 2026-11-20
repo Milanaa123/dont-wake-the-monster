@@ -83,7 +83,7 @@ line(panel, "A cute island. A sleepy giant. Terrible decisions.", UDim2.fromOffs
 
 local steps = {
     {heading = "1  🧭  HUNT SEEDS", detail = "Open FIND SEEDS, track a glowing cache in the forest and hold its SEARCH prompt."},
-    {heading = "2  🌱  GROW & EXPERIMENT", detail = "Plant discoveries in MY GARDEN. Weather and your pet can transform crops! Mix secret recipes."},
+    {heading = "2  🌱  GROW & EXPERIMENT", detail = "Walk to your garden beds and tap PLANT / HARVEST (E on PC). Use MY GARDEN to choose seeds, fertilize and mix recipes."},
     {heading = "3  🐱  FEED & CUDDLE", detail = "Feed wild snacks or hold PET to stroke your animal. Even a happy kitten's purr makes noise!"},
     {heading = "4  🚨  RESCUE & SURVIVE", detail = "When Giggles wakes, dodge attacks, save runaway pets and earn coins for your collection."},
 }
