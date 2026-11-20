@@ -478,9 +478,9 @@ def main():
     pets=[sculpt_species(name,base,secondary,Sculpt) for name,kind,base,secondary in PET_SPECS]
     from crop_shapes_v2 import sculpt_crop
     crops=[sculpt_crop(k,st,Sculpt) for k in CROP_NAMES for st in (1,2,3)]
-    env=[make_env(k) for k in ("OrangeTree","WoodFence","GardenCottage",
-                              "StonePath","WaterPond","SleepingMonster")]
-    assert len(pets)==30 and len(crops)==90 and len(env)==6
+    from world_shapes_v2 import sculpt_world,ASSET_NAMES
+    env=[sculpt_world(k,Sculpt) for k in ASSET_NAMES]
+    assert len(pets)==30 and len(crops)==90 and len(env)==8
     assert len(set(a.name for a in pets)) == 30
     for a in pets+crops+env:
         assert a.count()>=60, (a.name,a.count())
