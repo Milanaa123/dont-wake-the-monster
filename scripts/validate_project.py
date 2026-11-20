@@ -21,6 +21,7 @@ required = [
     "src/server/StorybookPetArt.luau",
     "src/server/ReferenceCropArt.luau",
     "src/server/ReferenceMeshLibrary.luau",
+    "src/server/ReferenceGroundLight.luau",
     "src/server/MonsterWakeVFX.luau",
     "src/server/ReferenceGardenFallback.luau",
     "src/server/ReferenceBackdropFallback.luau",
@@ -397,3 +398,14 @@ for marker in ("MAX_GARDEN = 88", "MAX_SCENERY = 38", "1 / 15",
         continue
     assert marker in wind, f"Native 15fps wind safety contract missing: {marker}"
 print("OK: functional crop geometry uses tapered leaves, extra berries and client breeze")
+
+# Artist-authored, engine-native material contrast (visual composition only).
+ground = read("src/server/ReferenceGroundLight.luau")
+for name in ("OrchardContactShade", "StrawberryRootSoil", "MeadowPaintedGround",
+             "TinyCloverLeaf", "WarmSoilPebble"):
+    assert name in ground, f"Missing native painterly ground layer: {name}"
+assert "ReferenceGroundLight.build(scenery)" in read("src/server/World.luau")
+assert "local MAX_PARTS = 190" in ground, "Ground art must remain capped on low-end devices"
+assert "item.CanCollide=false" in ground and "item.CanQuery=false" in ground
+assert "item.CastShadow=false" in ground, "Tiny ground detail must not produce self-shadow flicker"
+print("OK: first-person playable ground art, no new remote assets, bounded native part budget")
