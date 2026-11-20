@@ -185,7 +185,7 @@ for marker in ("ServerStorage", "DWTM_ArtLibrary", "DWTM_Pets_30", "DWTM_Crops_3
     assert marker in mesh_bridge, f"Missing safe import bridge: {marker}"
 assert "ReferenceCropArt.draw(visual, center, p.seed, stage, crop.color)" in world, "Old crops missing as test fallback"
 crop_art = read("src/server/ReferenceCropArt.luau")
-for crop_shape in ("HeartShapedBerry", "StripedRind", "CarrotRoot", "WheatStalk", "FlowerPetal", "HangingPepper", "VelvetMushroomCap"):
+for crop_shape in ("HeartShapedBerry", "CurvedMelonStripe", "CarrotRoot", "WheatStalk", "FlowerPetal", "HangingPepper", "VelvetMushroomCap"):
     assert crop_shape in crop_art, f"Reference-art crop silhouette missing: {crop_shape}"
 assert "CanQuery = false" in crop_art, "Decorative crop geometry must not block interaction queries"
 styling = read("src/server/CottageGardenStyle.luau")
