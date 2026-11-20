@@ -513,6 +513,24 @@ end
 -- Server-created personal farm zones. A player sees their six physical plots on the island.
 local farmModels: {[number]: Model} = {}
 local farmCenters: {[number]: CFrame} = {}
+-- The interaction handler lives in the authoritative game server.
+-- World only creates physical prompts and never edits the player's inventory.
+local gardenPromptHandler: ((Player, number, number) -> ())? = nil
+
+function World.setGardenPromptHandler(handler: (Player, number, number) -> ())
+    gardenPromptHandler = handler
+end
+
+function World.plotPosition(userId: number, plotIndex: number): Vector3?
+    if plotIndex < 1 or plotIndex > 9 or plotIndex ~= math.floor(plotIndex) then return nil end
+    local farm = farmModels[userId]
+    if not farm then return nil end
+    local plot = farm:FindFirstChild("Plot_" .. tostring(plotIndex))
+    if not plot then return nil end
+    local x, y, z = plot:GetAttribute("PosX"), plot:GetAttribute("PosY"), plot:GetAttribute("PosZ")
+    if type(x) ~= "number" or type(y) ~= "number" or type(z) ~= "number" then return nil end
+    return Vector3.new(x, y, z)
+end
 
 function World.createGarden(userId: number, ownerName: string, slot: number): boolean
     if slot < 1 or slot > 12 then return false end
@@ -551,6 +569,23 @@ function World.createGarden(userId: number, ownerName: string, slot: number): bo
         soil.CanCollide = true
         local mini = part(plot, "NumberAnchor", Vector3.new(0.2, 0.2, 0.2), place * CFrame.new(0, 1.6, -2.9), Color3.new(1, 1, 1))
         mini.Transparency = 1
+        mini.CanCollide = false
+        mini.CanQuery = false
+        local prompt = Instance.new("ProximityPrompt")
+        prompt.Name = "GardenPlotInteract"
+        prompt.ActionText = "Plant seed"
+        prompt.ObjectText = "Your garden • Plot " .. index
+        prompt.KeyboardKeyCode = Enum.KeyCode.E
+        prompt.GamepadKeyCode = Enum.KeyCode.ButtonX
+        prompt.MaxActivationDistance = 8
+        prompt.HoldDuration = 0.22
+        prompt.RequiresLineOfSight = false
+        prompt.Exclusivity = Enum.ProximityPromptExclusivity.OnePerButton
+        prompt.Parent = mini
+        prompt.Triggered:Connect(function(player: Player)
+            local handler = gardenPromptHandler
+            if handler then handler(player, userId, index) end
+        end)
         local tag = Instance.new("BillboardGui")
         tag.Size = UDim2.fromOffset(84, 24)
         tag.MaxDistance = 28
@@ -600,6 +635,17 @@ function World.updateGarden(userId: number, garden: any, cropConfig: any)
             stage = if now >= p.readyAt then 3 elseif ratio > 0.48 then 2 else 1
         end
         local stageKey = if p then p.seed .. "_" .. stage .. "_" .. (p.mutation or "normal") else "EMPTY"
+        -- Refresh interaction text even when the stage geometry did not change.
+        -- The server calls this every 8 seconds, so ripeness appears in-world.
+        local anchorPart = plot:FindFirstChild("NumberAnchor")
+        local prompt = if anchorPart then anchorPart:FindFirstChild("GardenPlotInteract") else nil
+        if prompt and prompt:IsA("ProximityPrompt") then
+            prompt.ActionText = if not p then "Plant seed"
+                elseif now >= p.readyAt then "Harvest ripe crop" else "Check growth"
+            prompt.ObjectText = if p and cropConfig.Crops[p.seed] then
+                cropConfig.Crops[p.seed].name else "Your garden • Plot " .. index
+            prompt.HoldDuration = if p and now >= p.readyAt then 0.14 else 0.22
+        end
         if plot:GetAttribute("StageKey") == stageKey then continue end
         plot:SetAttribute("StageKey", stageKey)
         local previous = plot:FindFirstChild("PlantVisual")
