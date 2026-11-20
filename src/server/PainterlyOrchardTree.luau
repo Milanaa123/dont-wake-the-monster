@@ -2,7 +2,7 @@
 -- Real Roblox geometry for the original orange orchard in the reference
 -- color language. The mesh pack, if installed in Studio, still takes priority.
 -- This replaces the four enormous "lollipop" spheres in the fallback scene.
--- One shared asset-free canopy per tree, bounded to <= 54 pieces.
+-- One shared asset-free canopy per tree, bounded to <= 64 pieces.
 local Orchard = {}
 
 local BARK = Color3.fromRGB(148, 103, 76)
@@ -123,7 +123,7 @@ function Orchard.build(parent: Instance, index: number, ground: Vector3): Model
     end
 
     tree:SetAttribute("NativeOrchardTree", true)
-    tree:SetAttribute("DetailCountCap", 54)
+    tree:SetAttribute("DetailCountCap", 64)
     return tree
 end
 
