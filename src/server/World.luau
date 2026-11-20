@@ -11,6 +11,7 @@ local MonsterWakeVFX = require(script.Parent:WaitForChild("MonsterWakeVFX"))
 local NativeReferenceGarden = require(script.Parent:WaitForChild("ReferenceGardenFallback"))
 local NativeReferenceBackdrop = require(script.Parent:WaitForChild("ReferenceBackdropFallback"))
 local ReferenceFoliageLayer = require(script.Parent:WaitForChild("ReferenceFoliageLayer"))
+local ReferenceGroundLight = require(script.Parent:WaitForChild("ReferenceGroundLight"))
 local NativePetSilhouettes = require(script.Parent:WaitForChild("NativePetSilhouettes"))
 
 local World = {}
@@ -200,6 +201,7 @@ function World.build()
     if nativeBeds or nativeBackdrop then
         ReferenceFoliageLayer.build(scenery, nativeBackdrop, nativeBeds)
     end
+    ReferenceGroundLight.build(scenery)
 
     lastAwakeState = nil
     monster = Instance.new("Model")
