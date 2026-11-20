@@ -229,7 +229,7 @@ function NativeGarden.build(parent: Instance): Folder
     -- All beds are outside x [-9,9] so character movement remains unobstructed.
     for row=1,3 do
         for col=1,3 do
-            strawberry(garden,Vector3.new(-27+col*4.75,7.17,67+row*4.65),
+            strawberry(garden,Vector3.new(-30+col*4.15,7.17,67+row*4.65),
                 row*1703+col*23)
         end
     end
@@ -240,7 +240,7 @@ function NativeGarden.build(parent: Instance): Folder
             111+i)
     end
     for i=1,3 do
-        carrots(garden,Vector3.new(-27+i*5.4,7.15,95.0),i)
+        carrots(garden,Vector3.new(-31+i*4.8,7.15,95.0),i)
     end
     -- Flowers and ground greenery soften edges but never obscure the walkway.
     for i=1,31 do
