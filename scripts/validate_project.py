@@ -23,6 +23,7 @@ required = [
     "src/server/ReferenceMeshLibrary.luau",
     "src/server/ReferenceGroundLight.luau",
     "src/server/OrganicGardenBeds.luau",
+    "src/server/PainterlyOrchardTree.luau",
     "src/server/MonsterWakeVFX.luau",
     "src/server/GardenActionVFX.luau",
     "src/server/ReferenceGardenFallback.luau",
@@ -495,3 +496,17 @@ mesh_bridge = read("src/server/ReferenceMeshLibrary.luau")
 assert "mesh.Size.X * 1.31" in mesh_bridge, "Dense imported strawberry foliage missing"
 assert "makeVisual(source, visual, \"ImportedCropMesh\"" in mesh_bridge
 print("OK: nine organic soil beds and playable fruit geometry replace square wooden trays")
+
+# All imported GLBs are optional: the native fallback must render a complete
+# orange grove with connected fruit and layered directional leaf shapes.
+orchard = read("src/server/PainterlyOrchardTree.luau")
+world = read("src/server/World.luau")
+for item in ('function Orchard.build(', 'PaintedCanopyMass',
+             'PaintedOrchardLeaf', 'RipeOrange', 'OrangeSePal',
+             'CanCollide = false', 'CanQuery = false',
+             'tree:SetAttribute("DetailCountCap", 64)'):
+    assert item in orchard, f"Imported-mesh-free orchard art regressed: {item}"
+assert 'PainterlyOrchardTree.build(scenery, index, position)' in world
+assert 'ReferenceMeshLibrary.applyOrchardTree(scenery, index, position)' in world
+assert 'orb(scenery, "FluffyCanopy"' not in world, "Old giant sphere trees remain"
+print("OK: standalone painterly citrus fallback integrated without 3D import")
