@@ -10,6 +10,7 @@ local ReferenceMeshLibrary = require(script.Parent:WaitForChild("ReferenceMeshLi
 local MonsterWakeVFX = require(script.Parent:WaitForChild("MonsterWakeVFX"))
 local NativeReferenceGarden = require(script.Parent:WaitForChild("ReferenceGardenFallback"))
 local NativeReferenceBackdrop = require(script.Parent:WaitForChild("ReferenceBackdropFallback"))
+local ReferenceFoliageLayer = require(script.Parent:WaitForChild("ReferenceFoliageLayer"))
 local NativePetSilhouettes = require(script.Parent:WaitForChild("NativePetSilhouettes"))
 
 local World = {}
@@ -193,6 +194,7 @@ function World.build()
     if importedBeds == 0 then
         NativeReferenceGarden.build(scenery)
         NativeReferenceBackdrop.build(scenery)
+        ReferenceFoliageLayer.build(scenery)
     end
 
     monster = Instance.new("Model")
