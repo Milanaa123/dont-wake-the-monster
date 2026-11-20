@@ -14,6 +14,7 @@ local monster: Model
 local monsterEyes: {BasePart} = {}
 local monsterLids: {BasePart} = {}
 local monsterSleepLines: {BasePart} = {}
+local importedSleepingMonster: MeshPart? = nil
 local monsterMouth: BasePart
 
 local PINK = Color3.fromRGB(255, 153, 204)
@@ -230,14 +231,22 @@ function World.build()
     local halo = orb(monster, "GlowingNose", Vector3.new(0, 45, -17), Vector3.new(3, 2, 1.7), PINK, Enum.Material.Neon)
     halo.CanCollide = false
 
-    -- The spawn is on the southern side (+Z); make Giggles face the garden
-    -- entrance instead of presenting his back to new players.
+    importedSleepingMonster = ReferenceMeshLibrary.applySleepingMonster(monster)
+    -- The spawn is on the southern side (+Z); face the garden entrance.
     monster:PivotTo(monster:GetPivot() * CFrame.Angles(0, math.pi, 0))
 
     return scenery
 end
 
 function World.setMonsterAwake(awake: boolean)
+    if importedSleepingMonster and importedSleepingMonster.Parent then
+        importedSleepingMonster.Transparency = if awake then 1 else 0
+        for _, obj in ipairs(monster:GetDescendants()) do
+            if obj:IsA("BasePart") and obj ~= importedSleepingMonster then
+                obj.Transparency = if awake then 0 else 1
+            end
+        end
+    end
     for _, lid in ipairs(monsterLids) do
         if lid.Parent then lid.Transparency = if awake then 1 else 0 end
     end
