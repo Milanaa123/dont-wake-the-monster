@@ -503,7 +503,9 @@ local farmCenters: {[number]: CFrame} = {}
 function World.createGarden(userId: number, ownerName: string, slot: number): boolean
     if slot < 1 or slot > 12 then return false end
     if farmModels[userId] then farmModels[userId]:Destroy() end
-    -- Place the first player garden directly ahead of the southern spawn.\n    -- Remaining plots retain their distinct 12-player radial slots.\n    local angle = (slot - 1) / 12 * math.pi * 2 + math.pi / 2
+    -- Place the first player garden directly ahead of the southern spawn.
+    -- Remaining plots retain their distinct 12-player radial slots.
+    local angle = (slot - 1) / 12 * math.pi * 2 + math.pi / 2
     local origin = Vector3.new(math.cos(angle) * 61, 8.3, math.sin(angle) * 61)
     local center = CFrame.lookAt(origin, Vector3.new(0, 8.3, 0))
     local model = Instance.new("Model")
