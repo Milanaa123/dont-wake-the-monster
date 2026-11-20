@@ -983,6 +983,14 @@ remote.OnServerEvent:Connect(function(player: Player, command: any, arg: any)
         if os.clock() - profile.lastShopAction < 0.35 then return end
         profile.lastShopAction = os.clock()
         switchPet(player, arg, command == "BuyPet")
+    elseif command == "TutorialDismiss" then
+        if profile.tutorialSeen then return end
+        profile.tutorialSeen = true
+        if profile.loaded then
+            profile.dirty = true
+            profile.revision += 1
+        end
+        sendCollection(player)
     elseif command == "ClaimDaily" then
         if os.clock() - profile.lastDailyRequest < 1 then return end
         profile.lastDailyRequest = os.clock()
