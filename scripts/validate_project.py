@@ -24,6 +24,7 @@ required = [
     "src/server/ReferenceGardenFallback.luau",
     "src/server/ReferenceBackdropFallback.luau",
     "src/server/NativeGardenerAvatar.luau",
+    "src/server/NativePetSilhouettes.luau",
     "src/client/CottageCamera.client.luau",
     "src/server/Progression.luau",
     "src/client/HUD.client.luau",
@@ -331,3 +332,15 @@ assert 'OpenSeedExplorer' in read("src/client/SeedExplorer.client.luau")
 assert 'CottageQuickMenu' in quick_menu and 'control.Activated:Connect' in quick_menu
 assert project["tree"]["Workspace"]["$properties"]["StreamingEnabled"] is True, "Mobile island streaming disabled"
 print("OK: native 3D reference garden, chibi animated R15 figure, orchard and compact mobile UI wired into place")
+
+native_pet = read("src/server/NativePetSilhouettes.luau")
+for species in ("Pip","Zuzu","Nugget","Floofle","Snorf","Sprig","Splat","Pebble",
+                "Twinkle","Quibble","Squiggle","Echo","Glimmer"):
+    assert species+'=' in native_pet, f"Asset-free pet lacks species mapping: {species}"
+for detail in ("CurvedWhisker","FloppyMoonEar","FrogPupil","TurtleShell",
+               "CrabPinkClaw","CurvingOctopusArm","WingGoldDot","UnicornGoldenHorn",
+               "DinosaurBackSpine","AxolotlTailFin"):
+    assert detail in native_pet, f"Asset-free animals lack distinct geometry: {detail}"
+assert 'NativePetSilhouettes.apply(pet, species, color)' in world_art
+assert 'if not ReferenceMeshLibrary.applyPet(pet, species)' in world_art
+print("OK: distinct species silhouettes for playable offline-import fallback and original mesh priority")
