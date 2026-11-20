@@ -23,6 +23,7 @@ required = [
     "src/server/ReferenceMeshLibrary.luau",
     "src/server/ReferenceGroundLight.luau",
     "src/server/MonsterWakeVFX.luau",
+    "src/server/GardenActionVFX.luau",
     "src/server/ReferenceGardenFallback.luau",
     "src/server/ReferenceBackdropFallback.luau",
     "src/server/ReferenceFoliageLayer.luau",
@@ -447,13 +448,23 @@ for marker in (
     '(root.Position - spot).Magnitude > 11',
     'if not humanoid or humanoid.Health <= 0 or profile.knockedOut then return end',
     'if phase == "AWAKE" then',
-    'local harvested = gardenAction(player, "GardenHarvest", index)',
-    'local planted = gardenAction(player, "GardenPlant", {plot = index, seed = chosen})',
-    'if harvested and crop then',
-    'if planted then',
+    'gardenAction(player, "GardenHarvest", index)',
+    'gardenAction(player, "GardenPlant", {plot = index, seed = chosen})',
+    'GardenActionVFX.play(workspace, spot, command == "GardenHarvest"',
+    'if command == "GardenPlant" or command == "GardenHarvest" then',
     'return ok == true',
 ):
     assert marker in server, f"Server-authoritative garden prompt check missing: {marker}"
 assert "Garden.plotPosition(" not in server, "Plot coordinates must come from World, not client"
 assert 'if phase == "AWAKE" or profile.knockedOut then' in server, "Garden UI must not bypass chase survival"
 print("OK: nine in-world planting/harvesting prompts, owner/range checks, no free reward before success")
+
+garden_fx = read("src/server/GardenActionVFX.luau")
+for marker in ("Instance.new(\"WedgePart\")", "TweenService:Create", "Debris:AddItem",
+               "CanCollide = false", "CanTouch = false", "CanQuery = false",
+               "local total = if isHarvest then 13 else 8"):
+    assert marker in garden_fx, f"Painterly tactile planting animation regressed: {marker}"
+assert 'GardenActionVFX.play(workspace, spot, command == "GardenHarvest"' in server
+assert "if ok then" in server.split('local function gardenAction(', 1)[1].split('World.setGardenPromptHandler(', 1)[0]
+assert "World.burst(spot +" not in server, "Old physical planting glow has been reintroduced"
+print("OK: no external asset dependencies, bounded leaf VFX only after garden mutation")
