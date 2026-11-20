@@ -376,6 +376,13 @@ local function onPlayerAdded(player: Player)
     player.CharacterAdded:Connect(function(character: Model)
         task.spawn(characterReady, character)
     end)
+    -- Roblox can finish avatar appearance after CharacterAdded. Retry only
+    -- when the final outfit is ready, without replacing the Humanoid rig.
+    player.CharacterAppearanceLoaded:Connect(function(character: Model)
+        if player.Character == character then
+            ArtLibrary.applyGardenerAvatar(character)
+        end
+    end)
     if player.Character then
         task.spawn(characterReady, player.Character)
     end
