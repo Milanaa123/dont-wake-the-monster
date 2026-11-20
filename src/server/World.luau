@@ -183,6 +183,7 @@ function World.build()
 
     CottageStyle.decorateWorld(scenery)
     ReferenceMeshLibrary.applySetDress(scenery)
+    ReferenceMeshLibrary.decorateEntrance(scenery)
 
     monster = Instance.new("Model")
     monster.Name = "GigglesTheGiant"
