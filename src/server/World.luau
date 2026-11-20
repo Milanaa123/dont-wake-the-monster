@@ -4,6 +4,7 @@ local TweenService = game:GetService("TweenService")
 local Lighting = game:GetService("Lighting")
 local Debris = game:GetService("Debris")
 local CottageStyle = require(script.Parent:WaitForChild("CottageGardenStyle"))
+local OrganicGardenBeds = require(script.Parent:WaitForChild("OrganicGardenBeds"))
 local StorybookPetArt = require(script.Parent:WaitForChild("StorybookPetArt"))
 local ReferenceCropArt = require(script.Parent:WaitForChild("ReferenceCropArt"))
 local ReferenceMeshLibrary = require(script.Parent:WaitForChild("ReferenceMeshLibrary"))
@@ -545,9 +546,13 @@ function World.createGarden(userId: number, ownerName: string, slot: number): bo
     model.Parent = scenery
     farmModels[userId] = model
     farmCenters[userId] = center
-    local base = part(model, "GardenPlatform", Vector3.new(28, 0.8, 32), center, Color3.fromRGB(247, 213, 160), Enum.Material.WoodPlanks)
+    local base = part(model, "GardenPlatform", Vector3.new(28, 0.8, 32),
+        center, Color3.fromRGB(133, 177, 103), Enum.Material.Grass)
     base.CanCollide = true
-    part(model, "GreenGrass", Vector3.new(26, 0.4, 30), center * CFrame.new(0, 0.5, 0), Color3.fromRGB(166, 198, 124), Enum.Material.Grass)
+    local lawn = part(model, "GreenGrass", Vector3.new(26, 0.4, 30),
+        center * CFrame.new(0, 0.5, 0), Color3.fromRGB(168, 194, 119), Enum.Material.Grass)
+    lawn.CanCollide = true
+    OrganicGardenBeds.decorateLawn(model, center)
     local labelPosition = (center * CFrame.new(0, 2.2, 12)).Position
     billboard(model, "🌼 " .. string.sub(ownerName, 1, 16) .. "'S GARDEN", labelPosition, 260)
 
@@ -563,10 +568,9 @@ function World.createGarden(userId: number, ownerName: string, slot: number): bo
         plot:SetAttribute("PosX", place.Position.X)
         plot:SetAttribute("PosY", place.Position.Y)
         plot:SetAttribute("PosZ", place.Position.Z)
-        local bed = part(plot, "WoodFrame", Vector3.new(7.9, 0.8, 7.9), place, Color3.fromRGB(187, 121, 93), Enum.Material.Wood)
-        bed.CanCollide = true
-        local soil = part(plot, "SoftSoil", Vector3.new(6.9, 0.25, 6.9), place * CFrame.new(0, 0.54, 0), Color3.fromRGB(143, 103, 75), Enum.Material.Ground)
-        soil.CanCollide = true
+        -- Edgeless organic earth replaces nine raised wooden boxes.
+        -- Positions and attributes still match the existing garden persistence.
+        OrganicGardenBeds.decoratePlot(plot, place, index)
         local mini = part(plot, "NumberAnchor", Vector3.new(0.2, 0.2, 0.2), place * CFrame.new(0, 1.6, -2.9), Color3.new(1, 1, 1))
         mini.Transparency = 1
         mini.CanCollide = false
