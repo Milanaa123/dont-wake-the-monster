@@ -230,6 +230,57 @@ function Bridge.applyCrop(visual: Model, center: Vector3,
     return mesh ~= nil
 end
 
+-- Rich opening composition: layered strawberry beds, melon vines and wheat
+-- on one side of the central footpath. All meshes are cosmetic, static and
+-- nonqueryable. This does not modify any player-owned garden or economy data.
+function Bridge.decorateEntrance(world: Instance): number
+    local berry = findMesh("Crops", "Crop_Berry_S3")
+    local melon = findMesh("Crops", "Crop_LavaMelon_S3")
+    local wheat = findMesh("Crops", "Crop_WhisperWheat_S3")
+    if not berry or not melon or not wheat then return 0 end
+    local garden = Instance.new("Folder")
+    garden.Name = "ImportedReferenceStyleEntranceGarden"
+    garden.Parent = world
+    local count = 0
+    local function place(source: MeshPart, name: string, p: Vector3,
+        scaleHeight: number, yaw: number)
+        local mesh = makeVisual(source, garden, name,
+            CFrame.new(p + Vector3.new(0, scaleHeight * 0.5, 0))
+                * CFrame.Angles(0, yaw, 0), scaleHeight)
+        if mesh then
+            mesh:SetAttribute("DecorativeOnly", true)
+            count += 1
+        end
+    end
+    -- Central x in [-8,8] stays completely open for the spawn walkway.
+    for row = 1, 3 do
+        for col = 1, 4 do
+            local x = -44 + col * 5.7
+            local z = 58 + row * 6.1
+            place(berry, "StrawberryPatch_" .. row .. "_" .. col,
+                Vector3.new(x, 7.18, z), 3.4, (row+col)*0.67)
+        end
+    end
+    for i = 1, 5 do
+        local x = -42 + i * 6.6
+        place(melon, "VineWatermelon_" .. i, Vector3.new(x, 7.06, 83.8),
+            3.10, i * 1.23)
+    end
+    for i = 1, 7 do
+        local x = -47 + (i % 3) * 3.1
+        local z = 51 + math.floor((i-1)/3) * 5.1
+        place(wheat, "WheatBorder_" .. i, Vector3.new(x, 7.06, z),
+            3.4 + (i%2)*0.25, i * 0.27)
+    end
+    -- A second, lighter planting on the cottage side balances the camera.
+    for i = 1, 4 do
+        local z = 57 + i * 5.5
+        place(berry, "OrchardBerries_" .. i,
+            Vector3.new(23.4, 7.16, z), 2.65, i * 0.6)
+    end
+    return count
+end
+
 function Bridge.applySetDress(parent: Instance): number
     stageImportedPacks()
     local root = ServerStorage:FindFirstChild(ROOT_NAME)
