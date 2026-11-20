@@ -26,30 +26,65 @@ def sculpt_world(name,S):
         b("gold",(at[0],at[1],at[2]-.08*scale),
           (.065*scale,.065*scale,.05*scale),9,6)
     if name=="OrangeTree":
-        tube("bark",[(0,0,0),(.08,1.54,0),(-.08,3.11,0),(0,3.61,0)],
-            [.40,.35,.25,.17])
-        # broad irregular painterly canopy, layered light/warm green clumps.
-        for i in range(14):
-            a=2*pi*i/14
-            x=cos(a)*(1.27+(i%3)*.18)
-            z=sin(a)*(1.24+(i%4)*.13)
-            y=3.59+(i%5)*.29
-            if i%3==0:
-                tube("bark",[(0,2.72,0),(x*.63,3.19,z*.64),
-                    (x*.88,y-.27,z*.79)],[.16,.12,.08])
-            b("leaflight" if i%3==0 else "leaf",
-              (x,y,z),(.93,1.02,.96),15,9)
-        for i in range(13):
-            a=i*2.39996
-            x=sin(a)*1.73;z=cos(a)*1.60
-            p=(x,3.39+(i%5)*.34,z-.53)
-            b("orange",p,(.29,.31,.29),13,8)
-            lf("leafdeep",(x, p[1]+.30,p[2]),
-                (x+.35,p[1]+.38,p[2]),.16)
+        # Reference-style citrus: the crown is a mass of overlapping
+        # irregular, angular leaves, not a pile of green ellipsoids.
+        rng=random.Random(4129)
+        tube("bark",[(0,0,0),(.06,1.60,0),(-.07,3.11,0),(.05,3.70,0)],
+            [.37,.34,.24,.12])
         for i in range(6):
-            a=i*2*pi/6
+            a=2*pi*i/6
+            x=cos(a)*1.68; z=sin(a)*1.62
+            tube("bark",[(0,2.39,0),(x*.51,3.12,z*.47),
+                (x*.90,3.83+(i%3)*.24,z*.86)],[.17,.12,.052])
+        # Low-detail inner mass creates depth, cards form the detailed surface.
+        for i in range(5):
+            a=2*pi*i/5
+            center=(cos(a)*.90,4.00+(i%3)*.19,sin(a)*.91)
+            b("leafdeep" if i%2 else "leaf",
+              center,(1.43,1.05,1.40),12,7)
+        b("leaf",(0,4.50,.0),(1.63,1.05,1.62),14,8)
+        # A fixed-seed cloud of individual leaf planes, facing many directions.
+        # doubleSided material allows one surface per leaf at half the draw cost.
+        for i in range(520):
+            a = i*2.399963229728653
+            ty=rng.uniform(-.87,.99)
+            ring=(1-ty*ty)**.50
+            radial=2.04+rng.uniform(-.31,.48)
+            x=cos(a)*ring*radial
+            z=sin(a)*ring*radial
+            y=4.12+ty*1.43+rng.uniform(-.16,.16)
+            leaflen=rng.uniform(.25,.62)
+            leafw=rng.uniform(.12,.32)
+            tilt=rng.uniform(-.55,.64)
+            # Stable jagged silhouette and dappled colors, broad leaves in
+            # the foreground, smaller clipped leaves behind fruit.
+            dx=cos(a)*leaflen*.6
+            dz=sin(a)*leaflen*.6
+            root=(x-dx*.43,y-leaflen*.35,z-dz*.43)
+            left=(x+sin(a)*leafw,y+tilt*.16,z-cos(a)*leafw)
+            right=(x-sin(a)*leafw,y-tilt*.16,z+cos(a)*leafw)
+            tip=(x+dx,y+leaflen*.47+tilt*.12,z+dz)
+            col=("leaflight" if i%7==0 else
+                 "leafdeep" if i%5==0 else
+                 "lime" if i%9==0 else "leaf")
+            g.tri(col,root,left,tip)
+            g.tri(col,root,tip,right)
+        # Large golden fruit must sit in front of foliage and read clearly
+        # from the game camera. Each has a stalk and a little pointed leaf.
+        for i in range(17):
+            a=i*2.399963
+            nx=sin(a)*1.69
+            nz=cos(a)*1.73
+            p=(nx,3.60+(i%5)*.37,nz-.60)
+            b("orange",p,(.26+(i%3)*.025,.29,.26),13,8)
+            tube("bark",[(p[0],p[1]+.26,p[2]),
+                (p[0]+.06,p[1]+.45,p[2]+.07)],[.042,.028])
+            lf("leafdeep",(p[0],p[1]+.35,p[2]),
+                (p[0]+.36,p[1]+.46,p[2]-.03),.15)
+        for i in range(8):
+            a=i*2*pi/8
             lf("leafdeep",(0,.30,0),
-               (sin(a)*.66,.73,cos(a)*.61),.24)
+               (sin(a)*.83,.78,cos(a)*.72),.24)
     elif name=="WoodFence":
         for x in (-2.60,0,2.60):
             beam("wood",[(x,0,0),(x,1.60,0)],.15)
