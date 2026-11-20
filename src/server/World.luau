@@ -7,6 +7,7 @@ local CottageStyle = require(script.Parent:WaitForChild("CottageGardenStyle"))
 local StorybookPetArt = require(script.Parent:WaitForChild("StorybookPetArt"))
 local ReferenceCropArt = require(script.Parent:WaitForChild("ReferenceCropArt"))
 local ReferenceMeshLibrary = require(script.Parent:WaitForChild("ReferenceMeshLibrary"))
+local NativeReferenceGarden = require(script.Parent:WaitForChild("ReferenceGardenFallback"))
 
 local World = {}
 local scenery: Folder
@@ -183,7 +184,12 @@ function World.build()
 
     CottageStyle.decorateWorld(scenery)
     ReferenceMeshLibrary.applySetDress(scenery)
-    ReferenceMeshLibrary.decorateEntrance(scenery)
+    -- The imported GLBs are preferred. Unlike the old version, the game also
+    -- has a proper garden when no one has imported the assets into Studio.
+    local importedBeds = ReferenceMeshLibrary.decorateEntrance(scenery)
+    if importedBeds == 0 then
+        NativeReferenceGarden.build(scenery)
+    end
 
     monster = Instance.new("Model")
     monster.Name = "GigglesTheGiant"
