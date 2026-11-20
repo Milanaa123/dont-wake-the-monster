@@ -21,6 +21,7 @@ required = [
     "src/server/StorybookPetArt.luau",
     "src/server/ReferenceCropArt.luau",
     "src/server/ReferenceMeshLibrary.luau",
+    "src/server/MonsterWakeVFX.luau",
     "src/server/ReferenceGardenFallback.luau",
     "src/server/ReferenceBackdropFallback.luau",
     "src/server/NativeGardenerAvatar.luau",
@@ -345,3 +346,15 @@ for detail in ("CurvedWhisker","FloppyMoonEar","FrogPupil","TurtleShell",
 assert 'NativePetSilhouettes.apply(pet, species, color)' in world_art
 assert 'if not ReferenceMeshLibrary.applyPet(pet, species)' in world_art
 print("OK: distinct species silhouettes for playable offline-import fallback and original mesh priority")
+
+# Native Roblox visual-effects integration; these checks do not imply Studio playback.
+vfx = read("src/server/MonsterWakeVFX.luau")
+world_vfx = read("src/server/World.luau")
+for marker in ("ParticleEmitter", "Beam", "PointLight", "TweenService",
+               "Debris:AddItem", "emitter:Emit(", "function VFX.wake(",
+               "function VFX.groundPulse("):
+    assert marker in vfx, f"Missing native wake effect: {marker}"
+assert 'MonsterWakeVFX.wake(scenery, Vector3.new(0, 8, 0))' in world_vfx
+assert 'MonsterWakeVFX.groundPulse(scenery, position, radius)' in world_vfx
+assert "local b = orb(scenery, \"Shockwave\"" not in world_vfx, "Old spherical VFX not removed"
+print("OK: real native Roblox wake VFX linked; in-engine appearance not verified")
