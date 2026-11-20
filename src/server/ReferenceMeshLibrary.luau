@@ -129,8 +129,9 @@ function Bridge.applyCrop(visual: Model, center: Vector3,
     local name = "Crop_" .. seedType .. "_S" .. tostring(stage)
     local source = findMesh("Crops", name)
     if not source then return false end
+    local targetHeight = if stage == 1 then 1.25 elseif stage == 2 then 2.35 else 3.65
     local mesh = makeVisual(source, visual, "ImportedCropMesh",
-        CFrame.new(center + Vector3.new(0, 0.65, 0)), 3.7)
+        CFrame.new(center + Vector3.new(0, targetHeight / 2 + 0.10, 0)), targetHeight)
     return mesh ~= nil
 end
 
@@ -143,8 +144,10 @@ function Bridge.applySetDress(parent: Instance): number
     if not environment then return 0 end
 
     local placement = {
-        {"GardenCottage", "CozyOrchardCottage", Vector3.new(37, 7, 88), 13},
-        {"WaterPond", "ShadedOrchardPond", Vector3.new(54, 7, 91), 14},
+        {"GardenCottage", "CozyOrchardCottage", Vector3.new(37, 13.5, 88), 13},
+        {"WaterPond", "ShadedOrchardPond", Vector3.new(54, 7.25, 91), 14},
+        {"GardenerToucan", "OriginalGardenHelper", Vector3.new(32, 9.6, 78), 5.2},
+        {"BloomingHedge", "OriginalFlowerHedge", Vector3.new(49, 9.0, 80), 4.0},
     }
     for _, record in ipairs(placement) do
         local source = findMesh("World", "Environment_" .. record[1])
