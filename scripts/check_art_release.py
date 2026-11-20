@@ -27,8 +27,16 @@ def inspect(path: pathlib.Path):
     assert kind==b"JSON" and length_json>64
     data=json.loads(raw[20:20+length_json])
     assert data["scene"]==0 and len(data["scenes"])==1
-    assert len(data["images"])==1 and len(data["textures"])==1
+    assert len(data["images"])==2 and len(data["textures"])==2
     assert data["images"][0]["mimeType"]=="image/png"
+    assert data["images"][1]["mimeType"]=="image/png"
+    assert data["materials"][0]["pbrMetallicRoughness"]["metallicRoughnessTexture"]["index"]==1
+    # Embedded texture blobs must have valid PNG signatures after export.
+    for picture in data["images"]:
+        view=data["bufferViews"][picture["bufferView"]]
+        bin_start=20+length_json+8
+        start=bin_start+view["byteOffset"]
+        assert raw[start:start+8]==b"\x89PNG\r\n\x1a\n", "Corrupt embedded PBR texture"
     assert len(data["meshes"])==EXPECT[path.name]
     result={}
     for mesh in data["meshes"]:
