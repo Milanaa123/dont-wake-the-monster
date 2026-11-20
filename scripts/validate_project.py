@@ -283,7 +283,7 @@ print("OK: tutorial persistence, mobile chase focus, restoration of garden camer
 art_bridge = read("src/server/ReferenceMeshLibrary.luau")
 ambient_motion = read("src/client/CozyMotion.client.luau")
 avatar_source = read("scripts/gardener_avatar_v1.py")
-for token in ("DWTM_Gardener_Avatar_15", "Avatar_Head", "Avatar_RightFoot",
+for token in ("DWTM_Gardener_Avatar_15", "\"Avatar_\" .. name",
               "function Bridge.applyGardenerAvatar(", "Enum.HumanoidRigType.R15",
               "WeldConstraint", "AnimatedR15Attachment", "DWTMStorybookAvatar",
               "function Bridge.decorateEntrance(", "Crop_Berry_S3", "Crop_LavaMelon_S3",
