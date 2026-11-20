@@ -95,6 +95,12 @@ local function fruitTree(parent: Instance, pos: Vector3, index: number, rng: Ran
         local fruit = ball(parent, "GoldenOrange", canopy + Vector3.new(math.cos(a) * r, rng:NextNumber(-5, 1), math.sin(a) * r),
             Vector3.new(2.1, 2.1, 2.1), ORANGE)
         fruit.CastShadow = false
+        -- A leaf pair and a small sunlit stem read as real citrus from the camera.
+        local tip = fruit.Position + Vector3.new(0, 1.14, 0)
+        ball(parent, "OrangeLeaf", tip + Vector3.new(0.53, 0.11, 0),
+            Vector3.new(1.19, 0.22, 0.51), LEAF_DARK).CastShadow = false
+        ball(parent, "OrangeLeafHighlight", tip + Vector3.new(-0.38, 0.13, 0.04),
+            Vector3.new(0.9, 0.19, 0.46), LEAF_LIGHT).CastShadow = false
     end
 end
 
@@ -102,8 +108,16 @@ local function wildBerryBush(parent: Instance, pos: Vector3, rng: Random)
     lowPolyBush(parent, pos, rng:NextNumber(2.3, 3.5), rng)
     for i = 1, 5 do
         local a = i * 2.399
-        ball(parent, "WildStrawberry", pos + Vector3.new(math.cos(a) * 2, rng:NextNumber(0.8, 2.3), math.sin(a) * 1.6),
-            Vector3.new(1.55, 1.6, 1.4), RED).CastShadow = false
+        local fruit = ball(parent, "WildStrawberry",
+            pos + Vector3.new(math.cos(a) * 2, rng:NextNumber(0.8, 2.3), math.sin(a) * 1.6),
+            Vector3.new(1.55, 1.6, 1.4), RED)
+        fruit.CastShadow = false
+        ball(parent, "StrawberryCalyx", fruit.Position + Vector3.new(0, 0.78, 0),
+            Vector3.new(1.25, 0.19, 1.22), LEAF_DARK).CastShadow = false
+        for seed = 1, 2 do
+            ball(parent, "StrawberrySeed", fruit.Position + Vector3.new((seed - 1.5) * 0.64, -0.03, -0.69),
+                Vector3.new(0.13, 0.19, 0.1), CREAM).CastShadow = false
+        end
     end
 end
 
@@ -311,9 +325,14 @@ function Cottage.decorateCrop(parent: Instance, position: Vector3, seedType: str
         for i = 1, 4 do
             local a = i * 2.4
             local pos = position + Vector3.new(math.cos(a) * 1.7, 2.0 + stage * 0.7, math.sin(a) * 1.5)
-            ball(parent, "BerryRedCluster", pos, Vector3.new(1.0, 1.2, 1.0), RED)
+            local berryColor = if seedType == "FrostBerry" then Color3.fromRGB(139, 205, 250) else RED
+            ball(parent, "BerryRedCluster", pos, Vector3.new(1.0, 1.2, 1.0), berryColor)
             ball(parent, "LeafCap", pos + Vector3.new(0, 0.65, 0),
                 Vector3.new(1.5, 0.25, 1.2), LEAF_DARK)
+            for seed = 1, 2 do
+                ball(parent, "BerrySeed", pos + Vector3.new((seed - 1.5) * 0.44, 0.03, -0.49),
+                    Vector3.new(0.12, 0.16, 0.1), CREAM).CastShadow = false
+            end
         end
     elseif seedType == "Tomato" or seedType == "Pepper" then
         for i = 1, 3 do
@@ -324,14 +343,26 @@ function Cottage.decorateCrop(parent: Instance, position: Vector3, seedType: str
     elseif seedType == "Carrot" then
         for i = 1, 3 do
             local a = i * 2.094
-            ball(parent, "CarrotRoot", position + Vector3.new(math.cos(a) * 1.4, 1.0, math.sin(a) * 1.4),
-                Vector3.new(1.1, 1.9, 1.1), ORANGE)
+            local root = position + Vector3.new(math.cos(a) * 1.4, 1.0, math.sin(a) * 1.4)
+            ball(parent, "CarrotRoot", root, Vector3.new(1.1, 1.9, 1.1), ORANGE)
+            for leaf = 1, 2 do
+                local tip = root + Vector3.new((leaf - 1.5) * 0.55, 1.23, 0)
+                local greens = ball(parent, "CarrotFeather", tip, Vector3.new(0.42, 1.3, 0.7), LEAF_DARK)
+                greens.CFrame *= CFrame.Angles(0, 0, math.rad((leaf - 1.5) * 37))
+            end
         end
     elseif seedType == "Watermelon" or seedType == "HoneyMelon" then
         ball(parent, "StripedGardenMelon", position + Vector3.new(0.7, 1.05, 0),
             Vector3.new(3.2, 2.3, 3.0), LEAF)
         ball(parent, "MelonHighlight", position + Vector3.new(0.7, 2.12, 0),
             Vector3.new(1.7, 0.2, 1.1), LEAF_DARK)
+        -- Simple contrasting rind marks, intentionally not texture-dependent.
+        for stripe = -1, 1 do
+            local rind = ball(parent, "MelonRindStripe",
+                position + Vector3.new(0.7 + stripe * 0.85, 1.63, -1.05),
+                Vector3.new(0.3, 1.34, 0.22), LEAF_DARK)
+            rind.CFrame *= CFrame.Angles(0, 0, math.rad(stripe * 18))
+        end
     end
 end
 
