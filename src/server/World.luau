@@ -132,7 +132,7 @@ function World.build()
     local spawn = Instance.new("SpawnLocation")
     spawn.Name = "SafeSpawn"
     spawn.Size = Vector3.new(15, 1, 15)
-    spawn.CFrame = CFrame.new(0, 9, 74)
+    spawn.CFrame = CFrame.new(0, 9, 85)
     spawn.Material = Enum.Material.Grass
     spawn.Color = Color3.fromRGB(184, 207, 141)
     spawn.Transparency = 0.42
@@ -489,7 +489,7 @@ local farmCenters: {[number]: CFrame} = {}
 function World.createGarden(userId: number, ownerName: string, slot: number): boolean
     if slot < 1 or slot > 12 then return false end
     if farmModels[userId] then farmModels[userId]:Destroy() end
-    local angle = (slot - 1) / 12 * math.pi * 2
+    -- Place the first player garden directly ahead of the southern spawn.\n    -- Remaining plots retain their distinct 12-player radial slots.\n    local angle = (slot - 1) / 12 * math.pi * 2 + math.pi / 2
     local origin = Vector3.new(math.cos(angle) * 61, 8.3, math.sin(angle) * 61)
     local center = CFrame.lookAt(origin, Vector3.new(0, 8.3, 0))
     local model = Instance.new("Model")
