@@ -712,7 +712,14 @@ end
 
 local function gardenAction(player: Player, command: string, arg: any)
     local profile = profiles[player]
-    if not profile then return end
+    if not profile then return false end
+    -- The shop/menu cannot be used to hide from Giggles or mutate the
+    -- persistent garden after the player has been knocked out.
+    if phase == "AWAKE" or profile.knockedOut then
+        remote:FireClient(player, {type = "notice",
+            text = "Survive the chase first! Your garden will still be here."})
+        return false
+    end
     local now = os.clock()
     if now - profile.lastGardenAction < 0.23 then return end
     profile.lastGardenAction = now
