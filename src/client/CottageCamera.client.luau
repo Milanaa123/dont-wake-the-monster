@@ -11,9 +11,9 @@ local remote = ReplicatedStorage:WaitForChild("MonsterRemote") :: RemoteEvent
 local preferredGarden = true
 local lastPhase = "SLEEP"
 local appliedGarden = false
-local viewFov = 53
+local viewFov = 48
 local normalFov = 70
-local cameraOffset = Vector3.new(30, 40, 34)
+local cameraOffset = Vector3.new(16, 22, 23)
 local currentFocus: Vector3? = nil
 
 local gui = Instance.new("ScreenGui")
@@ -102,13 +102,17 @@ local function render(delta: number)
     if not camera or not root or not root:IsA("BasePart") then return end
     local humanoid = character:FindFirstChildOfClass("Humanoid")
     local lookAhead = if humanoid then humanoid.MoveDirection * 3.4 else Vector3.zero
-    local target = root.Position + Vector3.new(0, 3, 0) + lookAhead
+    -- Frame the garden left of the player, not an empty centered island.
+    local target = root.Position + Vector3.new(-5.7, 3.3, -5.2) + lookAhead
     local smoothing = math.clamp(1 - math.exp(-delta * 7.2), 0, 1)
     currentFocus = if currentFocus then currentFocus:Lerp(target, smoothing) else target
     local focus = currentFocus :: Vector3
-    local desired = CFrame.lookAt(focus + cameraOffset, focus)
+    -- Portrait devices need additional horizontal room for beds and thumb controls.
+    local aspect = camera.ViewportSize.X / math.max(camera.ViewportSize.Y, 1)
+    local distanceMultiplier = if aspect < 0.8 then 1.28 elseif aspect < 1.15 then 1.09 else 1
+    local desired = CFrame.lookAt(focus + cameraOffset * distanceMultiplier, focus)
     camera.CameraType = Enum.CameraType.Scriptable
-    camera.FieldOfView = viewFov
+    camera.FieldOfView = if aspect < 0.8 then 52 else viewFov
     camera.CFrame = camera.CFrame:Lerp(desired, smoothing)
     camera.Focus = CFrame.new(focus)
 end
