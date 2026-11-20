@@ -65,7 +65,9 @@ assert all(int(weight) > 0 for _, weight in reaction_defs), "Chaos outcomes need
 world_art = read("src/server/World.luau")
 pet_art = read("src/server/StorybookPetArt.luau")
 assert 'StorybookPetArt.decorate(pet, species, color)' in world_art, "Storybook details disconnected from pet creation"
-for species in ("Pip", "Zuzu", "Floofle", "Snorf", "Sprig", "Puddle", "Swoop"):
+for species in ("Pip", "Zuzu", "Floofle", "Snorf", "Sprig", "Puddle", "Swoop",
+                "Nugget", "Pebble", "Splat", "Twinkle", "Quibble",
+                "Rumble", "Puffin", "Echo", "Glimmer", "Mallow"):
     assert ('species == "' + species + '"') in pet_art, f"Missing detailed species: {species}"
 
 server = read("src/server/Game.server.luau")
@@ -159,6 +161,8 @@ styling = read("src/server/CottageGardenStyle.luau")
 camera = read("src/client/CottageCamera.client.luau")
 for token in ("function Cottage.applyLighting()", "function Cottage.decorateWorld(", "function Cottage.decorateFarm(", "function Cottage.decorateCrop("):
     assert token in styling, f"Missing cottage style pipeline: {token}"
+for token in ("CozyOrchardCottage", "ShadedOrchardPond", "MeadowGrassPatch", "LanternWindow"):
+    assert token in styling, f"Reference environment fixture missing: {token}"
 for token in ("OrchardTrunk", "GoldenOrange", "WildStrawberry", "GoldenWheat", "SunlitMelon", "WarmGardenPath", "FencePost"):
     assert token in styling, f"Missing reference-informed art element: {token}"
 for token in ("ColorCorrectionEffect", "BloomEffect", "Atmosphere", "SunRaysEffect"):
@@ -166,6 +170,7 @@ for token in ("ColorCorrectionEffect", "BloomEffect", "Atmosphere", "SunRaysEffe
 for token in ("CameraType.Scriptable", "CameraType.Custom", "BindToRenderStep", "camera.Focus", "GARDEN VIEW"):
     assert token in camera, f"Missing optional camera behavior: {token}"
 assert "CanCollide = false" in styling and "CanTouch = false" in styling, "New foliage must not block gameplay"
+assert "CanQuery = false" in styling, "Cosmetic grass and flowers should not intercept pet/seed queries"
 print("OK: cottage garden world/plots/crop art, warm lighting and optional three-quarter camera")
 
 # Continuous, server-owned pet affection and visual/audio asset integration.
