@@ -4,6 +4,7 @@ local TweenService = game:GetService("TweenService")
 local Lighting = game:GetService("Lighting")
 local Debris = game:GetService("Debris")
 local CottageStyle = require(script.Parent:WaitForChild("CottageGardenStyle"))
+local StorybookPetArt = require(script.Parent:WaitForChild("StorybookPetArt"))
 
 local World = {}
 local scenery: Folder
@@ -350,6 +351,7 @@ function World.makePet(name: string, color: Color3, pointy: boolean): Model
             orb(pet, "Fang", Vector3.new(x * 0.6, -1.1, -2.17), Vector3.new(0.45, 0.95, 0.45), Color3.fromRGB(254, 254, 248))
         end
     end
+    StorybookPetArt.decorate(pet, species, color)
     local tag = Instance.new("BillboardGui")
     tag.Name = "PetNameTag"
     tag.Size = UDim2.fromOffset(140, 36)
