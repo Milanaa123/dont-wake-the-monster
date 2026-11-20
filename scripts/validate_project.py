@@ -18,6 +18,7 @@ required = [
     "src/server/Game.server.luau",
     "src/server/World.luau",
     "src/server/CottageGardenStyle.luau",
+    "src/server/StorybookPetArt.luau",
     "src/client/CottageCamera.client.luau",
     "src/server/Progression.luau",
     "src/client/HUD.client.luau",
@@ -59,6 +60,12 @@ reaction_defs = re.findall(r'\{id = "([^"]+)".*?weight = (\d+)\}', reactions)
 assert len(reaction_defs) == 12, f"Expected 12 reactions, got {len(reaction_defs)}"
 assert len({id_ for id_, _ in reaction_defs}) == len(reaction_defs), "Duplicate chaos reaction"
 assert all(int(weight) > 0 for _, weight in reaction_defs), "Chaos outcomes need positive weights"
+
+world_art = read("src/server/World.luau")
+pet_art = read("src/server/StorybookPetArt.luau")
+assert 'StorybookPetArt.decorate(pet, species, color)' in world_art, "Storybook details disconnected from pet creation"
+for species in ("Pip", "Zuzu", "Floofle", "Snorf", "Sprig", "Puddle", "Swoop"):
+    assert ('species == "' + species + '"') in pet_art, f"Missing detailed species: {species}"
 
 server = read("src/server/Game.server.luau")
 progression = read("src/server/Progression.luau")
