@@ -19,6 +19,7 @@ required = [
     "src/server/World.luau",
     "src/server/CottageGardenStyle.luau",
     "src/server/StorybookPetArt.luau",
+    "src/server/ReferenceCropArt.luau",
     "src/client/CottageCamera.client.luau",
     "src/server/Progression.luau",
     "src/client/HUD.client.luau",
@@ -149,7 +150,11 @@ print(f"OK: {len(pet_prices)} pets, {len(reaction_defs)} reactions, 30 plants, 2
 
 assert "CottageStyle.decorateWorld(scenery)" in world, "Garden environment must be integrated into actual island"
 assert "CottageStyle.decorateFarm(model, center)" in world, "Physical garden fence decoration not integrated"
-assert "CottageStyle.decorateCrop(visual, center, seedType, stage)" in world, "Detailed crops not integrated"
+assert "ReferenceCropArt.draw(visual, center, p.seed, stage, crop.color)" in world, "Reference crops not integrated"
+crop_art = read("src/server/ReferenceCropArt.luau")
+for crop_shape in ("HeartShapedBerry", "StripedRind", "CarrotRoot", "WheatStalk", "FlowerPetal", "HangingPepper", "VelvetMushroomCap"):
+    assert crop_shape in crop_art, f"Reference-art crop silhouette missing: {crop_shape}"
+assert "CanQuery = false" in crop_art, "Decorative crop geometry must not block interaction queries"
 styling = read("src/server/CottageGardenStyle.luau")
 camera = read("src/client/CottageCamera.client.luau")
 for token in ("function Cottage.applyLighting()", "function Cottage.decorateWorld(", "function Cottage.decorateFarm(", "function Cottage.decorateCrop("):
