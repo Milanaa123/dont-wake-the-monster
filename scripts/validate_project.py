@@ -248,3 +248,19 @@ for token in ("Audio.ChaseMusicAssetId = 0", "Audio.AmbienceAssetId = 0", "TinyV
 assert "crossfadeMusic(" in soundscape and "ChaseMusicAssetId" in soundscape
 assert "harvestedSeed" in server and "ComedySting" in server, "Missing crop-chaos connection"
 print("OK: coin-only rotating merchant, per-restock limits, audio crossfade and funny harvest surprises")
+
+# First-session retention and chase usability (static contracts, NOT visual QA).
+tutorial = read("src/client/HowToPlay.client.luau")
+care = read("src/client/PetCare.client.luau")
+camera = read("src/client/CottageCamera.client.luau")
+hud = read("src/client/HUD.client.luau")
+for token in ("tutorialSeen = false", "profile.tutorialSeen = data.tutorialSeen == true",
+              "tutorialSeen = profile.tutorialSeen == true"):
+    assert token in progression, f"Tutorial completion persistence broken: {token}"
+assert '"TutorialDismiss"' in server and "remote:FireServer(\"TutorialDismiss\")" in tutorial
+assert "setOpen(false)" in tutorial and "resolvedFirstJoin" in tutorial
+assert 'lastPhase ~= "AWAKE"' in camera and 'Enum.CameraType.Custom' in camera
+assert "foodPanel.Visible = event.phase == \"SLEEP\"" in hud
+assert 'card.Visible = not chasing' in care
+assert "profile.carrying = false" in server, "Carried pets cannot block chase movement"
+print("OK: tutorial persistence, mobile chase focus, restoration of garden camera and pet controls")
