@@ -487,6 +487,8 @@ assert 'part(plot, "WoodFrame"' not in world, "Large rectangular tray still bloc
 assert 'lawn.CanCollide = true' in world, "Farm walkable grass physics disabled"
 assert 'plot:SetAttribute("PosX", place.Position.X)' in world, "Plot coordinates altered"
 crop_ref = read("src/server/ReferenceCropArt.luau")
+for marker in ("WheatSpikelet", "GoldenGrain")[:1]:
+    assert marker in crop_ref, f"Gameplay grain ears missing: {marker}"
 for marker in ("CurvedMelonStripe", "math.sqrt(math.max(.06",
                "for sepal = 1, 5 do", "for i = 1, 5 do",
                "StrawberrySeed"):
