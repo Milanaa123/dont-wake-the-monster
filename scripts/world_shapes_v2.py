@@ -149,24 +149,37 @@ def sculpt_world(name,S):
               (cos(a)*1.52,5.73+sin(a)*.25,-1.22),
               (.40,.31,.44),11,7)
     elif name=="GardenerToucan":
-        # Original little garden helper: recognizable bill and a light-blue cap.
-        b("ink",(0,1.02,.15),(.71,1.05,.61),19,13)
-        b("ink",(0,2.02,-.23),(.76,.76,.71),20,12)
-        b("ivory",(0,.94,-.45),(.48,.67,.18),14,9)
+        # Small black garden companion: blue cap, pale grey beak and a large
+        # golden circular eyering like the user's styling reference.
+        b("ink",(0,1.08,.14),(.72,1.02,.71),20,13)
+        b("black",(0,1.98,-.20),(.78,.79,.75),21,14)
+        b("chocolate",(0,.72,-.55),(.47,.57,.22),13,9)
         for side in (-1,1):
-            b("chocolate",(side*.39,2.18,-.80),(.20,.24,.07),14,8)
-            b("gold",(side*.39,2.18,-.86),(.075,.12,.05),11,7)
-            lf("ink",(side*.63,1.42,.35),
-               (side*.99,.94,.80),.29)
-        # beak: tapered orange bill attached to face and projecting forward
-        tube("straw",[(0,1.97,-.73),(.24,1.96,-1.28),
-                      (.46,1.84,-1.87)],[.40,.32,.09])
-        b("blue",(0,2.71,-.28),(.87,.24,.78),20,9)
-        b("blue",(0,2.50,-.87),(.76,.115,.38),17,7)
-        for side in (-1,1):
-            tube("orange",[(side*.40,.20,.32),
-                           (side*.40,.04,.05)],[.11,.07])
-        b("white",(.18,2.79,-.77),(.14,.045,.09),10,5)
+            # Eye rings are real narrow circular mesh tubes, not yellow dots.
+            a = 0
+            ring=[]
+            for j in range(17):
+                ang = j*2*pi/16
+                ring.append((side*.43 + cos(ang)*.245,
+                            2.18 + sin(ang)*.25,-.875))
+            g.tube("gold",ring,[.065]*len(ring),6)
+            b("ink",(side*.43,2.18,-.92),(.17,.18,.07),13,8)
+            b("shine",(side*.37,2.26,-.984),(.05,.06,.018),10,6)
+            lf("ink",(side*.62,1.49,.37),
+               (side*1.06,.98,.84),.27)
+            tube("orange",[(side*.39,.22,.32),
+                           (side*.39,.035,.04)],[.10,.063])
+        # Bulbous but tapered grey beak, with smooth curves and a subtle seam.
+        tube("stone",[(0,1.88,-.68),(.10,1.86,-1.31),
+                       (.23,1.73,-1.85)],[.43,.32,.11])
+        tube("chocolate",[(.08,1.63,-1.21),
+                           (.21,1.64,-1.73)],[.021,.013])
+        # Curved blue cap, cream embroidered tiny leaf, and sunlit visor.
+        b("blue",(0,2.67,-.25),(.83,.27,.79),20,9)
+        b("sky",(0,2.49,-.85),(.70,.09,.39),17,7)
+        lf("white",(.10,2.79,-.64),(.38,2.85,-.64),.12,.025)
+        tube("ink",[(0,1.10,.72),(.21,.78,1.23),(.39,.55,1.57)],
+             [.24,.15,.032])
     elif name=="BloomingHedge":
         rng=random.Random(19)
         for i in range(14):
