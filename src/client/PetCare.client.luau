@@ -182,7 +182,14 @@ end)
 carry.MouseButton1Click:Connect(function() remote:FireServer("ToggleCarry") end)
 
 remote.OnClientEvent:Connect(function(payload: any)
-    if typeof(payload) ~= "table" or payload.type ~= "petCare" then return end
+    if typeof(payload) ~= "table" then return end
+    if payload.type == "state" then
+        local chasing = payload.phase == "AWAKE"
+        if chasing and held then stop() end
+        card.Visible = not chasing
+        return
+    end
+    if payload.type ~= "petCare" then return end
     state = payload
     poseShoulders(state.carrying == true)
     carry.Text = if state.carrying then "👐 PUT DOWN" else "🤲 PICK UP"
