@@ -400,7 +400,7 @@ wind = read("src/client/NativeGardenWind.client.luau")
 assert 'Instance.new("WedgePart")' in crop_art, "Gameplay crops reverted to spherical leaves"
 assert "for berryIndex = 1" in crop_art, "Second ripe strawberry fruit missing"
 assert "stripedMelon(parent, origin + Vector3.new(0.15" in crop_art, "Third mature melon missing"
-for marker in ("MAX_GARDEN = 88", "MAX_SCENERY = 38", "1 / 15",
+for marker in ("MAX_GARDEN = 88", "MAX_SCENERY = 48", "1 / 15",
                "DescendantAdded", "DescendantRemoving", "CanCollide"):
     if marker == "CanCollide":
         continue
@@ -507,6 +507,7 @@ for item in ('function Orchard.build(', 'PaintedCanopyMass',
              'tree:SetAttribute("DetailCountCap", 64)'):
     assert item in orchard, f"Imported-mesh-free orchard art regressed: {item}"
 assert 'PainterlyOrchardTree.build(scenery, index, position)' in world
+assert '"PaintedOrchardLeaf"' in read("src/client/NativeGardenWind.client.luau"), "Orchard leaves lack wind animation"
 assert 'ReferenceMeshLibrary.applyOrchardTree(scenery, index, position)' in world
 assert 'orb(scenery, "FluffyCanopy"' not in world, "Old giant sphere trees remain"
 print("OK: standalone painterly citrus fallback integrated without 3D import")
