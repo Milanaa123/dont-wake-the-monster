@@ -103,6 +103,20 @@ local function makeVisual(source: MeshPart, parent: Instance, name: string,
     return mesh
 end
 
+function Bridge.applyOrchardTree(parent: Instance, index: number, ground: Vector3): boolean
+    local source = findMesh("World", "Environment_OrangeTree")
+    if not source then return false end
+    local tall = 17 + (index % 3) * 1.1
+    local visual = makeVisual(source, parent, "ImportedOrangeTree_" .. tostring(index),
+        CFrame.new(ground + Vector3.new(0, tall / 2, 0))
+            * CFrame.Angles(0, math.rad(index * 41), 0), tall)
+    if visual then
+        visual:SetAttribute("CottageArt", true)
+        return true
+    end
+    return false
+end
+
 function Bridge.applyPet(pet: Model, species: string): boolean
     if pet:FindFirstChild("ImportedCharacterMesh") then return true end
     local source = findMesh("Pets", "Pet_" .. species)
