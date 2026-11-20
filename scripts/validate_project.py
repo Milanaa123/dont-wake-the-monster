@@ -414,3 +414,11 @@ assert "local MAX_PARTS = 190" in ground, "Ground art must remain capped on low-
 assert "item.CanCollide=false" in ground and "item.CanQuery=false" in ground
 assert "item.CastShadow=false" in ground, "Tiny ground detail must not produce self-shadow flicker"
 print("OK: first-person playable ground art, no new remote assets, bounded native part budget")
+
+# Real native farm geometry, not a concept render. Check visual-detail features.
+native_farm = read("src/server/ReferenceGardenFallback.luau")
+for feature in ("CurvedMelonRind", "TinyCloverLeaf", "GardenSoilPebble",
+                "leafIndex = 1, 5", "for i = 1, 78 do"):
+    assert feature in native_farm, f"Native garden missing reference detail: {feature}"
+assert "MelonRindStripe" not in native_farm, "Old floating straight melon bands remain"
+print("OK: curved melon rind, fruit crowns and ground-cover geometry included")
