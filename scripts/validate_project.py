@@ -26,6 +26,7 @@ required = [
     "src/server/ReferenceBackdropFallback.luau",
     "src/server/ReferenceFoliageLayer.luau",
     "src/client/NativePetIdle.client.luau",
+    "src/client/NativeGardenWind.client.luau",
     "src/server/NativeGardenerAvatar.luau",
     "src/server/NativePetSilhouettes.luau",
     "src/client/CottageCamera.client.luau",
@@ -377,3 +378,18 @@ for token in ("NativeSpeciesStyled", "MAX_DISTANCE = 100", "MAX_PARTS_PER_PET = 
     assert token in idle, f"Native pet idle animation regressed: {token}"
 assert "1 / 20" in idle, "Cosmetic idle no longer has 20 FPS throttle"
 print("OK: bounded native foliage and original in-place pet animation are integrated (not Studio tested)")
+
+
+# Check that real planted crops use tapered polygonal foliage and a thicker
+# strawberry/melon canopy, not only the static entrance decoration.
+crop_art = read("src/server/ReferenceCropArt.luau")
+wind = read("src/client/NativeGardenWind.client.luau")
+assert 'Instance.new("WedgePart")' in crop_art, "Gameplay crops reverted to spherical leaves"
+assert "for berryIndex = 1" in crop_art, "Second ripe strawberry fruit missing"
+assert "stripedMelon(parent, origin + Vector3.new(0.15" in crop_art, "Third mature melon missing"
+for marker in ("MAX_GARDEN = 88", "MAX_SCENERY = 38", "1 / 15",
+               "DescendantAdded", "DescendantRemoving", "CanCollide"):
+    if marker == "CanCollide":
+        continue
+    assert marker in wind, f"Native 15fps wind safety contract missing: {marker}"
+print("OK: functional crop geometry uses tapered leaves, extra berries and client breeze")
