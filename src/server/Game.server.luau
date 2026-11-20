@@ -829,6 +829,63 @@ local function gardenAction(player: Player, command: string, arg: any)
     remote:FireClient(player, {type = if newlyDiscovered then "questToast" else "notice", text = message, color = if ok then Color3.fromRGB(164, 255, 186) else Color3.fromRGB(255, 196, 143)})
 end
 
+-- Playable farming at the actual 3D soil beds. Roblox ProximityPrompt
+-- supplies keyboard, gamepad and touch interaction without needing a menu.
+-- No client-provided plot coordinates, inventory or owner IDs are trusted.
+World.setGardenPromptHandler(function(player: Player, ownerId: number, index: number)
+    if player.UserId ~= ownerId then
+        remote:FireClient(player, {type = "notice", text = "This is another gardener's plot!"})
+        return
+    end
+    local profile = profiles[player]
+    if not profile or typeof(index) ~= "number" or index ~= math.floor(index)
+        or index < 1 or index > GardenConfig.PLOT_COUNT then return end
+    local root = rootFor(player)
+    local spot = World.plotPosition(ownerId, index)
+    if not root or not spot or (root.Position - spot).Magnitude > 11 then return end
+    local character = player.Character
+    local humanoid = if character then character:FindFirstChildOfClass("Humanoid") else nil
+    if not humanoid or humanoid.Health <= 0 or profile.knockedOut then return end
+    if phase == "AWAKE" then
+        remote:FireClient(player, {type = "notice", text = "Run! Giggles is awake. Gardening can wait!"})
+        return
+    end
+    local plot = profile.garden.plots[index]
+    if plot then
+        if os.time() >= plot.readyAt then
+            local crop = GardenConfig.Crops[plot.seed]
+            gardenAction(player, "GardenHarvest", index)
+            if crop then
+                World.burst(spot + Vector3.new(0, 1.9, 0), crop.color, 12, 6)
+            end
+        else
+            local remaining = math.max(1, plot.readyAt - os.time())
+            remote:FireClient(player, {
+                type = "notice",
+                text = GardenConfig.Crops[plot.seed].name .. " is growing — " ..
+                    tostring(remaining) .. " seconds until harvest!",
+            })
+        end
+        return
+    end
+    local chosen: string? = nil
+    for _, seed in ipairs(GardenConfig.Order) do
+        if (profile.garden.seeds[seed] or 0) > 0 then
+            chosen = seed
+            break
+        end
+    end
+    if chosen then
+        gardenAction(player, "GardenPlant", {plot = index, seed = chosen})
+        World.burst(spot + Vector3.new(0, 0.8, 0), Color3.fromRGB(158, 209, 119), 6, 4)
+    else
+        remote:FireClient(player, {
+            type = "notice",
+            text = "No seeds left. Open Garden to buy or collect more seeds!",
+        })
+    end
+end)
+
 local function useLure(player: Player, id: any)
     local profile = profiles[player]
     if not profile or typeof(id) ~= "string" then return end
