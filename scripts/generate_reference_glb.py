@@ -36,12 +36,17 @@ class Sculpt:
     def __init__(self,name):
         self.name=name
         self.data=defaultdict(lambda:[[],[]]) # material: positions, normals
-    def tri(self,m,a,b,c):
+    def tri(self,m,a,b,c,na=None,nb=None,nc=None):
         n=norm(cross(sub(b,a),sub(c,a)))
         self.data[m][0].extend((a,b,c))
-        self.data[m][1].extend((n,n,n))
-    def quad(self,m,a,b,c,d):
-        self.tri(m,a,b,c);self.tri(m,a,c,d)
+        self.data[m][1].extend((na or n,nb or n,nc or n))
+    def quad(self,m,a,b,c,d,vertex_normals=None):
+        if vertex_normals is None:
+            self.tri(m,a,b,c);self.tri(m,a,c,d)
+        else:
+            na,nb,nc,nd=vertex_normals
+            self.tri(m,a,b,c,na,nb,nc)
+            self.tri(m,a,c,d,na,nc,nd)
     def blob(self,m,at,radii,seg=15,rings=9,ruffle=0):
         # Continuous sculpted surface with slightly irregular section, not a Roblox ball.
         cx,cy,cz=at; sx,sy,sz=radii
@@ -54,7 +59,9 @@ class Sculpt:
                     return (cx+sx*math.cos(e)*math.cos(a)*f,
                             cy+sy*math.sin(e),
                             cz+sz*math.cos(e)*math.sin(a)*f)
-                self.quad(m,vertex(e0,a0),vertex(e0,a1),vertex(e1,a1),vertex(e1,a0))
+                v=(vertex(e0,a0),vertex(e0,a1),vertex(e1,a1),vertex(e1,a0))
+                ns=[norm(((p[0]-cx)/(sx*sx),(p[1]-cy)/(sy*sy),(p[2]-cz)/(sz*sz))) for p in v]
+                self.quad(m,*v,vertex_normals=ns)
     def leaf(self,m,root,tip,width,curve=0.2,steps=7,slices=4):
         direction=sub(tip,root); horiz=norm((-direction[2],0,direction[0]))
         if sum(abs(x) for x in horiz)<0.01:horiz=(1,0,0)
@@ -79,7 +86,11 @@ class Sculpt:
                 return [add(p,add(mul(r1,math.cos(a)*r),mul(r2,math.sin(a)*r)))
                         for a in [2*PI*j/sides for j in range(sides)]]
             a=ring(points[i],t0,radii[i]);b=ring(points[i+1],t1,radii[i+1])
-            for j in range(sides): self.quad(m,a[j],a[(j+1)%sides],b[(j+1)%sides],b[j])
+            for j in range(sides):
+                pa,pb,pc,pd=a[j],a[(j+1)%sides],b[(j+1)%sides],b[j]
+                na=norm(sub(pa,points[i]));nb=norm(sub(pb,points[i]))
+                nc=norm(sub(pc,points[i+1]));nd=norm(sub(pd,points[i+1]))
+                self.quad(m,pa,pb,pc,pd,vertex_normals=(na,nb,nc,nd))
     def beam(self,m,start,end,width):
         self.tube(m,[start,end],[width,width],6)
     def petal(self,m,center,direction,length,width):
