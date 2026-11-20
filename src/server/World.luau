@@ -5,6 +5,7 @@ local Lighting = game:GetService("Lighting")
 local Debris = game:GetService("Debris")
 local CottageStyle = require(script.Parent:WaitForChild("CottageGardenStyle"))
 local OrganicGardenBeds = require(script.Parent:WaitForChild("OrganicGardenBeds"))
+local PainterlyOrchardTree = require(script.Parent:WaitForChild("PainterlyOrchardTree"))
 local StorybookPetArt = require(script.Parent:WaitForChild("StorybookPetArt"))
 local ReferenceCropArt = require(script.Parent:WaitForChild("ReferenceCropArt"))
 local ReferenceMeshLibrary = require(script.Parent:WaitForChild("ReferenceMeshLibrary"))
@@ -80,22 +81,11 @@ local function billboard(parent: Instance, label: string, position: Vector3, wid
 end
 
 local function lollipopTree(index: number, position: Vector3)
-    -- Cottage palette: muted greens and gently varied sunlit leaves.
-    local treeColors = {
-        Color3.fromRGB(107, 165, 93),
-        Color3.fromRGB(149, 195, 104),
-        Color3.fromRGB(188, 214, 121),
-    }
-    local treeColor = treeColors[index % #treeColors + 1]
-    -- Production model replaces the previous lollipop silhouette when imported.
+    -- An authorized, imported MeshPart always wins. With no mesh permissions
+    -- the playable game still gets layered original orange-tree geometry,
+    -- rather than large generic spheres.
     if ReferenceMeshLibrary.applyOrchardTree(scenery, index, position) then return end
-    local height = 11 + index % 5
-    local trunk = part(scenery, "CandyTreeTrunk", Vector3.new(3, height, 3), CFrame.new(position + Vector3.new(0, height / 2, 0)), Color3.fromRGB(180, 123, 116))
-    trunk.CanCollide = false
-    orb(scenery, "FluffyCanopy", position + Vector3.new(0, height + 3, 0), Vector3.new(15, 13, 15), treeColor)
-    orb(scenery, "CloudyLeaf", position + Vector3.new(5, height + 3, 0), Vector3.new(10, 9, 10), treeColor)
-    orb(scenery, "CanopyLeafCluster", position + Vector3.new(-4, height + 1.7, -3), Vector3.new(9, 8, 9), treeColors[(index + 1) % #treeColors + 1])
-    orb(scenery, "CanopySunlitLeaves", position + Vector3.new(1.3, height + 7, 2), Vector3.new(8, 6, 8), treeColors[(index + 2) % #treeColors + 1])
+    PainterlyOrchardTree.build(scenery, index, position)
 end
 
 local function mushroom(position: Vector3, color: Color3, scale: number)
