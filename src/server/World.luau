@@ -20,6 +20,7 @@ local monsterEyes: {BasePart} = {}
 local monsterLids: {BasePart} = {}
 local monsterSleepLines: {BasePart} = {}
 local importedSleepingMonster: MeshPart? = nil
+local lastAwakeState: boolean? = nil
 local monsterMouth: BasePart
 
 local PINK = Color3.fromRGB(255, 153, 204)
@@ -200,6 +201,7 @@ function World.build()
         ReferenceFoliageLayer.build(scenery, nativeBackdrop, nativeBeds)
     end
 
+    lastAwakeState = nil
     monster = Instance.new("Model")
     monster.Name = "GigglesTheGiant"
     monster.Parent = scenery
@@ -255,6 +257,9 @@ function World.build()
 end
 
 function World.setMonsterAwake(awake: boolean)
+    -- A phase transition must emit VFX once, not on every server update.
+    if lastAwakeState == awake then return end
+    lastAwakeState = awake
     if awake then
         MonsterWakeVFX.wake(scenery, Vector3.new(0, 8, 0))
     end
