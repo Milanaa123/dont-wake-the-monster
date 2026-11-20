@@ -17,6 +17,7 @@ local NativeAvatar = require(script.Parent:WaitForChild("NativeGardenerAvatar"))
 local Progression = require(script.Parent:WaitForChild("Progression"))
 local ProfileStore = require(script.Parent:WaitForChild("ProfileStore"))
 local Garden = require(script.Parent:WaitForChild("Garden"))
+local GardenActionVFX = require(script.Parent:WaitForChild("GardenActionVFX"))
 local RecipeCatalog = require(script.Parent:WaitForChild("RecipeCatalog"))
 local RescueObjective = require(script.Parent:WaitForChild("RescueObjective"))
 local GardenConfig = require(ReplicatedStorage:WaitForChild("GardenConfig"))
@@ -791,6 +792,18 @@ local function gardenAction(player: Player, command: string, arg: any)
         profile.revision += 1
         World.updateGarden(player.UserId, g, GardenConfig)
         sendGarden(player)
+        if command == "GardenPlant" or command == "GardenHarvest" then
+            local plotIndex = if command == "GardenPlant" then arg.plot else arg
+            if typeof(plotIndex) == "number" then
+                local spot = World.plotPosition(player.UserId, plotIndex)
+                if spot then
+                    local seedId = if command == "GardenHarvest" then harvestedSeed else arg.seed
+                    local def = if typeof(seedId) == "string" then GardenConfig.Crops[seedId] else nil
+                    GardenActionVFX.play(workspace, spot, command == "GardenHarvest",
+                        if def then def.color else nil)
+                end
+            end
+        end
         if newlyDiscovered then
             addCoins(player, 15)
             local root = rootFor(player)
@@ -861,11 +874,7 @@ World.setGardenPromptHandler(function(player: Player, ownerId: number, index: nu
     local plot = profile.garden.plots[index]
     if plot then
         if os.time() >= plot.readyAt then
-            local crop = GardenConfig.Crops[plot.seed]
-            local harvested = gardenAction(player, "GardenHarvest", index)
-            if harvested and crop then
-                World.burst(spot + Vector3.new(0, 1.9, 0), crop.color, 12, 6)
-            end
+            gardenAction(player, "GardenHarvest", index)
         else
             local remaining = math.max(1, plot.readyAt - os.time())
             remote:FireClient(player, {
@@ -884,10 +893,7 @@ World.setGardenPromptHandler(function(player: Player, ownerId: number, index: nu
         end
     end
     if chosen then
-        local planted = gardenAction(player, "GardenPlant", {plot = index, seed = chosen})
-        if planted then
-            World.burst(spot + Vector3.new(0, 0.8, 0), Color3.fromRGB(158, 209, 119), 6, 4)
-        end
+        gardenAction(player, "GardenPlant", {plot = index, seed = chosen})
     else
         remote:FireClient(player, {
             type = "notice",
