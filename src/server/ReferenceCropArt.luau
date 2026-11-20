@@ -83,10 +83,15 @@ local function plantBase(parent: Instance, pos: Vector3, scale: number, leaves: 
 end
 
 local function littleSeeds(parent: Instance, center: Vector3, scale: number)
-    -- Two visible cream-colored marks; readable even from the 3/4 view.
-    for i = 1, 2 do
-        piece(parent, "StrawberrySeed", center + Vector3.new((i - 1.5) * 0.36 * scale, 0.11 * scale, -0.52 * scale),
-            Vector3.new(0.12, 0.16, 0.09) * scale, CREAM)
+    -- Five small seed dimples follow the berry's front curvature.
+    for i = 1, 5 do
+        local col = (i - 1) % 3 - 1
+        local row = math.floor((i - 1) / 3)
+        local x = col * .25 * scale
+        local y = (row == 0 and .10 or -.23) * scale
+        local z = -.52 * scale + math.abs(col) * .07 * scale
+        piece(parent, "StrawberrySeed", center + Vector3.new(x, y, z),
+            Vector3.new(.12, .15, .07) * scale, CREAM)
     end
 end
 
@@ -120,8 +125,13 @@ local function strawberry(parent: Instance, origin: Vector3, s: number, stage: n
                     Vector3.new(1.05, 1.24, 1.0) * r * s,
                     if stage == 2 then PINK else bright)
                 fruitShape.CFrame *= CFrame.Angles(0,math.rad(i*27),math.rad((berryIndex-1)*8))
-                leaf(parent, fruit + Vector3.new(0, r * s * 0.67, 0),
-                    0.83 * r * s, 0.53 * r * s, i * 70 + berryIndex*30, DARK)
+                -- Five serrated sepals make the strawberry silhouette legible.
+                for sepal = 1, 5 do
+                    local a = sepal * math.pi * 2 / 5
+                    leaf(parent, fruit + Vector3.new(math.cos(a) * .23 * r * s,
+                        .68 * r * s, math.sin(a) * .23 * r * s),
+                        .69 * r * s, .28 * r * s, math.deg(a), DARK)
+                end
                 if stage == 3 then littleSeeds(parent, fruit, r * s) end
             end
         end
@@ -129,15 +139,36 @@ local function strawberry(parent: Instance, origin: Vector3, s: number, stage: n
 end
 
 local function stripedMelon(parent: Instance, center: Vector3, scale: number, tint: Color3)
-    piece(parent, "GardenWatermelon", center, Vector3.new(2.7, 2.14, 2.62) * scale, tint)
-    for i = -2, 2 do
-        local x = i * 0.39 * scale
-        local stripe = piece(parent, "StripedRind", center + Vector3.new(x, 0.09 * scale, -1.16 * scale),
-            Vector3.new(0.30, 1.39, 0.26) * scale, DARK)
-        stripe.CFrame *= CFrame.Angles(0, 0, math.rad(i * 18))
+    -- Curved rind bands are sampled against the surface of an ellipsoid.
+    -- A segmented painted ribbon reads as a real watermelon from the
+    -- three-quarter camera, unlike five vertical sticks floating out front.
+    local body = piece(parent, "GardenWatermelon",
+        center, Vector3.new(2.7, 2.14, 2.62) * scale, tint)
+    body.CastShadow = true
+    for stripe = -2, 2 do
+        local x = stripe * .37 * scale
+        for segment = 1, 3 do
+            local yUnit = (segment - 2) * .48
+            local xUnit = x / (1.35 * scale)
+            local depth = math.sqrt(math.max(.06, 1 - xUnit*xUnit - yUnit*yUnit))
+            local z = -1.31 * scale * depth - .035
+            local p = piece(parent, "CurvedMelonStripe",
+                center + Vector3.new(x, yUnit * 1.07 * scale, z),
+                Vector3.new(.19, .49, .08) * scale, DARK)
+            p.CFrame *= CFrame.Angles(math.rad((segment - 2) * 34),
+                0, math.rad(stripe * 5))
+            p.CastShadow = false
+        end
     end
-    piece(parent, "MelonTail", center + Vector3.new(0.28 * scale, 1.13 * scale, 0.12 * scale),
-        Vector3.new(0.34, 0.44, 0.33) * scale, DARK)
+    local crown = center + Vector3.new(.17 * scale, 1.04 * scale, .09 * scale)
+    for i = 1, 5 do
+        local a = i * math.pi * 2 / 5
+        leaf(parent, crown + Vector3.new(math.cos(a)*.17*scale, 0,
+            math.sin(a)*.17*scale), .70*scale, .28*scale,
+            math.deg(a), if i % 2 == 0 then LEAF_LIT else DARK)
+    end
+    piece(parent, "MelonTail", crown + Vector3.new(0, .19 * scale, 0),
+        Vector3.new(.20, .38, .22) * scale, DARK)
 end
 
 local function melon(parent: Instance, origin: Vector3, s: number, stage: number, tint: Color3)
