@@ -489,7 +489,7 @@ def main():
         assert a.count() < limit, (a.name,a.count(),limit)
     summary=[glb_write(pets,"DWTM_Pets_30.glb"),
              glb_write(crops,"DWTM_Crops_30x3.glb"),
-             glb_write(env,"DWTM_World_6.glb")]
+             glb_write(env,"DWTM_World_8.glb")]
     (OUT/"manifest.json").write_text(json.dumps({
         "version":"2026-11-20","art_pass":"cozy-garden-shapes-v2", "coordinate_system":"glTF Y-up",
         "pets":[a.name for a in pets],"crops":[a.name for a in crops],
