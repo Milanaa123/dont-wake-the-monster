@@ -73,7 +73,9 @@ class Sculpt:
                     base=lerp(root,tip,t)
                     return add(add(base,mul(horiz,u*wid)),(0,curve*(1-u*u)*math.sin(PI*t),0))
                 a,b,c,d=pt(i,j),pt(i,j+1),pt(i+1,j+1),pt(i+1,j)
-                self.quad(m,a,b,c,d);self.quad(m,d,c,b,a)
+                # All GLB primitives use doubleSided=true, so drawing the
+                # reverse face again wastes triangles and causes z-fighting.
+                self.quad(m,a,b,c,d)
     def tube(self,m,points,radii,sides=8):
         if len(points)<2: return
         for i in range(len(points)-1):
