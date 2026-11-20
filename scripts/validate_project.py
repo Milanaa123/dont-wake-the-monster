@@ -358,6 +358,8 @@ for marker in ("ParticleEmitter", "Beam", "PointLight", "TweenService",
                "function VFX.groundPulse("):
     assert marker in vfx, f"Missing native wake effect: {marker}"
 assert 'MonsterWakeVFX.wake(scenery, Vector3.new(0, 8, 0))' in world_vfx
+assert "if lastAwakeState == awake then return end" in world_vfx, "Wake VFX must not re-emit on same phase"
+assert "lastAwakeState = nil" in world_vfx, "World rebuild must reset wake phase"
 assert 'MonsterWakeVFX.groundPulse(scenery, position, radius)' in world_vfx
 assert "local b = orb(scenery, \"Shockwave\"" not in world_vfx, "Old spherical VFX not removed"
 print("OK: real native Roblox wake VFX linked; in-engine appearance not verified")
