@@ -7,6 +7,8 @@ on:
       - "scripts/crop_shapes_v2.py"
       - "scripts/world_shapes_v2.py"
       - "scripts/gardener_avatar_v1.py"
+      - "scripts/check_art_release.py"
+      - "docs/ROBLOX_3D_ASSET_IMPORT.md"
       - ".github/workflows/art-library.yml"
   workflow_dispatch:
 
@@ -23,6 +25,7 @@ jobs:
         run: |
           python3 -m py_compile scripts/generate_reference_glb.py
           python3 scripts/generate_reference_glb.py
+          python3 scripts/check_art_release.py
           python3 - <<'PY'
           import json, struct, pathlib
           root = pathlib.Path("dist/visual-library")
