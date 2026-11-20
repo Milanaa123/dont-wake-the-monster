@@ -56,8 +56,21 @@ end
 
 local function leaf(parent: Instance, pos: Vector3, length: number,
     width: number, angle: number, tint: Color3)
-    local p = piece(parent, "PaintedLeaf", pos, Vector3.new(length, 0.23, width), tint)
-    p.CFrame *= CFrame.Angles(math.rad(-12), math.rad(angle), math.rad(13))
+    -- An angular tapered, slightly lifted leaf rather than another ball:
+    -- matches the pointed foliage language in the supplied garden reference.
+    local p = Instance.new("WedgePart")
+    p.Name = "PaintedLeaf"
+    p.Size = Vector3.new(width, 0.15, length)
+    p.CFrame = CFrame.new(pos) *
+        CFrame.Angles(math.rad(-12), math.rad(angle), math.rad(5))
+    p.Color = tint
+    p.Material = Enum.Material.SmoothPlastic
+    p.Anchored = true
+    p.CanCollide = false
+    p.CanTouch = false
+    p.CanQuery = false
+    p.CastShadow = false
+    p.Parent = parent
     return p
 end
 
@@ -82,31 +95,43 @@ local function strawberry(parent: Instance, origin: Vector3, s: number, stage: n
         local x = (i - 2) * 1.43 * s
         local z = (i % 2 == 0 and 0.68 or -0.56) * s
         local base = origin + Vector3.new(x, 0, z)
-        plantBase(parent, base, s, 3)
+        plantBase(parent, base, s, if stage == 3 then 5 else 3)
         local top = base + Vector3.new(0, 1.23 * s, 0)
         stem(parent, "BerryStem", base, top, 0.17 * s, DARK)
-        for j = 1, 3 do
-            local a = (j * 2.1 + i) * 1.0
-            leaf(parent, top + Vector3.new(math.cos(a) * 0.58 * s, 0, math.sin(a) * 0.58 * s),
-                1.45 * s, 0.88 * s, math.deg(a), if j % 2 == 0 then LEAF_LIT else LEAF)
+        for j = 1, (if stage == 3 then 5 else 3) do
+            local a = j * 2.39996 + i * 0.37
+            leaf(parent, top + Vector3.new(math.cos(a) * 0.66 * s,
+                (j%2)*0.12*s, math.sin(a) * 0.64 * s),
+                (if j%3==0 then 1.62 else 1.38) * s, 0.88 * s,
+                math.deg(a), if j % 3 == 0 then LEAF_LIT else LEAF)
         end
         if stage >= 2 then
-            local r = if stage == 2 then 0.49 else 0.72
-            local fruit = base + Vector3.new((i % 2 == 0 and -0.66 or 0.65) * s, 0.73 * s, -0.28 * s)
-            stem(parent, "HangingBerry", top, fruit + Vector3.new(0, r * s * 0.46, 0), 0.095 * s, DARK)
-            piece(parent, "HeartShapedBerry", fruit, Vector3.new(1.05, 1.22, 1.00) * r * s,
-                if stage == 2 then PINK else tint)
-            leaf(parent, fruit + Vector3.new(0, r * s * 0.68, 0),
-                0.85 * r * s, 0.53 * r * s, i * 70, DARK)
-            if stage == 3 then littleSeeds(parent, fruit, r * s) end
+            local r = if stage == 2 then 0.49 else 0.69
+            for berryIndex = 1, (if stage == 3 then 2 else 1) do
+                local facing = if berryIndex == 1 then -1 else 1
+                local fruit = base + Vector3.new(
+                    facing * (0.65 + (i%2)*0.13) * s,
+                    (if berryIndex == 1 then 0.70 else 0.54) * s,
+                    (-0.34 - (berryIndex-1)*0.24) * s)
+                stem(parent, "HangingBerry", top,
+                    fruit + Vector3.new(0, r * s * 0.46, 0), 0.076 * s, DARK)
+                local bright = if i%2==0 then RED else tint
+                local fruitShape = piece(parent, "HeartShapedBerry", fruit,
+                    Vector3.new(1.05, 1.24, 1.0) * r * s,
+                    if stage == 2 then PINK else bright)
+                fruitShape.CFrame *= CFrame.Angles(0,math.rad(i*27),math.rad((berryIndex-1)*8))
+                leaf(parent, fruit + Vector3.new(0, r * s * 0.67, 0),
+                    0.83 * r * s, 0.53 * r * s, i * 70 + berryIndex*30, DARK)
+                if stage == 3 then littleSeeds(parent, fruit, r * s) end
+            end
         end
     end
 end
 
 local function stripedMelon(parent: Instance, center: Vector3, scale: number, tint: Color3)
     piece(parent, "GardenWatermelon", center, Vector3.new(2.7, 2.14, 2.62) * scale, tint)
-    for i = -1, 1 do
-        local x = i * 0.76 * scale
+    for i = -2, 2 do
+        local x = i * 0.39 * scale
         local stripe = piece(parent, "StripedRind", center + Vector3.new(x, 0.09 * scale, -1.16 * scale),
             Vector3.new(0.30, 1.39, 0.26) * scale, DARK)
         stripe.CFrame *= CFrame.Angles(0, 0, math.rad(i * 18))
@@ -127,6 +152,7 @@ local function melon(parent: Instance, origin: Vector3, s: number, stage: number
             (if stage == 2 then 0.59 else 0.9) * s, tint)
         if stage == 3 then
             stripedMelon(parent, origin + Vector3.new(1.18 * s, 0.85 * s, 0.91 * s), 0.68 * s, tint)
+            stripedMelon(parent, origin + Vector3.new(0.15 * s, 0.66 * s, 1.18 * s), 0.52 * s, tint)
         end
     end
 end
