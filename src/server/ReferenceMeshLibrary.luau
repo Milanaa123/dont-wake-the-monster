@@ -21,6 +21,7 @@ local function stageImportedPacks()
         {pack = "DWTM_Pets_30", folder = "Pets", prefix = "Pet_"},
         {pack = "DWTM_Crops_30x3", folder = "Crops", prefix = "Crop_"},
         {pack = "DWTM_World_8", folder = "World", prefix = "Environment_"},
+        {pack = "DWTM_Gardener_Avatar_15", folder = "Avatar", prefix = "Avatar_"},
     }
     local root = ServerStorage:FindFirstChild(ROOT_NAME)
     for _, item in ipairs(known) do
@@ -101,6 +102,71 @@ local function makeVisual(source: MeshPart, parent: Instance, name: string,
     mesh.CFrame = pivot
     mesh.Parent = parent
     return mesh
+end
+
+-- The 15 original mesh parts are attached to R15's existing moving bones.
+-- Roblox's native Humanoid/Animate script keeps all walk/run/jump animations.
+-- We never replace player control, physics or the standard character rig.
+function Bridge.applyGardenerAvatar(character: Model): boolean
+    if character:GetAttribute("DWTMStorybookAvatar") == true then return true end
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid or humanoid.RigType ~= Enum.HumanoidRigType.R15 then return false end
+    local names = {
+        "Head", "UpperTorso", "LowerTorso",
+        "LeftUpperArm", "LeftLowerArm", "LeftHand",
+        "RightUpperArm", "RightLowerArm", "RightHand",
+        "LeftUpperLeg", "LeftLowerLeg", "LeftFoot",
+        "RightUpperLeg", "RightLowerLeg", "RightFoot",
+    }
+    local planned = {}
+    -- The appearance must be complete; avoid half-colored / half-imported avatars.
+    for _, name in ipairs(names) do
+        local limb = character:FindFirstChild(name)
+        local source = findMesh("Avatar", "Avatar_" .. name)
+        if not limb or not limb:IsA("BasePart") or not source
+            or source.Size.Y < 0.001 then
+            return false
+        end
+        table.insert(planned, {name = name, limb = limb, source = source})
+    end
+    local costume = Instance.new("Folder")
+    costume.Name = "StorybookGardener"
+    costume.Parent = character
+    for _, record in ipairs(planned) do
+        local limb = record.limb :: BasePart
+        local original = record.source :: MeshPart
+        local mesh = original:Clone()
+        mesh.Name = "Garden" .. record.name
+        mesh.Massless = true
+        mesh.Anchored = false
+        mesh.CanCollide = false
+        mesh.CanTouch = false
+        mesh.CanQuery = false
+        mesh.CastShadow = true
+        local scale = limb.Size.Y / math.max(original.Size.Y, 0.001)
+        if record.name == "Head" then scale *= 1.20 end
+        mesh.Size = original.Size * scale
+        mesh.CFrame = limb.CFrame
+        mesh.Parent = costume
+        local weld = Instance.new("WeldConstraint")
+        weld.Name = "AnimatedR15Attachment"
+        weld.Part0 = limb
+        weld.Part1 = mesh
+        weld.Parent = mesh
+    end
+    -- Only after all 15 moving parts are attached do we hide default geometry.
+    for _, record in ipairs(planned) do
+        (record.limb :: BasePart).Transparency = 1
+    end
+    for _, item in ipairs(character:GetDescendants()) do
+        if item:IsA("Decal") and item.Parent and item.Parent.Name == "Head" then
+            item.Transparency = 1
+        elseif item:IsA("BasePart") and item.Parent and item.Parent:IsA("Accessory") then
+            item.Transparency = 1
+        end
+    end
+    character:SetAttribute("DWTMStorybookAvatar", true)
+    return true
 end
 
 function Bridge.applySleepingMonster(boss: Model): MeshPart?
