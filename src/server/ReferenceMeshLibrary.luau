@@ -227,6 +227,17 @@ function Bridge.applyCrop(visual: Model, center: Vector3,
     local targetHeight = if stage == 1 then 1.25 elseif stage == 2 then 2.35 else 3.65
     local mesh = makeVisual(source, visual, "ImportedCropMesh",
         CFrame.new(center + Vector3.new(0, targetHeight / 2 + 0.10, 0)), targetHeight)
+    -- Spread bush silhouettes across the organic soil patch without
+    -- multiplying imported meshes/draw calls on lower-end phones.
+    if mesh and stage >= 2 then
+        local bush = seedType == "Berry" or seedType == "FrostBerry"
+            or seedType == "Tomato" or seedType == "Pepper"
+            or seedType == "GummyGrape" or seedType == "Jellybean"
+        if bush then
+            mesh.Size = Vector3.new(mesh.Size.X * 1.31, mesh.Size.Y,
+                mesh.Size.Z * 1.31)
+        end
+    end
     return mesh ~= nil
 end
 
