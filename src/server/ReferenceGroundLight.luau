@@ -75,7 +75,7 @@ function Ground.build(world: Instance): Folder
             local center=Vector3.new(-30+col*4.15,7.17,67+row*4.65)
             for j=1,3 do
                 local a=j*2.094+row*.35
-                local p=center+Vector3.new(math.sin(a)*1.05,.165,
+                local p=center+Vector3.new(math.sin(a)*1.05,.315,
                     math.cos(a)*.85)
                 place("StrawberryRootSoil",p,
                     Vector3.new(random:NextNumber(1.2,1.9),.055,
