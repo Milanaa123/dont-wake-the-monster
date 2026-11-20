@@ -255,28 +255,28 @@ function Bridge.decorateEntrance(world: Instance): number
     -- Central x in [-8,8] stays completely open for the spawn walkway.
     for row = 1, 3 do
         for col = 1, 4 do
-            local x = -44 + col * 5.7
-            local z = 58 + row * 6.1
+            local x = -27 + col * 4.15
+            local z = 67 + row * 4.65
             place(berry, "StrawberryPatch_" .. row .. "_" .. col,
                 Vector3.new(x, 7.18, z), 3.4, (row+col)*0.67)
         end
     end
-    for i = 1, 5 do
-        local x = -42 + i * 6.6
-        place(melon, "VineWatermelon_" .. i, Vector3.new(x, 7.06, 83.8),
+    for i = 1, 2 do
+        local x = -27 + i * 6.8
+        place(melon, "VineWatermelon_" .. i, Vector3.new(x, 7.06, 89.0),
             3.10, i * 1.23)
     end
     for i = 1, 7 do
-        local x = -47 + (i % 3) * 3.1
-        local z = 51 + math.floor((i-1)/3) * 5.1
+        local x = -27 + (i % 3) * 3.1
+        local z = 63 + math.floor((i-1)/3) * 4.1
         place(wheat, "WheatBorder_" .. i, Vector3.new(x, 7.06, z),
             3.4 + (i%2)*0.25, i * 0.27)
     end
     -- A second, lighter planting on the cottage side balances the camera.
     for i = 1, 4 do
-        local z = 57 + i * 5.5
+        local z = 68 + i * 4.7
         place(berry, "OrchardBerries_" .. i,
-            Vector3.new(23.4, 7.16, z), 2.65, i * 0.6)
+            Vector3.new(14.8, 7.16, z), 2.65, i * 0.6)
     end
     return count
 end
