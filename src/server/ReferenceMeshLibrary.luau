@@ -321,6 +321,34 @@ function Bridge.applySetDress(parent: Instance): number
             end
         end
     end
+    -- Full imported world packs need the foreground citrus and wooden fences
+    -- too. The older bridge only placed the cottage, pond, toucan and hedge,
+    -- so the trees and fence vanished whenever the native fallback switched off.
+    if applied == 4 then
+        local citrus = findMesh("World", "Environment_OrangeTree")
+        local fence = findMesh("World", "Environment_WoodFence")
+        if citrus and fence then
+            local orchard = {
+                Vector3.new(16.5, 7.15, 65),
+                Vector3.new(34, 7.15, 64),
+                Vector3.new(-34, 7.15, 59),
+            }
+            for index, ground in ipairs(orchard) do
+                local height = 17.2 + index * 0.8
+                makeVisual(citrus, environment, "ImportedHeroCitrus_" .. index,
+                    CFrame.new(ground + Vector3.new(0, height / 2, 0))
+                        * CFrame.Angles(0, math.rad(index * 59), 0), height)
+            end
+            for _, x in ipairs({-33, -26, -19, 21, 28, 35}) do
+                makeVisual(fence, environment, "ImportedGardenFence_" .. tostring(x),
+                    CFrame.new(x, 8.55, 62), 2.6)
+            end
+        else
+            -- Keep the native citrus/fence backdrop if the owner's
+            -- import has not included those two named meshes yet.
+            applied = 3
+        end
+    end
     return applied
 end
 
