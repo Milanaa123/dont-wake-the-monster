@@ -367,7 +367,9 @@ print("OK: real native Roblox wake VFX linked; in-engine appearance not verified
 foliage = read("src/server/ReferenceFoliageLayer.luau")
 idle = read("src/client/NativePetIdle.client.luau")
 world = read("src/server/World.luau")
-assert "ReferenceFoliageLayer.build(scenery)" in world, "New native foliage is not shown in the place"
+assert "ReferenceFoliageLayer.build(scenery, nativeBackdrop, nativeBeds)" in world, "New native foliage is not shown in the place"
+assert "local nativeBeds = importedBeds == 0" in world
+assert "local nativeBackdrop = importedSceneryCount < 4" in world
 assert 'local LIMIT = 410' in foliage and 'if used >= LIMIT then return end' in foliage, "Foliage budget removed"
 for token in ("WedgePart", "PaintedAngularLeaf", "berryLeafPass", "orchardLeaves",
               "groundDetails", "CanCollide = false", "CanQuery = false"):
