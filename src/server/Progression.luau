@@ -28,6 +28,7 @@ function Progression.new()
         survivalCount = 0,
         questClaimed = {feeds = false, survivals = false, discoveries = false},
         dailyDay = -1,
+        tutorialSeen = false,
         garden = Garden.new(),
         personalities = {},
     }
@@ -73,6 +74,7 @@ function Progression.load(profile: any, data: any)
     profile.feedCount = saneInt(data.feedCount, 1000000)
     profile.survivalCount = saneInt(data.survivalCount, 1000000)
     profile.dailyDay = if data.dailyDay == nil then -1 else saneInt(data.dailyDay, 1000000)
+    profile.tutorialSeen = data.tutorialSeen == true
     if type(data.questClaimed) == "table" then
         for quest in pairs(Config.QUEST_GOALS) do
             profile.questClaimed[quest] = data.questClaimed[quest] == true
@@ -111,6 +113,7 @@ function Progression.serialize(profile: any)
             discoveries = profile.questClaimed.discoveries,
         },
         dailyDay = profile.dailyDay,
+        tutorialSeen = profile.tutorialSeen == true,
         garden = Garden.serialize(profile.garden),
     }
 end
@@ -207,6 +210,7 @@ function Progression.catalog(profile: any)
         },
         dailyReady = profile.dailyDay < currentDay,
         dailyReward = Config.DAILY_REWARD,
+        tutorialSeen = profile.tutorialSeen == true,
     }
 end
 
