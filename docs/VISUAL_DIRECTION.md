@@ -84,3 +84,16 @@ clipping. Do not advertise these as fully visually validated.
 - Official Roblox documentation recommends a content-update cadence across connected systems such as pets: https://create.roblox.com/docs/production/game-design/content-updates
 
 **What we implemented instead of copying another hit:** individually temperamental purring/petting that accumulates shared noise, a cooperative consequence (monster wake), and personal garden ingredients that make the interaction loop genuinely different. These charts are time-stamped third-party observations, not proof of future virality.
+
+## 20 November 2026 — updated reference-driven code pass
+
+The reference supplied on 20 November is a warm 3/4-view stylized farm scene. An AI concept visualization shown in ChatGPT is **art-direction only**, not an in-engine capture and not a Roblox asset. No screenshot or gameplay video from Roblox Studio is claimed.
+
+Code changes committed to `main`:
+
+- `src/server/StorybookPetArt.luau`: original, non-colliding character details for **Pip/Zuzu kittens, Floofle bunny, Snorf puppy, Sprig deer, Puddle axolotl and Swoop owl**, plus tiny highlights for all pets. They decorate existing companions without replacing personality behavior or server ownership. This is still procedural placeholder geometry, not custom rigged meshes.
+- `src/server/World.luau`: calls the new character detail module for each pet, including wild visitors.
+- `src/server/CottageGardenStyle.luau`: citrus leaves, strawberry caps and seeds, FrostBerry tint correction, carrot tops and more distinct ripe melon rind markings.
+- `scripts/validate_project.py`: CI contract that the additional art module is installed and linked.
+
+Build gate: `Build Roblox place` workflow on `main` compiles Luau, runs Python/Luau source tests, and packages an `.rbxlx`. An automated pass is **not** a visual/performance validation. Final fidelity needs a Roblox Studio visual review, custom optimized models, multi-device profiling and iteration; mobile geometry cost should be measured rather than guessed.
