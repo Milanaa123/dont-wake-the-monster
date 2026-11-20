@@ -61,6 +61,7 @@ gui.ResetOnSpawn = false
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Parent = player:WaitForChild("PlayerGui")
 local open = button(gui, "🧭 FIND SEEDS", LEAF)
+open.Name = "OpenSeedExplorer"
 open.Position = UDim2.fromOffset(12, 292)
 open.Size = UDim2.fromOffset(152, 43)
 local tracker = Instance.new("TextLabel")
