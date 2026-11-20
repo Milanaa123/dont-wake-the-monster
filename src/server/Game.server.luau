@@ -1093,6 +1093,12 @@ local function startWake()
     wakeCount += 1
     for player, profile in pairs(profiles) do
         stopPetting(player, profile)
+        -- Chase mode must not leave a mobile player holding an animal
+        -- with no visible button to put it down.
+        if profile.carrying then
+            profile.carrying = false
+            careUpdate(player)
+        end
         profile.hearts = 3
         profile.knockedOut = false
         profile.lastHit = -100
