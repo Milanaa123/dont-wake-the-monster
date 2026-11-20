@@ -278,3 +278,25 @@ assert "foodPanel.Visible = event.phase == \"SLEEP\"" in hud
 assert 'card.Visible = not chasing' in care
 assert "profile.carrying = false" in server, "Carried pets cannot block chase movement"
 print("OK: tutorial persistence, mobile chase focus, restoration of garden camera and pet controls")
+
+# Authored chibi gardener and composition are conditional on creator-owned GLB imports.
+art_bridge = read("src/server/ReferenceMeshLibrary.luau")
+ambient_motion = read("src/client/CozyMotion.client.luau")
+avatar_source = read("scripts/gardener_avatar_v1.py")
+for token in ("DWTM_Gardener_Avatar_15", "Avatar_Head", "Avatar_RightFoot",
+              "function Bridge.applyGardenerAvatar(", "Enum.HumanoidRigType.R15",
+              "WeldConstraint", "AnimatedR15Attachment", "DWTMStorybookAvatar",
+              "function Bridge.decorateEntrance(", "Crop_Berry_S3", "Crop_LavaMelon_S3",
+              "Crop_WhisperWheat_S3"):
+    assert token in art_bridge, f"Game art bridge disconnected: {token}"
+for token in ("flower(", "blob(\"sky\"", "Avatar_", "R15_PARTS"):
+    assert token in avatar_source, f"Original gardener source lost: {token}"
+assert "ArtLibrary.applyGardenerAvatar(character)" in server, "Player avatar application not wired"
+assert "CharacterAppearanceLoaded" in server, "Avatar must support asynchronous Roblox appearance loading"
+assert "ReferenceMeshLibrary.decorateEntrance(scenery)" in world_art, "Reference planting layout not constructed"
+for token in ("ImportedCharacterMesh", "ImportedCropMesh", "ImportedSleepingMonster",
+              "ImportedGardenerToucan", "RenderStepped"):
+    assert token in ambient_motion, f"Cosmetic movement missing: {token}"
+assert "if not limb or not limb:IsA(\"BasePart\") or not source" in art_bridge, "Partial avatar risk: failed component must retain native rig"
+assert "CanCollide = false" in art_bridge, "Costume meshes must never collide with world"
+print("OK: all 15 R15 body parts, dense planted opening garden, safe avatar import and cosmetic animations")
