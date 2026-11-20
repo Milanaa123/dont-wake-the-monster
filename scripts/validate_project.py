@@ -21,6 +21,9 @@ required = [
     "src/server/StorybookPetArt.luau",
     "src/server/ReferenceCropArt.luau",
     "src/server/ReferenceMeshLibrary.luau",
+    "src/server/ReferenceGardenFallback.luau",
+    "src/server/ReferenceBackdropFallback.luau",
+    "src/server/NativeGardenerAvatar.luau",
     "src/client/CottageCamera.client.luau",
     "src/server/Progression.luau",
     "src/client/HUD.client.luau",
@@ -300,3 +303,31 @@ for token in ("ImportedCharacterMesh", "ImportedCropMesh", "ImportedSleepingMons
 assert "if not limb or not limb:IsA(\"BasePart\") or not source" in art_bridge, "Partial avatar risk: failed component must retain native rig"
 assert "CanCollide = false" in art_bridge, "Costume meshes must never collide with world"
 print("OK: all 15 R15 body parts, dense planted opening garden, safe avatar import and cosmetic animations")
+
+# Reference-quality progress gates, offline/source-only (NOT rendered QA).
+native_garden = read("src/server/ReferenceGardenFallback.luau")
+native_backdrop = read("src/server/ReferenceBackdropFallback.luau")
+native_avatar = read("src/server/NativeGardenerAvatar.luau")
+quick_menu = read("src/client/CottageQuickMenu.client.luau")
+camera_source = read("src/client/CottageCamera.client.luau")
+assert 'NativeReferenceGarden.build(scenery)' in world_art, "No native garden without GLB import"
+assert 'NativeReferenceBackdrop.build(scenery)' in world_art, "No native farm backdrop"
+assert 'ReferenceMeshLibrary.decorateEntrance(scenery)' in world_art, "Imported GLB entrance priority lost"
+for marker in ("RipeRedStrawberry","StripedWatermelon","WheatEar",
+               "MatureOrangeCarrot","PaintedTaperedLeaf","MeadowPetal",
+               'CanCollide = false'):
+    assert marker in native_garden, f"Missing geometric garden feature: {marker}"
+for marker in ("ToucanGoldenEyeRing","ToucanBlueCap",
+               "ToucanCurvedBeak","OrangeFruit",
+               "MossGreenCanopy","PastelWoodFenceRail"):
+    assert marker in native_backdrop, f"Missing reference background feature: {marker}"
+for marker in ("ChibiFace","HairDaisyPetal","BlueOverallsBib",
+               "PuffedBlouseSleeve","GardenBareArm","SunflowerShoes",
+               "ChibiR15Weld"):
+    assert marker in native_avatar, f"Missing actual R15 character visual: {marker}"
+assert "NativeAvatar.apply(character)" in server, "No native avatar when mesh pack absent"
+assert 'local viewFov = 48' in camera_source and 'Vector3.new(-5.7, 3.3, -5.2)' in camera_source, "Reference garden camera regressed"
+assert 'OpenSeedExplorer' in read("src/client/SeedExplorer.client.luau")
+assert 'CottageQuickMenu' in quick_menu and 'control.Activated:Connect' in quick_menu
+assert project["tree"]["Workspace"]["$properties"]["StreamingEnabled"] is True, "Mobile island streaming disabled"
+print("OK: native 3D reference garden, chibi animated R15 figure, orchard and compact mobile UI wired into place")
