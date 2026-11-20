@@ -13,6 +13,7 @@ local Personality = require(ReplicatedStorage:WaitForChild("PetPersonality"))
 local Affection = require(ReplicatedStorage:WaitForChild("PetAffection"))
 local World = require(script.Parent:WaitForChild("World"))
 local ArtLibrary = require(script.Parent:WaitForChild("ReferenceMeshLibrary"))
+local NativeAvatar = require(script.Parent:WaitForChild("NativeGardenerAvatar"))
 local Progression = require(script.Parent:WaitForChild("Progression"))
 local ProfileStore = require(script.Parent:WaitForChild("ProfileStore"))
 local Garden = require(script.Parent:WaitForChild("Garden"))
@@ -369,7 +370,9 @@ local function onPlayerAdded(player: Player)
         if player.Character == character then
             -- Display chibi gardener only when all creator-owned imported mesh
             -- components exist; otherwise leave Roblox avatar untouched.
-            ArtLibrary.applyGardenerAvatar(character)
+            if not ArtLibrary.applyGardenerAvatar(character) then
+                NativeAvatar.apply(character)
+            end
             movePetNearPlayer(player)
         end
     end
@@ -380,7 +383,9 @@ local function onPlayerAdded(player: Player)
     -- when the final outfit is ready, without replacing the Humanoid rig.
     player.CharacterAppearanceLoaded:Connect(function(character: Model)
         if player.Character == character then
-            ArtLibrary.applyGardenerAvatar(character)
+            if not ArtLibrary.applyGardenerAvatar(character) then
+                NativeAvatar.apply(character)
+            end
         end
     end)
     if player.Character then
