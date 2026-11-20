@@ -288,8 +288,8 @@ def make_env(key):
     g=Sculpt("Environment_"+key)
     if key=="OrangeTree":
         g.tube("bark",[(0,0,0),(.04,2.5,0),(-.1,4.0,0)],[.38,.34,.20],12)
-        for i in range(13):
-            a=2*PI*i/13; r=1.55+(i%3)*.34
+        for i in range(11):
+            a=2*PI*i/11; r=1.55+(i%3)*.34
             pos=(math.cos(a)*r,3.8+(i%5)*.37,math.sin(a)*r)
             g.blob("leaflight" if i%3==0 else "leaf",pos,(1.05,.93,1.05),19,13,.065)
             if i%2==0:
