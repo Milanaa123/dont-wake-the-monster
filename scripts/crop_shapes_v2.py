@@ -62,11 +62,11 @@ def sculpt_crop(name, stage, S):
             p=(ox,.15,oz)
             top=(ox*.96,(.58+(.18 if i%2 else 0))*h,oz*.94)
             stem(p,top,.064)
-            for j in range(3):
-                b=a+j*2*pi/3
-                lf(lit if j==0 else leaf,top,
-                    (top[0]+sin(b)*.53*h,top[1]+.11*h,
-                     top[2]+cos(b)*.50*h),.27*h)
+            for j in range(5 if stage==3 else 3):
+                b=a+j*2*pi/(5 if stage==3 else 3)
+                lf(lit if j%3==0 else leaf,top,
+                    (top[0]+sin(b)*.67*h,top[1]+.13*h,
+                     top[2]+cos(b)*.61*h),.33*h)
             if stage>=2:
                 fruit=(ox*.95+sin(a+1)*.33,(.30+(.12 if i%2 else 0))*h,oz*.94-.22)
                 stem(top,(fruit[0],fruit[1]+.14*h,fruit[2]),.033)
@@ -81,6 +81,12 @@ def sculpt_crop(name, stage, S):
                         ell("cream",seedpos,(.034*h,.047*h,.019*h),8,5)
             elif i%2==1:
                 flower((top[0],top[1]+.07,top[2]-.18),scale=.55)
+        if stage == 3:
+            for j in range(8):
+                a=j*2*pi/8
+                lf(lit if j%3==0 else leaf,
+                   (0,.28,0),
+                   (sin(a)*1.38,.60,cos(a)*1.21),.39)
         # winding runners joining rosettes
         for a in (0,1,2):
             ang=a*2*pi/3
@@ -100,7 +106,7 @@ def sculpt_crop(name, stage, S):
                 q=(p[0],(.51 if stage==3 else .39)*h,
                    p[2])
                 melon(q,(.69 if stage==3 else .49)*h,
-                      "lime" if name=="LavaMelon" else "mint")
+                      "leaflight" if name=="LavaMelon" else "mint")
             elif i==0:
                 flower((p[0],.38*h,p[2]),"dandelion",.5)
     elif typ=="root":
