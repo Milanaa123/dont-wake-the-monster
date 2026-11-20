@@ -20,6 +20,7 @@ required = [
     "src/server/CottageGardenStyle.luau",
     "src/server/StorybookPetArt.luau",
     "src/server/ReferenceCropArt.luau",
+    "src/server/ReferenceMeshLibrary.luau",
     "src/client/CottageCamera.client.luau",
     "src/server/Progression.luau",
     "src/client/HUD.client.luau",
@@ -152,7 +153,15 @@ print(f"OK: {len(pet_prices)} pets, {len(reaction_defs)} reactions, 30 plants, 2
 
 assert "CottageStyle.decorateWorld(scenery)" in world, "Garden environment must be integrated into actual island"
 assert "CottageStyle.decorateFarm(model, center)" in world, "Physical garden fence decoration not integrated"
-assert "ReferenceCropArt.draw(visual, center, p.seed, stage, crop.color)" in world, "Reference crops not integrated"
+assert "ReferenceMeshLibrary.applyPet(pet, species)" in world, "Imported mesh pets are not wired"
+assert "ReferenceMeshLibrary.applyCrop(visual, center, p.seed, stage)" in world, "Imported 3D crops not wired"
+assert "ReferenceMeshLibrary.applySetDress(scenery)" in world, "Imported world set is not wired"
+mesh_bridge = read("src/server/ReferenceMeshLibrary.luau")
+for marker in ("ServerStorage", "DWTM_ArtLibrary", "DWTM_Pets_30", "DWTM_Crops_30x3",
+               "DWTM_World_6", "ImportedCharacterMesh", "ImportedCropMesh",
+               "CanCollide = false", "CanQuery = false"):
+    assert marker in mesh_bridge, f"Missing safe import bridge: {marker}"
+assert "ReferenceCropArt.draw(visual, center, p.seed, stage, crop.color)" in world, "Old crops missing as test fallback"
 crop_art = read("src/server/ReferenceCropArt.luau")
 for crop_shape in ("HeartShapedBerry", "StripedRind", "CarrotRoot", "WheatStalk", "FlowerPetal", "HangingPepper", "VelvetMushroomCap"):
     assert crop_shape in crop_art, f"Reference-art crop silhouette missing: {crop_shape}"
