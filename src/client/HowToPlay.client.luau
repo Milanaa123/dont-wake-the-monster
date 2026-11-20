@@ -2,8 +2,10 @@
 -- Short, readable onboarding: clarify the main loop in the first few seconds.
 -- No modal is forced after pressing PLAY; use ? to reopen.
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
+local remote = ReplicatedStorage:WaitForChild("MonsterRemote") :: RemoteEvent
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "HowToPlayGui"
@@ -118,8 +120,31 @@ local function setOpen(open: boolean)
     help.Visible = not open
 end
 
+local resolvedFirstJoin = false
+local tutorialSeen = false
+
 play.MouseButton1Click:Connect(function()
     setOpen(false)
+    if not tutorialSeen then
+        tutorialSeen = true
+        remote:FireServer("TutorialDismiss")
+    end
+end)
+
+remote.OnClientEvent:Connect(function(event: any)
+    if type(event) ~= "table" or event.type ~= "collection" then return end
+    tutorialSeen = event.tutorialSeen == true or tutorialSeen
+    if not resolvedFirstJoin then
+        resolvedFirstJoin = true
+        if not tutorialSeen then setOpen(true) end
+    end
+end)
+
+-- On very fast joins the server may send the initial snapshot before this
+-- LocalScript connects. Explicitly request one so the first-time guide
+-- appears reliably while existing players are not interrupted.
+task.delay(2.6, function()
+    if not resolvedFirstJoin then remote:FireServer("Sync") end
 end)
 help.MouseButton1Click:Connect(function()
     setOpen(true)
@@ -129,4 +154,4 @@ UserInputService.InputBegan:Connect(function(input: InputObject, processed: bool
         setOpen(not shade.Visible)
     end
 end)
-setOpen(true)
+setOpen(false)
