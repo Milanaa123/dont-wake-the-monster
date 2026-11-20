@@ -7,6 +7,7 @@ local CottageStyle = require(script.Parent:WaitForChild("CottageGardenStyle"))
 local StorybookPetArt = require(script.Parent:WaitForChild("StorybookPetArt"))
 local ReferenceCropArt = require(script.Parent:WaitForChild("ReferenceCropArt"))
 local ReferenceMeshLibrary = require(script.Parent:WaitForChild("ReferenceMeshLibrary"))
+local MonsterWakeVFX = require(script.Parent:WaitForChild("MonsterWakeVFX"))
 local NativeReferenceGarden = require(script.Parent:WaitForChild("ReferenceGardenFallback"))
 local NativeReferenceBackdrop = require(script.Parent:WaitForChild("ReferenceBackdropFallback"))
 local NativePetSilhouettes = require(script.Parent:WaitForChild("NativePetSilhouettes"))
@@ -249,6 +250,9 @@ function World.build()
 end
 
 function World.setMonsterAwake(awake: boolean)
+    if awake then
+        MonsterWakeVFX.wake(scenery, Vector3.new(0, 8, 0))
+    end
     if importedSleepingMonster and importedSleepingMonster.Parent then
         importedSleepingMonster.Transparency = if awake then 1 else 0
         for _, obj in ipairs(monster:GetDescendants()) do
@@ -489,11 +493,9 @@ function World.burst(position: Vector3, color: Color3, count: number, reach: num
     end
 end
 
-function World.wave(position: Vector3, radius: number, color: Color3)
-    local b = orb(scenery, "Shockwave", position, Vector3.new(4, 1.2, 4), color, Enum.Material.Neon)
-    b.Transparency = 0.3
-    TweenService:Create(b, TweenInfo.new(1.25, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {Size = Vector3.new(radius * 2, 1.2, radius * 2), Transparency = 1}):Play()
-    Debris:AddItem(b, 1.45)
+function World.wave(position: Vector3, radius: number, _color: Color3)
+    MonsterWakeVFX.groundPulse(scenery, position, radius)
+
 end
 
 -- Server-created personal farm zones. A player sees their six physical plots on the island.
