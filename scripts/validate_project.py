@@ -455,4 +455,5 @@ for marker in (
 ):
     assert marker in server, f"Server-authoritative garden prompt check missing: {marker}"
 assert "Garden.plotPosition(" not in server, "Plot coordinates must come from World, not client"
+assert 'if phase == "AWAKE" or profile.knockedOut then' in server, "Garden UI must not bypass chase survival"
 print("OK: nine in-world planting/harvesting prompts, owner/range checks, no free reward before success")
