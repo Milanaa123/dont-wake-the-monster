@@ -148,17 +148,19 @@ local function berryLeafPass(parent: Instance)
     end
 end
 
-function Detail.build(parent: Instance): Folder
+function Detail.build(parent: Instance, withTrees: boolean, withBerries: boolean): Folder
     local existing = parent:FindFirstChild("ReferencePaintedFoliage")
     if existing then existing:Destroy() end
     used = 0
     local folder = Instance.new("Folder")
     folder.Name = "ReferencePaintedFoliage"
     folder.Parent = parent
-    orchardLeaves(folder,Vector3.new(16.5,7.15,65),31)
-    orchardLeaves(folder,Vector3.new(34,7.15,64),43)
-    orchardLeaves(folder,Vector3.new(-34,7.15,59),57)
-    berryLeafPass(folder)
+    if withTrees then
+        orchardLeaves(folder,Vector3.new(16.5,7.15,65),31)
+        orchardLeaves(folder,Vector3.new(34,7.15,64),43)
+        orchardLeaves(folder,Vector3.new(-34,7.15,59),57)
+    end
+    if withBerries then berryLeafPass(folder) end
     groundDetails(folder)
     folder:SetAttribute("Source","NativeRobloxParts_NoMeshIds")
     folder:SetAttribute("PartBudget",LIMIT)
