@@ -79,6 +79,8 @@ local function lollipopTree(index: number, position: Vector3)
     trunk.CanCollide = false
     orb(scenery, "FluffyCanopy", position + Vector3.new(0, height + 3, 0), Vector3.new(15, 13, 15), treeColor)
     orb(scenery, "CloudyLeaf", position + Vector3.new(5, height + 3, 0), Vector3.new(10, 9, 10), treeColor)
+    orb(scenery, "CanopyLeafCluster", position + Vector3.new(-4, height + 1.7, -3), Vector3.new(9, 8, 9), treeColors[(index + 1) % #treeColors + 1])
+    orb(scenery, "CanopySunlitLeaves", position + Vector3.new(1.3, height + 7, 2), Vector3.new(8, 6, 8), treeColors[(index + 2) % #treeColors + 1])
 end
 
 local function mushroom(position: Vector3, color: Color3, scale: number)
@@ -112,21 +114,21 @@ function World.build()
     atmosphere.Parent = Lighting
     CottageStyle.applyLighting()
 
-    local water = part(scenery, "CottonCandySea", Vector3.new(1700, 4, 1700), CFrame.new(0, -26, 0), Color3.fromRGB(127, 211, 255), Enum.Material.Glass)
+    local water = part(scenery, "CottonCandySea", Vector3.new(1700, 4, 1700), CFrame.new(0, -26, 0), Color3.fromRGB(136, 195, 198), Enum.Material.Glass)
     water.Transparency = 0.36
 
-    platform(scenery, "MainIsland", Vector3.new(0, 0, 0), 118, 14, Color3.fromRGB(159, 230, 172))
-    platform(scenery, "MainEdge", Vector3.new(0, -8, 0), 113, 8, Color3.fromRGB(255, 194, 173))
-    platform(scenery, "UpperEarth", Vector3.new(0, -16, 0), 88, 9, Color3.fromRGB(193, 163, 237))
-    platform(scenery, "MonsterPlatform", Vector3.new(0, 8, 0), 30, 4, Color3.fromRGB(255, 229, 169))
+    platform(scenery, "MainIsland", Vector3.new(0, 0, 0), 118, 14, Color3.fromRGB(151, 197, 124))
+    platform(scenery, "MainEdge", Vector3.new(0, -8, 0), 113, 8, Color3.fromRGB(194, 156, 119))
+    platform(scenery, "UpperEarth", Vector3.new(0, -16, 0), 88, 9, Color3.fromRGB(154, 130, 114))
+    platform(scenery, "MonsterPlatform", Vector3.new(0, 8, 0), 30, 4, Color3.fromRGB(217, 196, 149))
 
     local spawn = Instance.new("SpawnLocation")
     spawn.Name = "SafeSpawn"
     spawn.Size = Vector3.new(15, 1, 15)
     spawn.CFrame = CFrame.new(0, 9, 74)
-    spawn.Material = Enum.Material.Neon
-    spawn.Color = BLUE
-    spawn.Transparency = 0.25
+    spawn.Material = Enum.Material.Grass
+    spawn.Color = Color3.fromRGB(184, 207, 141)
+    spawn.Transparency = 0.42
     spawn.Anchored = true
     spawn.Neutral = true
     spawn.CanCollide = true
@@ -423,7 +425,7 @@ function World.createGarden(userId: number, ownerName: string, slot: number): bo
     farmCenters[userId] = center
     local base = part(model, "GardenPlatform", Vector3.new(28, 0.8, 32), center, Color3.fromRGB(247, 213, 160), Enum.Material.WoodPlanks)
     base.CanCollide = true
-    part(model, "GreenGrass", Vector3.new(26, 0.4, 30), center * CFrame.new(0, 0.5, 0), Color3.fromRGB(166, 234, 156), Enum.Material.Grass)
+    part(model, "GreenGrass", Vector3.new(26, 0.4, 30), center * CFrame.new(0, 0.5, 0), Color3.fromRGB(166, 198, 124), Enum.Material.Grass)
     local labelPosition = (center * CFrame.new(0, 2.2, 12)).Position
     billboard(model, "🌼 " .. string.sub(ownerName, 1, 16) .. "'S GARDEN", labelPosition, 260)
 
@@ -441,7 +443,7 @@ function World.createGarden(userId: number, ownerName: string, slot: number): bo
         plot:SetAttribute("PosZ", place.Position.Z)
         local bed = part(plot, "WoodFrame", Vector3.new(7.9, 0.8, 7.9), place, Color3.fromRGB(187, 121, 93), Enum.Material.Wood)
         bed.CanCollide = true
-        local soil = part(plot, "SoftSoil", Vector3.new(6.9, 0.25, 6.9), place * CFrame.new(0, 0.54, 0), Color3.fromRGB(142, 97, 92), Enum.Material.Ground)
+        local soil = part(plot, "SoftSoil", Vector3.new(6.9, 0.25, 6.9), place * CFrame.new(0, 0.54, 0), Color3.fromRGB(143, 103, 75), Enum.Material.Ground)
         soil.CanCollide = true
         local mini = part(plot, "NumberAnchor", Vector3.new(0.2, 0.2, 0.2), place * CFrame.new(0, 1.6, -2.9), Color3.new(1, 1, 1))
         mini.Transparency = 1
@@ -512,7 +514,8 @@ function World.updateGarden(userId: number, garden: any, cropConfig: any)
             end
             local size = 0.75 + stage * 0.65
             local head = center + Vector3.new(0, height + 0.8, 0)
-            local glow = if stage == 3 then Enum.Material.Neon else Enum.Material.SmoothPlastic
+            -- Ripe crops should look like painted fruit, not glowing lamps.
+            local glow = Enum.Material.SmoothPlastic
             local seedType = p.seed
             local isBloom = seedType == "Sunflower" or seedType == "Starbloom" or seedType == "MoonLotus" or seedType == "CloudCotton"
             local isMushroom = seedType == "Moonshroom" or seedType == "NeonMushroom"
