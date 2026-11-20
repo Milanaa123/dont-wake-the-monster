@@ -505,7 +505,7 @@ world = read("src/server/World.luau")
 for item in ('function Orchard.build(', 'PaintedCanopyMass',
              'PaintedOrchardLeaf', 'RipeOrange', 'OrangeSePal',
              'CanCollide = false', 'CanQuery = false',
-             'tree:SetAttribute("DetailCountCap", 64)'):
+             'tree:SetAttribute("DetailCountCap", 48)'):
     assert item in orchard, f"Imported-mesh-free orchard art regressed: {item}"
 assert 'PainterlyOrchardTree.build(scenery, index, position)' in world
 assert '"PaintedOrchardLeaf"' in read("src/client/NativeGardenWind.client.luau"), "Orchard leaves lack wind animation"
