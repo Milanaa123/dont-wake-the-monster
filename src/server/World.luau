@@ -9,6 +9,7 @@ local ReferenceCropArt = require(script.Parent:WaitForChild("ReferenceCropArt"))
 local ReferenceMeshLibrary = require(script.Parent:WaitForChild("ReferenceMeshLibrary"))
 local NativeReferenceGarden = require(script.Parent:WaitForChild("ReferenceGardenFallback"))
 local NativeReferenceBackdrop = require(script.Parent:WaitForChild("ReferenceBackdropFallback"))
+local NativePetSilhouettes = require(script.Parent:WaitForChild("NativePetSilhouettes"))
 
 local World = {}
 local scenery: Folder
@@ -458,7 +459,11 @@ function World.makePet(name: string, color: Color3, pointy: boolean): Model
     light.Brightness = 0.4
     light.Color = color
     light.Parent = body
-    ReferenceMeshLibrary.applyPet(pet, species)
+    -- Imported sculpt takes priority. With no asset permissions, pets still
+    -- have family-specific native silhouettes instead of identical blobs.
+    if not ReferenceMeshLibrary.applyPet(pet, species) then
+        NativePetSilhouettes.apply(pet, species, color)
+    end
     return pet
 end
 
