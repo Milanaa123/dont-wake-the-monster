@@ -55,7 +55,7 @@ def sculpt_crop(name, stage, S):
       "mushroom" if name in ("Moonshroom","NeonMushroom") else "fantasy")
     if typ=="berry":
         # A spreading carpet of strawberry trifoliate leaves; fruit under the canopy.
-        n=8 if stage==3 else 5 if stage==2 else 3
+        n=6 if stage==3 else 5 if stage==2 else 3
         for i in range(n):
             a=i*2.39996
             ox=sin(a)*1.11; oz=cos(a)*1.00
@@ -74,8 +74,8 @@ def sculpt_crop(name, stage, S):
                     (.29*h,.35*h,.26*h),15,10)
                 cap(fruit,h)
                 if stage==3:
-                    for j in range(5):
-                        seedpos=(fruit[0]+(j-2)*.086*h,
+                    for j in range(4):
+                        seedpos=(fruit[0]+(j-1.5)*.102*h,
                                  fruit[1]+(.03 if j%2 else -.11)*h,
                                  fruit[2]-.252*h+abs(j-2)*.032*h)
                         ell("cream",seedpos,(.034*h,.047*h,.019*h),8,5)
