@@ -187,14 +187,17 @@ function World.build()
     -- the 3/4 farm camera and conflicted with the foliage-first reference.
 
     CottageStyle.decorateWorld(scenery)
-    ReferenceMeshLibrary.applySetDress(scenery)
-    -- The imported GLBs are preferred. Unlike the old version, the game also
-    -- has a proper garden when no one has imported the assets into Studio.
+    local importedSceneryCount = ReferenceMeshLibrary.applySetDress(scenery)
+    -- Art packs are imported separately. Missing world GLBs must not leave
+    -- imported crops surrounded by bare terrain; missing crop GLBs must not
+    -- remove the personal garden. Keep each fallback independently.
     local importedBeds = ReferenceMeshLibrary.decorateEntrance(scenery)
-    if importedBeds == 0 then
-        NativeReferenceGarden.build(scenery)
-        NativeReferenceBackdrop.build(scenery)
-        ReferenceFoliageLayer.build(scenery)
+    local nativeBeds = importedBeds == 0
+    local nativeBackdrop = importedSceneryCount < 4
+    if nativeBeds then NativeReferenceGarden.build(scenery) end
+    if nativeBackdrop then NativeReferenceBackdrop.build(scenery) end
+    if nativeBeds or nativeBackdrop then
+        ReferenceFoliageLayer.build(scenery, nativeBackdrop, nativeBeds)
     end
 
     monster = Instance.new("Model")
