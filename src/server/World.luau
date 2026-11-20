@@ -11,6 +11,8 @@ local World = {}
 local scenery: Folder
 local monster: Model
 local monsterEyes: {BasePart} = {}
+local monsterLids: {BasePart} = {}
+local monsterSleepLines: {BasePart} = {}
 local monsterMouth: BasePart
 
 local PINK = Color3.fromRGB(255, 153, 204)
@@ -173,6 +175,9 @@ function World.build()
     monster = Instance.new("Model")
     monster.Name = "GigglesTheGiant"
     monster.Parent = scenery
+    table.clear(monsterEyes)
+    table.clear(monsterLids)
+    table.clear(monsterSleepLines)
     local body = orb(monster, "Tummy", Vector3.new(0, 29, 0), Vector3.new(33, 30, 28), PURPLE)
     monster.PrimaryPart = body
     orb(monster, "Head", Vector3.new(0, 47, -4), Vector3.new(29, 25, 25), PURPLE)
@@ -183,19 +188,66 @@ function World.build()
     orb(monster, "RightFoot", Vector3.new(12, 16, -8), Vector3.new(12, 8, 14), PURPLE)
     orb(monster, "LeftArm", Vector3.new(-20, 34, 0), Vector3.new(12, 17, 12), PURPLE)
     orb(monster, "RightArm", Vector3.new(20, 34, 0), Vector3.new(12, 17, 12), PURPLE)
+    -- Soft original fur puffs break up the geometric sphere silhouette.
+    for i = 1, 10 do
+        local a = (i / 10) * 2 * math.pi
+        local tuft = orb(monster, "ForeheadFurTuft",
+            Vector3.new(math.cos(a) * 11.9, 55.3 + math.sin(a) * 2.4, -8.2),
+            Vector3.new(4.2, 5.9, 4.6), if i % 2 == 0 then PURPLE:Lerp(PINK, 0.16) else PURPLE)
+        tuft.CFrame *= CFrame.Angles(0, 0, a + 0.4)
+    end
+    for _, side in ipairs({-1, 1}) do
+        orb(monster, "VelvetInnerEar",
+            Vector3.new(side * 12, 61.6, -9), Vector3.new(5.4, 9.3, 0.8), PINK:Lerp(CREAM, 0.27))
+        orb(monster, "SleepingCheek",
+            Vector3.new(side * 11.3, 43.1, -14.5), Vector3.new(5.7, 3.1, 1.2), PINK)
+    end
     for _, x in ipairs({-7, 7}) do
         orb(monster, "EyeWhite", Vector3.new(x, 49, -15.3), Vector3.new(6, 6.3, 2.2), Color3.fromRGB(250, 250, 255))
         local iris = orb(monster, "SleepyEye", Vector3.new(x, 48.5, -16.8), Vector3.new(3, 3.2, 1.4), Color3.fromRGB(57, 47, 91))
         table.insert(monsterEyes, iris)
+        -- Purple closed-eye covers are removed only while the monster is awake.
+        local lid = orb(monster, "ClosedEyelid", Vector3.new(x, 49, -17.8),
+            Vector3.new(6.2, 6.3, 1.05), PURPLE)
+        table.insert(monsterLids, lid)
+        local sleepLine = orb(monster, "SleepySmileLine",
+            Vector3.new(x, 47.7, -18.48), Vector3.new(4.0, 0.43, 0.27),
+            Color3.fromRGB(92, 69, 116))
+        table.insert(monsterSleepLines, sleepLine)
     end
     monsterMouth = orb(monster, "Mouth", Vector3.new(0, 41, -16), Vector3.new(8, 2, 1.4), Color3.fromRGB(75, 42, 90))
     local halo = orb(monster, "GlowingNose", Vector3.new(0, 45, -17), Vector3.new(3, 2, 1.7), PINK, Enum.Material.Neon)
     halo.CanCollide = false
 
+    -- The spawn is on the southern side (+Z); make Giggles face the garden
+    -- entrance instead of presenting his back to new players.
+    monster:PivotTo(monster:GetPivot() * CFrame.Angles(0, math.pi, 0))
+
     return scenery
 end
 
 function World.setMonsterAwake(awake: boolean)
+    for _, lid in ipairs(monsterLids) do
+        if lid.Parent then lid.Transparency = if awake then 1 else 0 end
+    end
+    for _, line in ipairs(monsterSleepLines) do
+        if line.Parent then line.Transparency = if awake then 1 else 0 end
+    end
+    -- Sleep is golden-hour cozy; wakeup temporarily cools the same landscape.
+    TweenService:Create(Lighting, TweenInfo.new(1.8), {
+        ClockTime = if awake then 19.0 else 16.1,
+        Brightness = if awake then 1.42 else 2.1,
+        OutdoorAmbient = if awake then Color3.fromRGB(151, 155, 189)
+            else Color3.fromRGB(204, 193, 157),
+    }):Play()
+    local grade = Lighting:FindFirstChild("CottageColorGrade")
+    if grade and grade:IsA("ColorCorrectionEffect") then
+        TweenService:Create(grade, TweenInfo.new(1.7), {
+            TintColor = if awake then Color3.fromRGB(210, 204, 247)
+                else Color3.fromRGB(255, 248, 224),
+            Saturation = if awake then -0.19 else -0.065,
+        }):Play()
+    end
     for _, eye in ipairs(monsterEyes) do
         if eye.Parent then
             TweenService:Create(eye, TweenInfo.new(0.35), {Size = awake and Vector3.new(4.2, 5.5, 1.7) or Vector3.new(3, 3.2, 1.4), Color = awake and Color3.fromRGB(255, 65, 124) or Color3.fromRGB(57, 47, 91)}):Play()
