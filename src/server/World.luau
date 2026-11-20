@@ -78,6 +78,8 @@ local function lollipopTree(index: number, position: Vector3)
         Color3.fromRGB(188, 214, 121),
     }
     local treeColor = treeColors[index % #treeColors + 1]
+    -- Production model replaces the previous lollipop silhouette when imported.
+    if ReferenceMeshLibrary.applyOrchardTree(scenery, index, position) then return end
     local height = 11 + index % 5
     local trunk = part(scenery, "CandyTreeTrunk", Vector3.new(3, height, 3), CFrame.new(position + Vector3.new(0, height / 2, 0)), Color3.fromRGB(180, 123, 116))
     trunk.CanCollide = false
@@ -154,22 +156,29 @@ function World.build()
         local pos = Vector3.new(math.cos(a) * r, 7, math.sin(a) * r)
         mushroom(pos, colors[i % #colors + 1], rng:NextNumber(0.8, 1.8))
     end
+    -- Garden reference uses sunlit foliage and tiny flowers rather than
+    -- oversized neon crystals in the central playable meadow.
     for i = 1, 7 do
         local a = rng:NextNumber(0, math.pi * 2)
         local r = rng:NextNumber(43, 106)
-        local base = Vector3.new(math.cos(a) * r, 8, math.sin(a) * r)
-        local crystal = orb(scenery, "GlowCrystal", base + Vector3.new(0, 3.5, 0), Vector3.new(3, 7, 3), colors[(i % #colors) + 1], Enum.Material.Neon)
-        crystal.CFrame = crystal.CFrame * CFrame.Angles(0, 0, math.rad(18))
-    end
-    for i = 1, 12 do
-        local a = rng:NextNumber(0, math.pi * 2)
-        local r = rng:NextNumber(125, 240)
-        local height = rng:NextNumber(25, 85)
-        local center = Vector3.new(math.cos(a) * r, height, math.sin(a) * r)
-        for j = 1, 3 do
-            orb(scenery, "SkyMarshmallow", center + Vector3.new(j * 5, j % 2 * 2, 0), Vector3.new(16, 8, 13), Color3.fromRGB(255, 246, 254))
+        local base = Vector3.new(math.cos(a) * r, 7.4, math.sin(a) * r)
+        for petal = 1, 5 do
+            local theta = petal * math.pi * 2 / 5
+            local bloom = orb(scenery, "LittleGardenPetal",
+                base + Vector3.new(math.cos(theta) * 0.72, 0.1, math.sin(theta) * 0.72),
+                Vector3.new(0.92, 0.28, 0.65),
+                if i % 2 == 0 then Color3.fromRGB(255, 239, 211)
+                else Color3.fromRGB(251, 201, 220))
+            bloom.CanQuery = false
+            bloom.CastShadow = false
         end
+        local center = orb(scenery, "GardenBloomHeart", base + Vector3.new(0, 0.35, 0),
+            Vector3.new(0.62, 0.20, 0.62), Color3.fromRGB(251, 224, 129))
+        center.CanQuery = false
+        center.CastShadow = false
     end
+    -- Keep the horizon visually quiet; cloud spheres previously dominated
+    -- the 3/4 farm camera and conflicted with the foliage-first reference.
 
     CottageStyle.decorateWorld(scenery)
     ReferenceMeshLibrary.applySetDress(scenery)
