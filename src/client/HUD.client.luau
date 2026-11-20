@@ -303,6 +303,13 @@ remote.OnClientEvent:Connect(function(event: any)
         noiseCaption.Text = string.format("NOISE %d / %d   •   MORE CHAOS!", event.noise or 0, event.maxNoise or 100)
         timer.Text = countdown(event.time or 0)
         health.Visible = event.phase == "AWAKE"
+        -- Keep the playfield visible while dodging attacks: feeding is disabled
+        -- by the server during a chase, so the giant food control panel hides.
+        -- All four feed controls return automatically when the monster sleeps.
+        foodPanel.Visible = event.phase == "SLEEP"
+        rescueCard.Position = if event.phase == "AWAKE"
+            then UDim2.new(0.5, 0, 1, -24)
+            else UDim2.new(0.5, 0, 1, -193)
         local rescue = event.rescue
         rescueCard.Visible = event.phase == "AWAKE" and typeof(rescue) == "table" and rescue.active == true
         if typeof(rescue) == "table" then
