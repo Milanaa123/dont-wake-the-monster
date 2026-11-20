@@ -394,12 +394,45 @@ def _palette_png(keys, cell=16):
             + chunk(b"IDAT", zlib.compress(payload, 9))
             + chunk(b"IEND", b""))
 
+def _roughness_png(keys, cell=16):
+    # glTF metallic-roughness map: G=roughness, B=metalness. Soft leaves,
+    # matte soil and gently glossy ripened fruit share the same UV palette.
+    import zlib
+    overrides = {
+        "red":.35,"berry":.35,"orange":.38,"pink":.58,
+        "gold":.53,"dandelion":.64,"water":.24,
+        "eye":.18,"black":.28,"shine":.16,"slate":.77,
+        "leaf":.76,"leafdeep":.83,"leaflight":.72,
+        "lime":.67,"mint":.69,"cream":.80,"ivory":.81,
+        "soil":.96,"bark":.89,"wood":.86,"brown":.86,
+        "chocolate":.85,"stone":.88,
+    }
+    width=len(keys)*cell
+    height=32
+    rows=[]
+    for y in range(height):
+        scan=bytearray()
+        for key in keys:
+            base=overrides.get(key,.78)
+            for x in range(cell):
+                stipple=.018*math.sin(x*.73+y*1.11+len(key))
+                rough=max(.12,min(.98,base+stipple))
+                scan.extend((255,round(255*rough),0))
+        rows.append(b"\\x00"+bytes(scan))
+    payload=b"".join(rows)
+    def chunk(tag,data):
+        return struct.pack(">I",len(data))+tag+data+struct.pack(">I",zlib.crc32(tag+data)&0xffffffff)
+    return (b"\\x89PNG\\r\\n\\x1a\\n"+
+        chunk(b"IHDR",struct.pack(">IIBBBBB",width,height,8,2,0,0,0))+
+        chunk(b"IDAT",zlib.compress(payload,9))+chunk(b"IEND",b""))
+
 def glb_write(items,filename):
     # Each named asset = ONE MeshPart with texture atlas, not multiple colored
     # MeshParts. Preserves recognizable colors in Roblox's glTF Importer.
     keys = sorted(MAT)
     index_of = {k:i for i,k in enumerate(keys)}
     palette = _palette_png(keys)
+    roughness = _roughness_png(keys)
     tex_width = len(keys)*16
     doc = {
         "asset":{"version":"2.0","generator":"DWTM original textured 3D mesh library"},
@@ -408,10 +441,11 @@ def glb_write(items,filename):
             "name":"DWTM_PaintedSurface",
             "pbrMetallicRoughness":{"baseColorFactor":[1,1,1,1],
                 "baseColorTexture":{"index":0,"texCoord":0},
-                "metallicFactor":0.0,"roughnessFactor":0.86},
+                "metallicRoughnessTexture":{"index":1,"texCoord":0},
+                "metallicFactor":0.0,"roughnessFactor":1.0},
             "doubleSided":True
         }],
-        "textures":[{"sampler":0,"source":0}],
+        "textures":[{"sampler":0,"source":0},{"sampler":0,"source":1}],
         "samplers":[{"magFilter":9728,"minFilter":9728,"wrapS":33071,"wrapT":33071}],
         "images":[],
         "buffers":[{"byteLength":0}],"bufferViews":[],"accessors":[]
@@ -428,6 +462,9 @@ def glb_write(items,filename):
     image_view=store(palette)
     doc["images"].append({"name":"DWTM_Original_Color_Palette",
                            "mimeType":"image/png","bufferView":image_view})
+    roughness_view=store(roughness)
+    doc["images"].append({"name":"DWTM_Painted_PBR_Roughness",
+                           "mimeType":"image/png","bufferView":roughness_view})
     def access(view,count,typ,ctype,lo=None,hi=None):
         idx=len(doc["accessors"])
         a={"bufferView":view,"componentType":ctype,"count":count,"type":typ}
