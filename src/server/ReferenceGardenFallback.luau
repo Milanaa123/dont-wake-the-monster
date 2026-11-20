@@ -152,15 +152,28 @@ local function melon(parent: Instance, center: Vector3, seed: number)
             Vector3.new(1.83, 1.80, 1.69),
             if i%2==0 then MELON_PALE else MELON)
         fruit.CFrame *= CFrame.Angles(0, a, 0)
-        -- Broad dark green longitudinal rind markings.
+        -- Curved rind bands hug the melon instead of floating straight
+        -- vertical rods on the front. Keep the detail to five short ribbons.
         for stripe = -2, 2 do
-            local offset = stripe * 0.29
-            local stripePart = ball(parent, "MelonRindStripe",
-                fruitCenter + Vector3.new(offset, 0.03, -0.79 +
-                    math.abs(offset)*0.18),
-                Vector3.new(0.105, 1.42, 0.075), RIND)
-            stripePart.CFrame *= CFrame.Angles(math.rad(5*stripe),0,math.rad(8*stripe))
-            stripePart.CastShadow = false
+            local xOffset = stripe * 0.28
+            local horizontal = math.sqrt(math.max(0.05, 1 - (xOffset / 0.915)^2))
+            for segment = 1, 5 do
+                local t = -1.1 + (segment - 0.5) * 0.44
+                local y = math.sin(t) * 0.86
+                local z = -math.cos(t) * 0.845 * horizontal
+                local ribbon = ball(parent, "CurvedMelonRind",
+                    fruitCenter + Vector3.new(xOffset, y, z - 0.014),
+                    Vector3.new(0.095, 0.39, 0.065), RIND)
+                ribbon.CFrame *= CFrame.Angles(t * 0.76, a * 0.07, math.rad(stripe * 3))
+                ribbon.CastShadow = false
+            end
+        end
+        -- A small five-lobed green crown ties the fruit to the vine.
+        for leafIndex = 1, 5 do
+            local theta = leafIndex * math.pi * 2 / 5
+            leaf(parent, fruitCenter + Vector3.new(0, 0.83, 0),
+                fruitCenter + Vector3.new(math.cos(theta)*0.53, 0.82,
+                    math.sin(theta)*0.48), 0.24, LEAF_DEEP)
         end
         for j = 1, 3 do
             local angle = a + j*2.094
@@ -257,6 +270,32 @@ function NativeGarden.build(parent: Instance): Folder
                 leaf(garden,center,center+Vector3.new(math.cos(t)*.7,
                     .28,math.sin(t)*.58),.31,
                     if l%2==0 then LEAF_SUN else LEAF)
+            end
+        end
+    end
+    -- Ground-cover layer: tiny clover groups and warm soil pebbles break up
+    -- large empty patches without creating physical obstacles or expensive
+    -- terrain textures. Deterministic layout for consistent screenshots.
+    local details = Random.new(291104)
+    for i = 1, 78 do
+        local side = if i % 2 == 0 then -1 else 1
+        local x = side * details:NextNumber(12.7, 35.0)
+        local z = details:NextNumber(58, 101)
+        local at = Vector3.new(x, 7.23, z)
+        if i % 3 == 0 then
+            local pebble = ball(garden, "GardenSoilPebble",
+                at, Vector3.new(details:NextNumber(.24,.49),.12,
+                    details:NextNumber(.24,.49)),
+                if i % 2 == 0 then SOIL else DARK_SOIL)
+            pebble.CastShadow = false
+        else
+            for j = 1, 3 do
+                local a = j * math.pi * 2 / 3 + i * .73
+                local clover = ball(garden, "TinyCloverLeaf",
+                    at + Vector3.new(math.cos(a)*.18,.03,math.sin(a)*.18),
+                    Vector3.new(.29,.07,.23),
+                    if j == 1 then LEAF_SUN else LEAF)
+                clover.CastShadow = false
             end
         end
     end
