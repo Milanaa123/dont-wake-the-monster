@@ -96,6 +96,12 @@ jobs:
             /tmp/luau/luau-compile "$script" > /dev/null
           done < <(find src -name '*.luau' -print0)
 
+      - name: Rebuild approved art sources before an explicitly requested upload
+        run: |
+          set -euo pipefail
+          python3 scripts/bake_orchard.py
+          test -s assets/OrchardGeometry.model.json
+
       - name: Build place for upload
         shell: bash
         run: |
