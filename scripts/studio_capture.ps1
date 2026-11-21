@@ -119,8 +119,13 @@ try {
         try {
             $p = Start-Process -FilePath $studio -ArgumentList $args -PassThru
             $started = $true
-        } catch [System.ComponentModel.Win32Exception] {
+        } catch {
+            # Start-Process may wrap the Win32 sharing violation inside an
+            # InvalidOperationException, so inspect both outer/inner messages.
             $errorText = $_.Exception.Message
+            if ($_.Exception.InnerException) {
+                $errorText += " " + $_.Exception.InnerException.Message
+            }
             if ($errorText -notmatch 'used by another process|being used|access the file|in use') { throw }
             Write-Host "Studio EXE temporarily locked by installer or security scanner; retrying."
             Start-Sleep -Seconds 5
