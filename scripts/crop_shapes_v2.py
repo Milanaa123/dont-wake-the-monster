@@ -13,6 +13,10 @@ def sculpt_crop(name, stage, S):
         from storybook_vegetables import sweetcorn, bell_pepper
         (sweetcorn if name=="Corn" else bell_pepper)(g,stage)
         return g
+    if name in ("Carrot","RainbowRadish","MarshmallowRoot"):
+        from storybook_root_crops import root_bed
+        root_bed(g,name,stage)
+        return g
     rng=random.Random(sum((i+1)*ord(c) for i,c in enumerate(name))+stage*11)
     t=stage/3
     h={1:.55,2:.78,3:1.0}[stage]
