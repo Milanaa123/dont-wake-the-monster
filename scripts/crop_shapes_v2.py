@@ -138,11 +138,26 @@ def sculpt_crop(name, stage, S):
         for i,a in enumerate(angles):
             p=(sin(a)*1.11,.11,cos(a)*1.05)
             stem((0,.18,0),p,.08)
+            # Low, curling runners physically join the fruit to the bed.
+            # Small spirals and lobed leaves are the recognizable watermelon
+            # silhouette: they remain real editable triangles, not a decal.
             for j in range(3):
                 b=a+j*2*pi/3
                 lf(lit if j%2 else leaf,p,
                     (p[0]+sin(b)*.77,p[1]+.22*h,p[2]+cos(b)*.69),
                     .45*h)
+                if stage>=2 and j<2:
+                    bx=p[0]+sin(b)*.37*h
+                    bz=p[2]+cos(b)*.38*h
+                    turns=[]
+                    for k in range(6):
+                        t=k/5
+                        spiral=b+(2.5*pi*t if j==0 else -2.5*pi*t)
+                        turns.append((bx+.14*h*t*cos(spiral),
+                            p[1]+(.16+.10*sin(pi*t))*h,
+                            bz+.14*h*t*sin(spiral)))
+                    g.tube("leafdeep",turns,
+                           [.023*h,.021*h,.018*h,.015*h,.011*h,.006*h],5)
             if stage>=2 and (stage==3 or i==1):
                 q=(p[0],(.51 if stage==3 else .39)*h,
                    p[2])
@@ -157,8 +172,11 @@ def sculpt_crop(name, stage, S):
                         lf(lit if j%2==0 else leaf,crown,
                            (crown[0]+sin(b)*.56*h,crown[1]+.08*h,
                             crown[2]+cos(b)*.49*h),.24*h)
-            elif i==0:
-                flower((p[0],.38*h,p[2]),"dandelion",.5)
+            elif stage==1 or i==0:
+                # Yellow blossoms appear before fruit, making the crop
+                # progression readable even at small mobile camera scale.
+                flower((p[0],(.36+.08*(i%2))*h,p[2]),
+                       "dandelion",.45 if stage==1 else .5)
     elif typ=="root":
         count=7 if stage==3 else 3
         root_col="orange" if name=="Carrot" else "pink" if name=="RainbowRadish" else "cream"
