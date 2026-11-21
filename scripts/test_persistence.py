@@ -85,6 +85,51 @@ local broken = ProfileStore.new({GetDataStore = function() return backend end}, 
 p.dirty = true
 assert(not broken:save(7, p) and broken.saving[p] == nil, "serializer failure must release lock")
 assert(#warnings == 3)
+
+-- Cross-server session ownership: two servers share a single DataStore key,
+-- but only the first one is allowed to save that player's live progress.
+local records = {player_7 = {coins = 45}}
+local concurrentStore = {
+    UpdateAsync = function(_, key, callback)
+        local replacement = callback(records[key])
+        if replacement ~= nil then records[key] = replacement end
+        return replacement
+    end,
+}
+local service = {GetDataStore = function() return concurrentStore end}
+local first = ProfileStore.new(service, "test", serialize, "server-uuid-A")
+local second = ProfileStore.new(service, "test", serialize, "server-uuid-B")
+local third = ProfileStore.new(service, "test", serialize, "server-uuid-C")
+local claimed, restored = first:load(7)
+assert(claimed and restored.coins == 45)
+assert(records.player_7._dwtmLease.token == "server-uuid-A")
+assert(not second:load(7), "second server must never load writeable duplicate progress")
+assert(second.lastLoadError == "This profile is still open on another server")
+local active = {coins = 151, loaded = true, dirty = true, revision = 1}
+assert(first:save(7, active) and not active.dirty)
+assert(records.player_7.coins == 151 and records.player_7._dwtmLease.token == "server-uuid-A")
+assert(first:save(7, active), "clean profiles must renew their ownership lease")
+assert(not second:load(7), "refresh must keep the profile locked")
+assert(first:release(7, active))
+assert(records.player_7._dwtmLease == nil, "graceful leave must release the lock")
+claimed, restored = second:load(7)
+assert(claimed and restored.coins == 151)
+active.loaded = true
+active.dirty = true
+active.coins = 999
+active.revision += 1
+assert(not first:save(7, active), "old server must refuse to overwrite fresh owner")
+assert(not active.loaded and records.player_7.coins == 151)
+local successor = {coins = 208, loaded = true, dirty = true, revision = 1}
+assert(second:save(7, successor) and second:release(7, successor))
+claimed, restored = third:load(7)
+assert(claimed and restored.coins == 208)
+-- A crashed server does not hold the profile forever after lease timeout.
+records.player_7._dwtmLease.expiresAt = os.time() - 1
+claimed, restored = first:load(7)
+assert(claimed and restored.coins == 208)
+assert(first:release(7, {loaded = true, revision = 1}))
+print("PASS: cross-server acquisition, conflict rejection, lease renewal, release, stale-write protection and timeout recovery")
 print("PASS: unavailable/new/failed loads, no writes from unloaded profiles, save retry, autosave/leave ordering, dirty revisions and serializer recovery")
 '''.replace("MODULE", module)
 with tempfile.TemporaryDirectory() as folder:
