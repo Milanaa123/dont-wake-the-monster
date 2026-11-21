@@ -174,7 +174,9 @@ def sculpt_crop(name, stage, S):
     elif typ=="grain":
         # The reference has a dense pale wheat cluster with slight height
         # variation, not a small row of seven sticks.
-        n=10 if stage==3 else 5 if stage==2 else 3
+        # Cob kernels carry much denser geometry than wheat ears.
+        # Preserve the original seven-stalk corn budget for mobile clients.
+        n=(7 if name=="Corn" else 10) if stage==3 else 5 if stage==2 else 3
         for i in range(n):
             a=i*2.39996
             p=(sin(a)*.95,.05,cos(a)*.95)
