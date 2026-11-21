@@ -55,6 +55,13 @@ assert "bark" in pets["Wobble"].data, "Bear honey pot missing"
 assert "leafdeep" in pets["Pebble"].data, "Turtle's dark shell seam missing"
 assert "blush" in pets["Pickle"].data, "Frog's cheeks missing"
 assert "ivory" in pets["Puffin"].data, "Puffin belly missing"
+assert "Tail" in pets["Spark"].joints, "Fox should retain an articulated tail"
+assert "ivory" in pets["Spark"].data, "Fox cheek and tail tips missing"
+assert "rose" in pets["Snorf"].data, "Dog's little pink tongue disappeared"
+for creature in ("Pickle","Nugget","Swoop","Puffin"):
+    assert "eye" in pets[creature].data, (
+        f"{creature}: tiny black pupils missing from chibi face"
+    )
 
 crops={}
 for crop in CROP_NAMES:
