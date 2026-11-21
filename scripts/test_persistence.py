@@ -102,25 +102,32 @@ local second = ProfileStore.new(service, "test", serialize, "server-uuid-B")
 local third = ProfileStore.new(service, "test", serialize, "server-uuid-C")
 local claimed, restored = first:load(7)
 assert(claimed and restored.coins == 45)
-assert(records.player_7._dwtmLease.token == "server-uuid-A")
+local firstToken = restored._dwtmLease.token
+assert(firstToken:sub(1,#"server-uuid-A") == "server-uuid-A")
+assert(records.player_7._dwtmLease.token == firstToken)
 assert(not second:load(7), "second server must never load writeable duplicate progress")
 assert(second.lastLoadError == "This profile is still open on another server")
-local active = {coins = 151, loaded = true, dirty = true, revision = 1}
+local active = {coins = 151, loaded = true, dirty = true, revision = 1,
+    dataSessionId = firstToken}
 assert(first:save(7, active) and not active.dirty)
-assert(records.player_7.coins == 151 and records.player_7._dwtmLease.token == "server-uuid-A")
+assert(records.player_7.coins == 151 and records.player_7._dwtmLease.token == firstToken)
+assert(not first:load(7), "rapid same-server rejoin must not steal previous visit's lease")
 assert(first:save(7, active), "clean profiles must renew their ownership lease")
 assert(not second:load(7), "refresh must keep the profile locked")
 assert(first:release(7, active))
 assert(records.player_7._dwtmLease == nil, "graceful leave must release the lock")
 claimed, restored = second:load(7)
 assert(claimed and restored.coins == 151)
+local secondToken = restored._dwtmLease.token
+assert(secondToken ~= firstToken)
 active.loaded = true
 active.dirty = true
 active.coins = 999
 active.revision += 1
 assert(not first:save(7, active), "old server must refuse to overwrite fresh owner")
 assert(not active.loaded and records.player_7.coins == 151)
-local successor = {coins = 208, loaded = true, dirty = true, revision = 1}
+local successor = {coins = 208, loaded = true, dirty = true, revision = 1,
+    dataSessionId = secondToken}
 assert(second:save(7, successor) and second:release(7, successor))
 claimed, restored = third:load(7)
 assert(claimed and restored.coins == 208)
@@ -128,7 +135,8 @@ assert(claimed and restored.coins == 208)
 records.player_7._dwtmLease.expiresAt = os.time() - 1
 claimed, restored = first:load(7)
 assert(claimed and restored.coins == 208)
-assert(first:release(7, {loaded = true, revision = 1}))
+assert(first:release(7, {loaded = true, revision = 1,
+    dataSessionId = restored._dwtmLease.token}))
 print("PASS: cross-server acquisition, conflict rejection, lease renewal, release, stale-write protection and timeout recovery")
 print("PASS: unavailable/new/failed loads, no writes from unloaded profiles, save retry, autosave/leave ordering, dirty revisions and serializer recovery")
 '''.replace("MODULE", module)
