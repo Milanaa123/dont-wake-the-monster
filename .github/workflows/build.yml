@@ -78,6 +78,12 @@ jobs:
         shell: bash
         run: python3 scripts/test_persistence.py /tmp/luau/luau
 
+      - name: Rebuild native 3D mesh library from authoritative sculpt sources
+        run: |
+          set -euo pipefail
+          python3 scripts/bake_orchard.py
+          test -s assets/OrchardGeometry.model.json
+
       - name: Build playable-place file
         shell: bash
         run: |
@@ -98,8 +104,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 scripts/bake_orchard.py
-          git diff --exit-code -- assets/OrchardGeometry.model.json
+          # The bake ran BEFORE Rojo, so both Place and Studio kit contain
+          # the same newest authored meshes. Binary JSON is generated output.
           python3 scripts/package_studio.py dist/dont-wake-the-monster.rbxlx dist/StudioKit
           python3 scripts/verify_studio_geometry.py dist/StudioKit
           curl --fail --location --retry 3 https://github.com/lune-org/lune/releases/download/v0.11.1/lune-0.11.1-linux-x86_64.zip -o /tmp/lune.zip
