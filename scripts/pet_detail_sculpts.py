@@ -99,3 +99,83 @@ def sculpt_fluffy_collarette(g, root_y, root_z, tone, count=11):
                (x,root_y,z),
                (x*1.18,root_y-.32-(i%3)*.07,z-.14),
                .12+(i%3)*.019,.055,4,2)
+
+
+def sculpt_sticker_personality(g, name, species):
+    """Original miniature *3-D* props that make pet silhouettes read at mobile size.
+
+    The user's examples are 2-D graphic references; these props translate their
+    soft cheek shapes and recognizable character details into actual meshes.
+    Keep these details tiny so all pets remain under the existing triangle budget.
+    """
+    if species=="kitten":
+        # Curved collar, dangling tiny bell and tiny cheek spots.
+        g.joint("Head",g.joints["Head"][1])
+        g.tube("rose",[(-.58,1.24,-1.04),(-.39,1.16,-1.17),
+                        (0,1.12,-1.24),(.39,1.16,-1.17),(.58,1.24,-1.04)],
+               [.062,.069,.074,.069,.062],7)
+        g.blob("gold",(0,1.06,-1.32),(.15,.15,.105),10,6)
+        g.tube("chocolate",[(-.055,1.01,-1.421),(.04,1.01,-1.421)],
+               [.014,.014],5)
+        for side in (-1,1):
+            g.blob("blush",(side*.73,1.43,-1.16),(.15,.075,.039),9,5)
+    elif name=="Floofle":
+        # A small tapered carrot between the rabbit's front paws.
+        g.joint("Body",(0,0,0))
+        from orchard_sculpt import loft
+        loft(g,"orange",[(0,.63,-1.10,.015,.016),
+                         (0,.74,-1.12,.095,.09),
+                         (0,.97,-1.15,.13,.12),
+                         (0,1.16,-1.18,.105,.10),
+                         (0,1.19,-1.18,.026,.02)],12)
+        for i in range(3):
+            a=2*pi*i/3
+            g.leaf("leaflight",(0,1.18,-1.18),
+                   (sin(a)*.23,1.47,-1.16+cos(a)*.13),.082,.055,5,2)
+        for side in (-1,1):
+            g.blob("ivory",(side*.22,.76,-1.19),(.19,.18,.17),11,7)
+    elif species=="lamb":
+        # Pastel bow on the white fluffy collar, not an imported decal.
+        g.joint("Body",(0,0,0))
+        for side in (-1,1):
+            g.blob("rose",(side*.23,1.47,-1.28),(.27,.18,.10),11,7)
+        g.blob("gold",(0,1.47,-1.36),(.105,.10,.085),10,6)
+        for side in (-1,1):
+            g.leaf("pink",(side*.07,1.42,-1.28),
+                   (side*.18,1.13,-1.27),.09,.025,4,2)
+    elif species=="frog":
+        g.joint("Body",(0,0,0))
+        for side in (-1,1):
+            g.blob("blush",(side*.71,.77,-.72),(.195,.115,.068),11,7)
+            # Three shallow toe nubs instead of cartoon paddle spheres.
+            for toe in range(3):
+                g.blob("leaflight",(side*(1.19+toe*.15),.11,
+                       -.60+toe*.17),(.13,.082,.12),8,5)
+    elif species=="dog":
+        g.joint("Head",g.joints["Head"][1])
+        # Triangular kerchief follows the throat down under the muzzle.
+        g.leaf("brick",(-.55,1.19,-1.17),(.55,1.19,-1.17),.25,.07,5,2)
+        g.leaf("brick",(0,1.21,-1.18),(0,.72,-1.18),.35,.065,5,2)
+        g.blob("gold",(0,1.09,-1.26),(.09,.09,.05),9,5)
+    elif species=="fox":
+        g.joint("Head",g.joints["Head"][1])
+        g.tube("leafdeep",[(-.48,1.25,-1.0),(0,1.14,-1.12),(.49,1.24,-1.0)],
+               [.085,.093,.085],7)
+        g.leaf("leaflight",(.15,1.19,-1.1),(.38,.77,-1.08),.18,.05,5,2)
+        g.leaf("ivory",(.73,1.34,-1.15),(1.02,1.41,-1.13),.16,.06,4,2)
+    elif species=="chick":
+        g.joint("Body",(0,0,0))
+        for side in (-1,1):
+            g.blob("blush",(side*.56,1.29,-.59),(.16,.10,.045),9,6)
+        # Small flower pin on the head, with a matte golden centre.
+        pos=(.30,2.18,-.39)
+        for i in range(5):
+            a=2*pi*i/5
+            g.leaf("ivory",pos,
+                   (pos[0]+.17*cos(a),pos[1]+.18*sin(a),pos[2]-.035),
+                   .08,.025,4,2)
+        g.blob("gold",(pos[0],pos[1],pos[2]-.06),(.065,.06,.04),8,5)
+    elif species=="axolotl":
+        g.joint("Head",g.joints["Head"][1])
+        for side in (-1,1):
+            g.blob("blush",(side*.80,1.19,-1.26),(.20,.095,.05),10,6)
