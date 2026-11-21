@@ -78,24 +78,55 @@ try {
     Capture "01-after-installer.png" | Out-Null
     if (!$studio) { throw "No RobloxStudioBeta.exe found after official install attempt" }
 
-    # The installer creates the EXE before it finishes writing it.
+    # Roblox creates the signed executable before the bootstrapper has
+    # released its file handles. A valid signature alone is NOT readiness.
     $ready = $false
-    $until = (Get-Date).AddSeconds(140)
+    $stableChecks = 0
+    $previousSize = -1
+    $until = (Get-Date).AddSeconds(165)
     do {
-        try {
-            $check = Get-AuthenticodeSignature -LiteralPath $studio
-            $ready = $check.Status -eq 'Valid' -and $check.SignerCertificate.Subject -match 'Roblox' -and
-                ((Get-Process RobloxStudioBeta -ErrorAction SilentlyContinue) -or $process.HasExited)
-        } catch { $ready = $false }
-        if (!$ready) { Start-Sleep -Seconds 3 }
+        $process.Refresh()
+        $installers = @(Get-Process -Name RobloxStudioInstaller, RobloxStudioLauncherBeta -ErrorAction SilentlyContinue)
+        $currentSize = if (Test-Path -LiteralPath $studio) { (Get-Item -LiteralPath $studio).Length } else { 0 }
+        if ($process.HasExited -and $installers.Count -eq 0 -and $currentSize -gt 100000 -and
+            $currentSize -eq $previousSize) {
+            $stableChecks += 1
+        } else {
+            $stableChecks = 0
+        }
+        $previousSize = $currentSize
+        if ($stableChecks -ge 3) {
+            try {
+                $check = Get-AuthenticodeSignature -LiteralPath $studio
+                $ready = $check.Status -eq 'Valid' -and $check.SignerCertificate.Subject -match 'Roblox'
+            } catch { $ready = $false }
+        }
+        if (!$ready) { Start-Sleep -Seconds 5 }
     } while (!$ready -and (Get-Date) -lt $until)
-    if (!$ready) { throw "The Studio installation did not finish with a signed executable." }
+    if (!$ready) {
+        throw "Installer or launcher did not finish: RobloxStudioBeta.exe stayed busy or unsigned."
+    }
     $report.installed = $true
-    Write-Host "Studio found. Launching local .rbxlx place without credentials."
+    Write-Host "Signed Studio installer and launcher finished. Starting local .rbxlx."
     $place = Join-Path $root "dist\dont-wake-the-monster.rbxlx"
     if (!(Test-Path $place)) { throw "The built game .rbxlx does not exist." }
     $args = "--task EditFile --localPlaceFile `"$place`""
-    Start-Process -FilePath $studio -ArgumentList $args -PassThru | Out-Null
+    # Some Windows runners still hold the binary briefly while Defender scans.
+    # Retry only this operation; never change credentials or bypass sign-in.
+    $started = $false
+    $launchDeadline = (Get-Date).AddSeconds(90)
+    do {
+        try {
+            $p = Start-Process -FilePath $studio -ArgumentList $args -PassThru
+            $started = $true
+        } catch [System.ComponentModel.Win32Exception] {
+            $errorText = $_.Exception.Message
+            if ($errorText -notmatch 'used by another process|being used|access the file|in use') { throw }
+            Write-Host "Studio EXE temporarily locked by installer or security scanner; retrying."
+            Start-Sleep -Seconds 5
+        }
+    } while (!$started -and (Get-Date) -lt $launchDeadline)
+    if (!$started) { throw "Studio executable remained locked after installation completed." }
     $report.studio_launched = $true
 
     Start-Sleep -Seconds 18
