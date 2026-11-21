@@ -402,9 +402,11 @@ def sculpt_species(name, base, second, S):
                 a=i*2*pi/6
                 ell("gold",(sin(a)*1.08,1.82+cos(a)*.82,.12),
                     (.12,.12,.12),10,6)
-    # The supplied sticker references define the character-language only.
-    # Produce actual 3D geometry; preserve every gameplay pet and its joints.
+    # Translate the supplied sticker art direction into original 3D shapes,
+    # but retain existing species, unique personalities and articulated joints.
     sculpt_sticker_personality(g, name, k)
+    from storybook_family_sculpts import add_family_details
+    add_family_details(g, name, k, base, second)
     if "Head" in g.joints:
         g.joint("Head",g.joints["Head"][1])
     else:
