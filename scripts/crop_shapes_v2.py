@@ -80,7 +80,9 @@ def sculpt_crop(name, stage, S):
       "mushroom" if name in ("Moonshroom","NeonMushroom") else "fantasy")
     if typ=="berry":
         # A spreading carpet of strawberry trifoliate leaves; fruit under the canopy.
-        n=6 if stage==3 else 5 if stage==2 else 3
+        # The reference shows a full leafy carpet with red fruit hanging
+        # between overlapping trifoliate crowns, not a few isolated berries.
+        n=9 if stage==3 else 6 if stage==2 else 3
         for i in range(n):
             a=i*2.39996
             ox=sin(a)*1.11; oz=cos(a)*1.00
@@ -96,11 +98,20 @@ def sculpt_crop(name, stage, S):
                     leaflet(g,base,pi/2-axis+k*.76,(.52 if k else .7)*h,.20*h,
                             lit if (i+j+k)%4==0 else leaf)
             if stage>=2:
-                fruit=(ox*.95+sin(a+1)*.33,(.30+(.12 if i%2 else 0))*h,oz*.94-.22)
-                stem(top,(fruit[0],fruit[1]+.14*h,fruit[2]),.033)
-                strawberry_shape(fruit,h,
-                    "red" if name=="Berry" else "sky",stage==3)
-                cap(fruit,h)
+                # Two naturally staggered ripe berries on selected runners
+                # form a much denser patch without an expensive extra rosette.
+                berries=2 if stage==3 and i%2==0 else 1
+                for j in range(berries):
+                    fruit=(ox*.95+sin(a+1+j*.74)*(.33+.11*j),
+                           (.30+(.12 if i%2 else 0)-.09*j)*h,
+                           oz*.94-.22-.22*j)
+                    stem(top,(fruit[0],fruit[1]+.14*h,fruit[2]),.027)
+                    strawberry_shape(fruit,h*(.90 if j else 1),
+                        "red" if name=="Berry" else "sky",stage==3)
+                    cap(fruit,h*(.90 if j else 1))
+                if stage==3 and i%3==0:
+                    flower((top[0]-.15,top[1]+.06,top[2]-.17),
+                           scale=.43)
             elif i%2==1:
                 flower((top[0],top[1]+.07,top[2]-.18),scale=.55)
         if stage == 3:
@@ -127,12 +138,21 @@ def sculpt_crop(name, stage, S):
             if stage>=2 and (stage==3 or i==1):
                 q=(p[0],(.51 if stage==3 else .39)*h,
                    p[2])
-                melon(q,(.69 if stage==3 else .49)*h,
-                      "leaflight" if name=="LavaMelon" else "mint")
+                radius=(.69 if stage==3 else .49)*h
+                melon(q,radius,"leaflight" if name=="LavaMelon" else "mint")
+                # Broad, lobed leaf crown belongs to the physical melon;
+                # this follows the stalk rather than floating over the rind.
+                if stage==3:
+                    crown=(q[0],q[1]+radius*.87,q[2])
+                    for j in range(5):
+                        b=j*2*pi/5+a*.23
+                        lf(lit if j%2==0 else leaf,crown,
+                           (crown[0]+sin(b)*.56*h,crown[1]+.08*h,
+                            crown[2]+cos(b)*.49*h),.24*h)
             elif i==0:
                 flower((p[0],.38*h,p[2]),"dandelion",.5)
     elif typ=="root":
-        count=5 if stage==3 else 3
+        count=7 if stage==3 else 3
         root_col="orange" if name=="Carrot" else "pink" if name=="RainbowRadish" else "cream"
         for i in range(count):
             a=i*2.39996
@@ -142,7 +162,7 @@ def sculpt_crop(name, stage, S):
                 g.tube(root_col,[(p[0],.60*h,p[2]),
                     (p[0],.18,p[2]),(p[0],-.24*h,p[2])],
                     [.23*h,.19*h,.019],10)
-            for j in range(5 if stage==3 else 3):
+            for j in range(7 if stage==3 else 3):
                 b=j*2*pi/5+a
                 top=(p[0]+sin(b)*.48*h,.82*h+(j%2)*.16*h,
                      p[2]+cos(b)*.43*h)
@@ -152,7 +172,9 @@ def sculpt_crop(name, stage, S):
                         (top[0]+sin(b+k)*.23*h,top[1]+.27*h,
                          top[2]+cos(b+k)*.21*h),.17*h)
     elif typ=="grain":
-        n=7 if stage==3 else 4
+        # The reference has a dense pale wheat cluster with slight height
+        # variation, not a small row of seven sticks.
+        n=10 if stage==3 else 5 if stage==2 else 3
         for i in range(n):
             a=i*2.39996
             p=(sin(a)*.95,.05,cos(a)*.95)
