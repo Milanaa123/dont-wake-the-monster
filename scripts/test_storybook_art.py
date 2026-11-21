@@ -86,7 +86,14 @@ for tree, ripe_material in (
     ("ThunderPlum","violet"),
 ):
     young, growing, ripe = (crops[tree,stage] for stage in (1,2,3))
-    assert ripe_material not in young.data, f"{tree}: fruit must not exist at sprout stage"
+    # A pear blossom has a tiny GOLD pollen centre even before it fruits:
+    # require more golden *surface* in ripe pears, not an absence of gold.
+    if tree=="HoneyPear":
+        assert len(ripe.data["gold"][0]) > len(young.data["gold"][0]), (
+            "Honey pear ripe fruit was not added beyond blossom pollen"
+        )
+    else:
+        assert ripe_material not in young.data, f"{tree}: ripe fruit exists at sprout stage"
     assert "leaflight" in growing.data, f"{tree}: juvenile green fruit missing"
     assert ripe_material in ripe.data, f"{tree}: ripe fruit missing its unique pigment"
     assert young.count() < ripe.count(), f"{tree}: maturity lacks geometry progression"
