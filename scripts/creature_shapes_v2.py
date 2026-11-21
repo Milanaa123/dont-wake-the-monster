@@ -151,14 +151,23 @@ def sculpt_species(name, base, second, S):
             # sculpted muzzle lobes already and should not get a third
             # bulbous oval pasted across its nose and mouth.
             if k=="fox":
-                ell("ivory",(0,1.45,-1.36),(.48,.27,.28),15,9)
+                # Soft white chin and pointed cheek tufts instead of two
+                # overlapping round masks stuck onto a red fox head.
+                ell("ivory",(0,1.40,-1.37),(.37,.18,.18),14,8)
+                for side in (-1,1):
+                    lf("ivory",(side*.37,1.46,-1.26),
+                       (side*.88,1.21,-1.17),.17,.032)
             g.joint("Tail",(0,.85,1.35))
             tube(base,[(.24,.82,1.39),(.58,1.05,1.87),
                 (.87,1.69,2.02),(.76,2.16,2.09)],[.27,.29,.22,.06])
             if k=="fox":
-                ell("ivory",(.76,2.10,2.04),(.24,.32,.23),12,7)
+                # Cream tip follows the articulated tail, not the head.
+                for j in range(5):
+                    a=j*2*pi/5
+                    lf("ivory",(.76,2.01,2.05),
+                       (.75+sin(a)*.20,2.29+cos(a)*.20,2.16),
+                       .16,.02)
                 g.joint("Head",g.joints["Head"][1])
-                ell("ivory",(0,1.41,-1.41),(.63,.27,.36))
         elif k=="dog":
             for side in (-1,1):
                 ell(second,(side*.99,2.08,-.26),(.38,.70,.34),15,10)
@@ -171,7 +180,10 @@ def sculpt_species(name, base, second, S):
             if name=="Snorf":
                 for side in (-1,1):
                     ell("chocolate",(side*.77,1.80,-1.17),(.27,.22,.08),12,7)
-                ell("chocolate",(0,1.55,-1.68),(.34,.21,.12))
+                ell("chocolate",(0,1.55,-1.68),(.28,.16,.10))
+                # A tiny tongue below the nose gives the dog a unique
+                # playful smile without a flat facial expression decal.
+                ell("rose",(0,1.29,-1.78),(.10,.13,.045),10,6)
         elif k=="bunny":
             sculpt_bunny_ears(g, base)
             ell("white",(0,.96,1.46),(.38,.39,.40))
