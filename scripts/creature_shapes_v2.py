@@ -17,6 +17,9 @@ SPECIES = {
 }
 
 def sculpt_species(name, base, second, S):
+    from pet_detail_sculpts import (
+        sculpt_bunny_ears, sculpt_fluffy_collarette, sculpt_kitten_face,
+    )
     g=S("Pet_"+name)
     k=SPECIES[name]
     def side_joint(label,side,pivot,parent="Body"):
@@ -111,9 +114,12 @@ def sculpt_species(name, base, second, S):
         g.joint("Head",(0,hc[1]-ry*.62,hc[2]+rz*.32))
         face(*hc,rx,ry,rz,es,smile=True,nose=k not in ("salamander","dinosaur"))
         if k in ("kitten","fox"):
+            if k=="kitten":
+                sculpt_kitten_face(g, base, second)
             for side in (-1,1):
-                tip=(side*1.11,3.06,-.55)
-                ear(side,(side*.72,2.29,-.48),tip,.32)
+                if k=="fox":
+                    tip=(side*1.11,3.06,-.55)
+                    ear(side,(side*.72,2.29,-.48),tip,.32)
                 for t in range(3):
                     y=1.58+t*.105
                     tube("ivory",[(side*.34,y,-1.33),(side*.89,y-.06,-1.49),
@@ -141,8 +147,7 @@ def sculpt_species(name, base, second, S):
                     ell("chocolate",(side*.77,1.80,-1.17),(.27,.22,.08),12,7)
                 ell("chocolate",(0,1.55,-1.68),(.34,.21,.12))
         elif k=="bunny":
-            for side in (-1,1):
-                ear(side,(side*.49,2.28,-.36),(side*.64,4.32,-.44),.29)
+            sculpt_bunny_ears(g, base)
             ell("white",(0,.96,1.46),(.38,.39,.40))
             for side in (-1,1):
                 ell("ivory",(side*.40,1.34,-1.33),(.42,.32,.28),14,9)
@@ -160,6 +165,7 @@ def sculpt_species(name, base, second, S):
                 else:
                     ell(second,(side*.96,2.28,-.27),(.38,.37,.41))
             if k=="lamb":
+                sculpt_fluffy_collarette(g, 1.50, -.95, "ivory", 11)
                 for i in range(9):
                     a=i*2*pi/9
                     ell("cream",(sin(a)*.77,2.55+cos(a)*.17,-.31+cos(a)*.27),
