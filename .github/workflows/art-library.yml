@@ -9,6 +9,7 @@ on:
       - "scripts/storybook_crop_blooms.py"
       - "scripts/storybook_fruit_trees.py"
       - "scripts/storybook_vegetables.py"
+      - "scripts/storybook_root_crops.py"
       - "scripts/test_storybook_art.py"
       - "scripts/orchard_sculpt.py"
       - "scripts/orchard_varieties.py"
