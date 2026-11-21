@@ -39,7 +39,7 @@ def sculpt_crop(name, stage, S):
         cx,cy,cz=p
         heights=[-.37,-.30,-.15,.10,.31,.37]
         radii=[.025,.19,.285,.31,.19,.025]
-        sides=14
+        sides=12
         for band in range(len(heights)-1):
             for j in range(sides):
                 a=2*pi*j/sides
@@ -57,7 +57,7 @@ def sculpt_crop(name, stage, S):
                         if heights[i]<=yr<=heights[i+1])
                 fraction=(yr-heights[hi])/(heights[hi+1]-heights[hi])
                 rad=radii[hi]+(radii[hi+1]-radii[hi])*fraction
-                count = (6,9,10,7)[row]
+                count = (5,7,8,5)[row]
                 for j in range(count):
                     a=(j+.5*(row%2))*2*pi/count
                     x=cx+sin(a)*(rad+.004)*s
@@ -82,7 +82,7 @@ def sculpt_crop(name, stage, S):
         # A spreading carpet of strawberry trifoliate leaves; fruit under the canopy.
         # The reference shows a full leafy carpet with red fruit hanging
         # between overlapping trifoliate crowns, not a few isolated berries.
-        n=9 if stage==3 else 6 if stage==2 else 3
+        n=7 if stage==3 else 5 if stage==2 else 3
         for i in range(n):
             a=i*2.39996
             ox=sin(a)*1.11; oz=cos(a)*1.00
@@ -100,7 +100,7 @@ def sculpt_crop(name, stage, S):
             if stage>=2:
                 # Two naturally staggered ripe berries on selected runners
                 # form a much denser patch without an expensive extra rosette.
-                berries=2 if stage==3 and i%2==0 else 1
+                berries=2 if stage==3 and i%4==0 else 1
                 for j in range(berries):
                     fruit=(ox*.95+sin(a+1+j*.74)*(.33+.11*j),
                            (.30+(.12 if i%2 else 0)-.09*j)*h,
@@ -109,7 +109,7 @@ def sculpt_crop(name, stage, S):
                     strawberry_shape(fruit,h*(.90 if j else 1),
                         "red" if name=="Berry" else "sky",stage==3)
                     cap(fruit,h*(.90 if j else 1))
-                if stage==3 and i%3==0:
+                if stage==3 and i%7==0:
                     flower((top[0]-.15,top[1]+.06,top[2]-.17),
                            scale=.43)
             elif i%2==1:
