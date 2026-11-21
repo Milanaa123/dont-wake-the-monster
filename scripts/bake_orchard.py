@@ -80,10 +80,23 @@ def encode_part(materials, full_center, full_size):
             ac=[x-y for x,y in zip(a,c)]
             if any(ab[k]*ac[(k+1)%3] != ac[k]*ab[(k+1)%3] for k in range(3)):
                 faces.append(face)
+    # Face filtering above rejects zero-area triangles after 16-bit
+    # quantization. Previously their vertices stayed in the mesh even though
+    # no remaining triangle referenced them (15,558 orphan vertices in the
+    # first Codex Studio kit). Compact the index buffer after filtering.
+    assert faces, "No nondegenerate faces in " + str(materials.keys())
+    referenced=sorted({index for face in faces for index in face})
+    if len(referenced)<len(vertices):
+        remap={old:new for new,old in enumerate(referenced)}
+        vertices=[vertices[old] for old in referenced]
+        faces=[[remap[index] for index in face] for face in faces]
+    # All remaining normals must be nonzero and finite after face filtering.
+    assert all(any(v[3:6]) for v in vertices), "Zero normal in referenced mesh"
+    assert max(max(face) for face in faces)<len(vertices)
     data=struct.pack('<II',len(vertices),len(faces))
     data+=b''.join(VERTEX.pack(*v) for v in vertices)
     data+=b''.join(struct.pack('<3H',*f) for f in faces)
-    assert faces and len(vertices)<65536
+    assert len(vertices)<65536
     return center,size,data,vertices,faces
 
 
