@@ -113,6 +113,22 @@ for tree, ripe_material in (
         f"{tree}: tree crown does not grow across stages"
     )
 
+# Distinct storybook root vegetables: no mature root color on a sprout,
+# recognizable color and tapered botanical geometry when harvestable.
+for crop, color in (
+    ("Carrot", "orange"),
+    ("RainbowRadish", "pink"),
+    ("MarshmallowRoot", "cream"),
+):
+    assert color not in crops[crop,1].data, (
+        f"{crop}: a seedling already appears harvestable"
+    )
+    assert color in crops[crop,3].data, (
+        f"{crop}: harvestable root lacks its recognizable pigment"
+    )
+    assert "leafdeep" in crops[crop,2].data
+    assert crops[crop,3].count() > crops[crop,1].count()
+
 # Corn must look like *corn*, with ripened golden kernels and husks,
 # instead of inheriting the pale wheat ear that used to share its generator.
 assert "gold" not in crops["Corn",1].data
