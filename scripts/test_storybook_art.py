@@ -113,6 +113,23 @@ for tree, ripe_material in (
         f"{tree}: tree crown does not grow across stages"
     )
 
+# Corn must look like *corn*, with ripened golden kernels and husks,
+# instead of inheriting the pale wheat ear that used to share its generator.
+assert "gold" not in crops["Corn",1].data
+assert "gold" not in crops["Corn",2].data
+assert "gold" in crops["Corn",3].data
+assert "straw" in crops["Corn",3].data
+assert "leafdeep" in crops["Corn",2].data
+assert crops["Corn",3].count()>crops["Corn",1].count()
+
+# Hanging, scalloped bell peppers go green -> ripe orange; the old tomato
+# branch made the two crops almost indistinguishable when viewed from above.
+assert "orange" not in crops["Pepper",1].data
+assert "orange" not in crops["Pepper",2].data
+assert "leaflight" in crops["Pepper",2].data
+assert "orange" in crops["Pepper",3].data
+assert crops["Pepper",3].count()>crops["Pepper",1].count()
+
 print(
     f"PASS: {len(pets)} original articulated baby-animal meshes and "
     f"{len(crops)} botanical growth assets; shape identity, readable 3D "
