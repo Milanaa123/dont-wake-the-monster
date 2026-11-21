@@ -106,10 +106,18 @@ def sculpt_crop(name, stage, S):
                            (.30+(.12 if i%2 else 0)-.09*j)*h,
                            oz*.94-.22-.22*j)
                     stem(top,(fruit[0],fruit[1]+.14*h,fruit[2]),.027)
+                    # A young berry is visibly pale; only the final stage
+                    # has the saturated color and its individual yellow seeds.
+                    ripened=stage==3
+                    fruit_color=("red" if name=="Berry" else "sky") if ripened else "pink"
                     strawberry_shape(fruit,h*(.90 if j else 1),
-                        "red" if name=="Berry" else "sky",stage==3)
+                        fruit_color,ripened)
                     cap(fruit,h*(.90 if j else 1))
-                if stage==3 and i%7==0:
+                if stage==2 and i%2==0:
+                    # Intermediate plant still blossoms while fruit sets.
+                    flower((top[0]-.15,top[1]+.06,top[2]-.17),
+                           scale=.45)
+                elif stage==3 and i%7==0:
                     flower((top[0]-.15,top[1]+.06,top[2]-.17),
                            scale=.43)
             elif i%2==1:
@@ -257,7 +265,11 @@ def sculpt_crop(name, stage, S):
                     y=.65*h+k*.44*h
                     fruit=(top[0]+sin(a+k)*.31,y,
                             top[2]-.31+cos(a+k)*.12)
-                    col="red" if name=="Tomato" else "orange" if name=="Pepper" else "lilac"
+                    # Green immature tomatoes, then soft ripe red fruits,
+                    # so the player's garden visually communicates progress.
+                    col=("leaflight" if stage==2 and name=="Tomato" else
+                         "red" if name=="Tomato" else
+                         "orange" if name=="Pepper" else "lilac")
                     ell(col,fruit,(.28*h,.30*h if name!="Pepper" else .46*h,.30*h),14,9)
                     cap(fruit,h*.65)
             else:flower(top,scale=.48)
