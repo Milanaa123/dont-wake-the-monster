@@ -3,6 +3,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DataStoreService = game:GetService("DataStoreService")
+local HttpService = game:GetService("HttpService")
 local AnalyticsService = game:GetService("AnalyticsService")
 local RunService = game:GetService("RunService")
 local Debris = game:GetService("Debris")
@@ -32,7 +33,8 @@ local remote = Instance.new("RemoteEvent")
 remote.Name = "MonsterRemote"
 remote.Parent = ReplicatedStorage
 
-local persistence = ProfileStore.new(DataStoreService, Config.DATASTORE_NAME, Progression.serialize)
+local persistence = ProfileStore.new(DataStoreService, Config.DATASTORE_NAME,
+    Progression.serialize, HttpService:GenerateGUID(false))
 local rng = Random.new()
 local noise = 0
 local phase = "SLEEP"
@@ -323,10 +325,24 @@ local function onPlayerAdded(player: Player)
         warn("DWTM: data load unavailable for " .. player.UserId .. ". Progress is session-only.")
     end
     loading[player] = nil
-    if shuttingDown or player.Parent ~= Players then return end
+    if shuttingDown or player.Parent ~= Players then
+        if ok then persistence:release(player.UserId, profile) end
+        return
+    end
     -- Publish only fully loaded state. Remotes/timers cannot mutate a temporary
     -- starter garden while GetAsync yields and then overwrite or lose progress.
     profiles[player] = profile
+    if not ok then
+        -- Make it unmistakable that session-only progress is not permanent.
+        -- This is especially important if the account is active in another
+        -- Roblox server and an atomic lease correctly denied this join.
+        remote:FireClient(player, {
+            type = "notice",
+            text = "SAVE UNAVAILABLE: " .. tostring(persistence.lastLoadError or "Please rejoin later")
+                .. ". Progress in this visit will not be saved.",
+            color = Color3.fromRGB(255, 164, 148),
+        })
+    end
     onceMetric(player, profile, "JoinedGame")
     task.delay(600, function()
         if profiles[player] == profile then metric(player, "StayedTenMinutes") end
@@ -415,7 +431,13 @@ local function onPlayerRemoving(player: Player)
     local slot = farmOfPlayer[player]
     if slot then farmSlots[slot] = nil end
     farmOfPlayer[player] = nil
-    persistence:save(player.UserId, profile)
+    if persistence:save(player.UserId, profile) then
+        persistence:release(player.UserId, profile)
+    else
+        -- Retain the lease until expiry rather than allowing a second server
+        -- to join while an unsaved snapshot may still exist in memory.
+        warn("DWTM: final save failed; lease will expire for " .. player.UserId)
+    end
     closingProfiles[player] = nil
 end
 
