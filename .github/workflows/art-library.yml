@@ -7,6 +7,7 @@ on:
       - "scripts/pet_detail_sculpts.py"
       - "scripts/storybook_family_sculpts.py"
       - "scripts/storybook_crop_blooms.py"
+      - "scripts/storybook_fruit_trees.py"
       - "scripts/test_storybook_art.py"
       - "scripts/orchard_sculpt.py"
       - "scripts/orchard_varieties.py"
