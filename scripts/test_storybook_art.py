@@ -70,6 +70,16 @@ assert "pink" in crops["Berry",2].data
 assert "red" in crops["Berry",3].data
 assert "straw" in crops["Berry",3].data
 assert "rind" in crops["LavaMelon",3].data
+for melon in ("LavaMelon", "AuroraMelon"):
+    assert "dandelion" in crops[melon,1].data, (
+        f"{melon}: yellow blossoms missing from seedlings"
+    )
+    assert "leafdeep" in crops[melon,2].data, (
+        f"{melon}: mature winding green vine missing"
+    )
+    assert crops[melon,3].count() > crops[melon,1].count(), (
+        f"{melon}: ripening should add visible striped fruit geometry"
+    )
 assert "chocolate" in crops["Sunflower",3].data, "Sunflower seed disks gone"
 assert "gold" in crops["MoonLotus",3].data, "Lotus centres missing"
 assert "lilac" in crops["Moonshroom",3].data, "Bell mushroom caps missing"
