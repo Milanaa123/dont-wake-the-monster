@@ -17,6 +17,7 @@ function ProfileStore.new(service: any, name: string, serialize: (any) -> any,
         saving = {},
         serverToken = serverToken,
         lastLoadError = nil,
+        claims = {},
     }, ProfileStore)
     local ok, result = pcall(function() return service:GetDataStore(name) end)
     if ok then
@@ -27,15 +28,15 @@ function ProfileStore.new(service: any, name: string, serialize: (any) -> any,
     return self
 end
 
-local function ours(self: any, snapshot: any): boolean
+local function ours(self: any, snapshot: any, token: string?): boolean
     return type(snapshot) == "table"
         and type(snapshot[LEASE_FIELD]) == "table"
-        and snapshot[LEASE_FIELD].token == self.serverToken
+        and snapshot[LEASE_FIELD].token == (token or self.serverToken)
 end
 
-local function withLease(self: any, state: any): any
+local function withLease(self: any, state: any, token: string): any
     local saved = table.clone(state)
-    saved[LEASE_FIELD] = {token = self.serverToken, expiresAt = os.time() + LEASE_SECONDS}
+    saved[LEASE_FIELD] = {token = token, expiresAt = os.time() + LEASE_SECONDS}
     return saved
 end
 
@@ -53,26 +54,31 @@ function ProfileStore.load(self: any, userId: number): (boolean, any)
         if not ok then self.lastLoadError = tostring(result) end
         return ok, if ok then result else nil
     end
+    -- Distinct visit tokens also protect quick disconnect/rejoin on the same
+    -- Roblox server while the first visit's last UpdateAsync is still yielding.
+    local claim = (self.claims[userId] or 0) + 1
+    self.claims[userId] = claim
+    local token = self.serverToken .. ":" .. tostring(userId) .. ":" .. tostring(claim)
     local locked = false
     local ok, record = pcall(function()
         return self.store:UpdateAsync(key, function(previous: any)
             local data = if type(previous) == "table" then previous else {}
             local lease = data[LEASE_FIELD]
-            if type(lease) == "table" and lease.token ~= self.serverToken
+            if type(lease) == "table" and lease.token ~= token
                 and type(lease.expiresAt) == "number"
                 and lease.expiresAt > os.time() then
                 locked = true
                 return nil
             end
             locked = false
-            return withLease(self, data)
+            return withLease(self, data, token)
         end)
     end)
     if not ok then
         self.lastLoadError = "DataStore load/lease failed: " .. tostring(record)
         return false, nil
     end
-    if locked or not ours(self, record) then
+    if locked or not ours(self, record, token) then
         self.lastLoadError = "This profile is still open on another server"
         return false, nil
     end
@@ -95,13 +101,13 @@ function ProfileStore.save(self: any, userId: number, profile: any): boolean
         local snapshot = if profile.dirty then self.serialize(profile) else nil
         self.store:UpdateAsync("player_" .. userId, function(previous: any)
             if self.serverToken then
-                if not ours(self, previous) then
+                if not ours(self, previous, profile.dataSessionId) then
                     lostLease = true
                     return nil
                 end
                 lostLease = false
                 wrote = true
-                return withLease(self, snapshot or previous)
+                return withLease(self, snapshot or previous, profile.dataSessionId)
             end
             wrote = true
             return snapshot
@@ -129,7 +135,7 @@ function ProfileStore.release(self: any, userId: number, profile: any): boolean
     local owned = false
     local ok, err = pcall(function()
         self.store:UpdateAsync("player_" .. userId, function(previous: any)
-            if not ours(self, previous) then return nil end
+            if not ours(self, previous, profile.dataSessionId) then return nil end
             owned = true
             local nextState = table.clone(previous)
             nextState[LEASE_FIELD] = nil
