@@ -13,7 +13,7 @@ def blossom(g, crop, center, maturity):
     if crop=="Sunflower":
         petals=12
         petalColor="dandelion"
-        centerColor="chocolate"
+        centerColor="bark"  # warm honey-brown, not an oversized black disk
         tipRadius=.61*maturity
         width=.19*maturity
     elif crop=="MoonLotus":
@@ -66,8 +66,8 @@ def blossom(g, crop, center, maturity):
         for i in range(10):
             a=2*pi*i/10
             r=.145*maturity*(.7 if i%2 else 1.)
-            g.blob("ochre",(x+cos(a)*r,y+sin(a)*r,z-.255),
-                   (.029*maturity,.029*maturity,.018*maturity),7,4)
+            g.blob("chocolate",(x+cos(a)*r,y+sin(a)*r,z-.255),
+                   (.027*maturity,.027*maturity,.013*maturity),7,4)
     elif crop=="Starbloom":
         g.blob("gold",(x,y,z-.27),(.082*maturity,.075*maturity,.025*maturity),10,6)
 
