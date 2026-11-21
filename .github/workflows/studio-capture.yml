@@ -1,4 +1,4 @@
-name: Experimental real Studio capture (Windows) # Retry after discovering alternate install path
+name: Experimental real Studio capture (Windows) # Bootstrapper race retry, 2026-11-21
 
 on:
   push:
