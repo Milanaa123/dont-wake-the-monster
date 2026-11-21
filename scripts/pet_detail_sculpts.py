@@ -33,12 +33,8 @@ def sculpt_kitten_face(g, base, second):
     for side in (-1, 1):
         g.blob("ivory", (side*.22, 1.43, -1.395),
                (.305, .225, .218), 13, 8)
-        # Almond-like eye crease has actual width and volume.
-        g.tube("chocolate", [
-            (side*.23, 1.91, -1.360),
-            (side*.44, 2.005, -1.388),
-            (side*.67, 1.93, -1.325),
-        ], [.024, .028, .014], 6)
+        # No black brow ridges: at game-camera scale they looked angry.
+        # Tiny bead eyes already give the soft, friendly sticker expression.
         # Cheek ruff has pointed individual clumps, not sphere tufts.
         for j in range(4):
             y=1.37 + j*.13
