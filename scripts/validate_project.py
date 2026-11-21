@@ -51,6 +51,7 @@ required = [
     "src/client/PetDiary.client.luau",
     "src/server/RescueObjective.luau",
     "src/client/HowToPlay.client.luau",
+    "src/client/FirstMinuteGuide.client.luau",
     "src/shared/PetAffection.luau",
     "src/client/PetCare.client.luau",
 ]
@@ -512,3 +513,26 @@ assert '"PaintedOrchardLeaf"' in read("src/client/NativeGardenWind.client.luau")
 assert 'ReferenceMeshLibrary.applyOrchardTree(scenery, index, position)' in world
 assert 'orb(scenery, "FluffyCanopy"' not in world, "Old giant sphere trees remain"
 print("OK: standalone painterly citrus fallback integrated without 3D import")
+
+# First-minute contextual onboarding must use authoritative SERVER snapshots,
+# not client clicks or an invented badge awarding itself progress.
+first_guide = read("src/client/FirstMinuteGuide.client.luau")
+for marker in ('event.type == "collection"', 'event.type == "garden"',
+               'event.type == "state"', 'feedCount == 0',
+               'elseif not planted and not harvested', 'elseif not harvested',
+               'phase == "AWAKE"', 'tutorialSeen', 'finished = true'):
+    assert marker in first_guide, f"Introductory playable objectives missing: {marker}"
+assert 'remote:FireServer(' not in first_guide, "Client onboarding must not award itself prizes"
+print("OK: unobtrusive mobile-first onboarding based on real game progress")
+
+# Prevent two live Roblox servers from overwriting the same persistent profile.
+profile_store = read("src/server/ProfileStore.luau")
+for marker in ('function ProfileStore.load(', 'function ProfileStore.save(',
+               'function ProfileStore.release(', 'LEASE_SECONDS = 240',
+               'lease.expiresAt > os.time()', 'if not ours(self, previous) then',
+               'profile.loaded = false', 'self.store:UpdateAsync('):
+    assert marker in profile_store, f"Cross-server DataStore safeguards missing: {marker}"
+assert 'HttpService:GenerateGUID(false)' in server, "Every server must use a unique lease token"
+assert 'persistence:release(player.UserId, profile)' in server
+assert 'if persistence:save(player.UserId, profile) then' in server
+print("OK: atomic DataStore session lease and safe final-release integration")
