@@ -49,24 +49,8 @@ def variety(g, name, stage):
                     g.quad("mint" if t>.6 else "leaflight" if i%3==0 else "leaf",
                            grid[j][k],grid[j+1][k],grid[j+1][k+1],grid[j][k+1])
     elif name in ("HoneyPear","CaramelApple","ThunderPlum"):
-        stalk([(0,0,0),(.08,.62*scale,0),(-.06,1.6*scale,.08)],.12*scale,"wood")
-        for i in range(3+stage):
-            a=i*2.39996
-            tip=(.87*scale*cos(a),(1.32+i*.09)*scale,.83*scale*sin(a))
-            stalk([(0,.68*scale,0),(tip[0]*.6,tip[1]-.22,tip[2]*.6),tip],.065*scale,"bark")
-            for j in range(4): leaf(tip,a+j*1.59,.55*scale,.19*scale,"leaflight" if j%3==0 else "leaf")
-            if stage<2: continue
-            x,y,z=tip
-            r=(.29 if stage==3 else .17)
-            y-=r*1.1
-            if name=="HoneyPear":
-                loft(g,"gold",[(x,y-r,z,.07*r,.06*r),(x,y-.64*r,z,.76*r,.75*r),
-                    (x,y-.26*r,z,1.02*r,.96*r),(x,y+.22*r,z,.86*r,.78*r),
-                    (x,y+.78*r,z,.41*r,.38*r),(x+.03,y+r,z,.19*r,.18*r)],14)
-            else:
-                g.blob("brick" if name=="CaramelApple" else "violet",(x,y,z),
-                       (r,r*(.86 if name=="CaramelApple" else 1.18),r*.90),14,8)
-            stalk([(x,y+.84*r,z),(x+.04,tip[1]+.03,z)],.031,"bark")
+        from storybook_fruit_trees import sculpt_dwarf_fruit_tree
+        sculpt_dwarf_fruit_tree(g, name, stage)
     elif name in ("JellyCactus","Dragonfruit"):
         for i in range(2+stage):
             a=i*2.39996
