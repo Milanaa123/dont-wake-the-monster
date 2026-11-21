@@ -141,8 +141,12 @@ def sculpt_species(name, base, second, S):
                     ear(side,(side*.72,2.29,-.48),tip,.32)
                 for t in range(3):
                     y=1.58+t*.105
-                    tube("ivory",[(side*.34,y,-1.33),(side*.89,y-.06,-1.49),
-                        (side*1.33,y+(t-1)*.12,-1.40)],[.019,.015,.009])
+                    # Fine matte whiskers should read as whiskers, not
+                    # floating white blades crossing the whole face.
+                    tube("chocolate",[(side*.34,y,-1.42),
+                        (side*.74,y-.035,-1.49),
+                        (side*1.09,y+(t-1)*.07,-1.40)],
+                        [.010,.007,.003])
             # Fox gets a broad white mask; kitten has two individually
             # sculpted muzzle lobes already and should not get a third
             # bulbous oval pasted across its nose and mouth.
@@ -171,8 +175,10 @@ def sculpt_species(name, base, second, S):
         elif k=="bunny":
             sculpt_bunny_ears(g, base)
             ell("white",(0,.96,1.46),(.38,.39,.40))
+            # The rabbit's face stays a single soft plush surface; the
+            # original giant cheek balls hid the small sticker-style mouth.
             for side in (-1,1):
-                ell("ivory",(side*.40,1.34,-1.33),(.42,.32,.28),14,9)
+                ell("blush",(side*.57,1.34,-1.20),(.17,.085,.032),9,6)
         elif k=="ferret":
             for side in (-1,1):
                 ell(second,(side*.63,1.94,-.64),(.32,.38,.31),12,7)
@@ -287,12 +293,15 @@ def sculpt_species(name, base, second, S):
             lf("pink",(0,.88,1.69),(0,1.04,2.75),.44)
         elif k=="turtle":
             ell(base,(0,.46,.68),(.84,.36,1.02),19,12)
-            ell("leafdeep",(0,1.10,.45),(1.28,.99,1.37),24,15)
-            ell(second,(0,1.83,.42),(.83,.22,.94),16,9)
+            # Lower, more compact carapace: the baby turtle's little face
+            # should lead the silhouette rather than vanish under a giant
+            # dark green ball. Pattern is bound to the same original body rig.
+            ell("leafdeep",(0,.95,.78),(1.13,.70,1.18),23,14)
+            ell(second,(0,1.52,.78),(.82,.15,.88),16,9)
             for i in range(8):
                 a=i*2*pi/8
-                ell("leaflight",(sin(a)*.78,1.69, .42+cos(a)*.88),
-                    (.32,.09,.34),12,7)
+                ell("leaflight",(sin(a)*.70,1.53,.78+cos(a)*.74),
+                    (.25,.065,.27),11,7)
             g.joint("Head",(0,.84,-.64))
             face(0,.95,-1.10,.64,.55,.65,.29)
             for side in (-1,1):
