@@ -80,10 +80,24 @@ def encode_part(materials, full_center, full_size):
             ac=[x-y for x,y in zip(a,c)]
             if any(ab[k]*ac[(k+1)%3] != ac[k]*ab[(k+1)%3] for k in range(3)):
                 faces.append(face)
+    # Degenerate triangles are removed above after 1/2048-stud rounding,
+    # but their vertices were previously retained in the runtime packet.
+    # Some unused pole vertices have (0,0,0) normals; client/server mesh
+    # creation would normalize them to NaN in OrchardGeometry.surface().
+    # Strip every unreferenced index BEFORE writing Roblox EditableMesh data,
+    # not just when packaging the offline native Studio kit.
+    assert faces, "Mesh section contains no usable triangles"
+    referenced=sorted({index for face in faces for index in face})
+    assert max(referenced)<len(vertices)
+    if len(referenced)!=len(vertices):
+        remap={old:new for new,old in enumerate(referenced)}
+        vertices=[vertices[old] for old in referenced]
+        faces=[[remap[index] for index in face] for face in faces]
+    assert all(any(v[3:6]) for v in vertices), "Runtime mesh contains zero-length vertex normal"
+    assert len(vertices)<65536, "16-bit runtime mesh index overflow"
     data=struct.pack('<II',len(vertices),len(faces))
     data+=b''.join(VERTEX.pack(*v) for v in vertices)
     data+=b''.join(struct.pack('<3H',*f) for f in faces)
-    assert faces and len(vertices)<65536
     return center,size,data,vertices,faces
 
 
