@@ -320,6 +320,9 @@ local function onPlayerAdded(player: Player)
     local ok, result = persistence:load(player.UserId)
     if ok then
         profile.loaded = true
+        -- Persist the precise visit's lease token, not just this server's ID.
+        -- A rapid reconnect on the same server must not share write access.
+        profile.dataSessionId = result._dwtmLease.token
         Progression.load(profile, result)
     else
         warn("DWTM: data load unavailable for " .. player.UserId .. ". Progress is session-only.")
