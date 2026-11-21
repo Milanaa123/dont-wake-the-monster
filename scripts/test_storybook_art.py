@@ -96,7 +96,9 @@ for tree, ripe_material in (
         assert ripe_material not in young.data, f"{tree}: ripe fruit exists at sprout stage"
     assert "leaflight" in growing.data, f"{tree}: juvenile green fruit missing"
     assert ripe_material in ripe.data, f"{tree}: ripe fruit missing its unique pigment"
-    assert young.count() < ripe.count(), f"{tree}: maturity lacks geometry progression"
+    # First-stage flowers use many small petal triangles, while ripe fruit
+    # uses a compact rounded surface. Triangle count is NOT a growth metric.
+    # Mature dimensions and distinct pigments are the stable visual contract.
     assert bounds(ripe)[1][1] > bounds(young)[1][1] * 1.4, (
         f"{tree}: tree crown does not grow across stages"
     )
