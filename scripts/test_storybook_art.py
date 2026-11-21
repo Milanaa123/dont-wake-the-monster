@@ -78,6 +78,22 @@ assert "cream" in crops["CloudCotton",3].data
 assert crops["Sunflower",3].count()>crops["Sunflower",1].count()
 assert crops["Berry",3].count()>crops["Berry",1].count()
 
+# Each dwarf fruit tree must have a real seedling, growing and ripe state,
+# not exactly the same foliage with only a differently tinted floating orb.
+for tree, ripe_material in (
+    ("HoneyPear","gold"),
+    ("CaramelApple","red"),
+    ("ThunderPlum","violet"),
+):
+    young, growing, ripe = (crops[tree,stage] for stage in (1,2,3))
+    assert ripe_material not in young.data, f"{tree}: fruit must not exist at sprout stage"
+    assert "leaflight" in growing.data, f"{tree}: juvenile green fruit missing"
+    assert ripe_material in ripe.data, f"{tree}: ripe fruit missing its unique pigment"
+    assert young.count() < ripe.count(), f"{tree}: maturity lacks geometry progression"
+    assert bounds(ripe)[1][1] > bounds(young)[1][1] * 1.4, (
+        f"{tree}: tree crown does not grow across stages"
+    )
+
 print(
     f"PASS: {len(pets)} original articulated baby-animal meshes and "
     f"{len(crops)} botanical growth assets; shape identity, readable 3D "
