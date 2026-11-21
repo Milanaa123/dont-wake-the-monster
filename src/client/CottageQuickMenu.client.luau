@@ -17,6 +17,8 @@ local targets = {
     {"SeedExplorer", "OpenSeedExplorer"},
     {"PetDiary", "OpenDiary"},
     {"CottageCameraGui", "CameraMode"},
+    {"AudioSettings", "MusicToggle"},
+    {"AudioSettings", "EffectsToggle"},
     {"HowToPlayGui", "ReopenTutorial"},
 }
 
@@ -72,6 +74,12 @@ end
 local function refresh()
     local frame = viewport()
     compact = UserInputService.TouchEnabled or frame.X < 760
+    local top=math.clamp(math.floor(frame.Y*.24),75,191)
+    local firstRow=top+48
+    local rows=math.max(1,math.floor((frame.Y-firstRow-54)/40))
+    local columns=math.ceil(#targets/rows)
+    local width=math.clamp(math.floor((frame.X-30)/columns)-5,80,155)
+    button.Position=UDim2.fromOffset(12,top)
     button.Visible = compact and not chasing
     button.Text = if expanded then "✕ CLOSE MENU" else "🌼 MENU"
 
@@ -90,8 +98,8 @@ local function refresh()
             local original = originals[control]
             if compact then
                 control.AnchorPoint = Vector2.new(0, 0)
-                control.Position = UDim2.fromOffset(12, 241 + (index-1)*44)
-                control.Size = UDim2.fromOffset(158, 40)
+                control.Position = UDim2.fromOffset(12+math.floor((index-1)/rows)*(width+5),firstRow+(index-1)%rows*40)
+                control.Size = UDim2.fromOffset(width,36)
                 control.Visible = expanded and not chasing
                 if not watched[control] then
                     watched[control] = true

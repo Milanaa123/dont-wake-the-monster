@@ -105,7 +105,8 @@ local function render(delta: number)
     -- Frame the garden left of the player, not an empty centered island.
     local target = root.Position + Vector3.new(-5.7, 3.3, -5.2) + lookAhead
     local smoothing = math.clamp(1 - math.exp(-delta * 7.2), 0, 1)
-    currentFocus = if currentFocus then currentFocus:Lerp(target, smoothing) else target
+    local snap = not currentFocus or ((currentFocus :: Vector3)-target).Magnitude>28
+    currentFocus = if snap then target else (currentFocus :: Vector3):Lerp(target,smoothing)
     local focus = currentFocus :: Vector3
     -- Portrait devices need additional horizontal room for beds and thumb controls.
     local aspect = camera.ViewportSize.X / math.max(camera.ViewportSize.Y, 1)
@@ -113,7 +114,7 @@ local function render(delta: number)
     local desired = CFrame.lookAt(focus + cameraOffset * distanceMultiplier, focus)
     camera.CameraType = Enum.CameraType.Scriptable
     camera.FieldOfView = if aspect < 0.8 then 52 else viewFov
-    camera.CFrame = camera.CFrame:Lerp(desired, smoothing)
+    camera.CFrame = if snap then desired else camera.CFrame:Lerp(desired,smoothing)
     camera.Focus = CFrame.new(focus)
 end
 

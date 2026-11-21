@@ -30,20 +30,23 @@ def sculpt_chibi_part(part,S):
         blob("gold",(at[0],at[1],at[2]-.08*scale),
              (.07*scale,.075*scale,.05*scale),11,7)
     if part=="Head":
-        # Back hair is volumetric and slightly larger than the head.
-        blob("chocolate",(0,.05,.27),(.92,.99,.78),22,14)
-        # Low round head with visible muzzle cheeks, not a realistic face.
+        # One cut bob surface. The hairline sweeps above the eyes and below
+        # the ears at the nape. Its rolled hem turns under, closing the shell.
+        def hair(j,t,inset=0):
+            a=j*2*pi/32
+            front=max(0,cos(a))
+            hem=-.72+.98*front**2.6+.09*sin(3*a+.35)*front
+            rim=.93*(1-.06*cos(6*a+.2)**4)-inset
+            radius=sin(min(1,t/.61)*pi/2)*rim*(1-.06*max(0,t-.7))
+            return (radius*sin(a),1.01+(hem-1.01)*t,
+                    .07-radius*cos(a)*(1.11 if front>.0 else .88))
+        for j in range(32):
+            for band in range(8):
+                a,b=band/8,(band+1)/8
+                col="hairlit" if j in (4,5,10,26) and band in (2,3,4) else "chocolate"
+                g.quad(col,hair(j,a),hair(j+1,a),hair(j+1,b),hair(j,b))
+            g.quad("brown",hair(j,1),hair(j+1,1),hair(j+1,1,.11),hair(j,1,.11))
         blob("peach",(0,-.07,-.21),(.82,.79,.70),23,15)
-        # Cartoon bob locks on both cheeks.
-        for side in (-1,1):
-            blob("chocolate",(side*.77,-.18,.00),(.30,.68,.50),15,10)
-            blob("brown",(side*.85,-.36,-.33),(.19,.37,.26),13,9)
-        # Curved bangs and top layer.
-        for i in range(6):
-            x=-.65+i*.26
-            blob("chocolate",(x,.60,-.58),
-                 (.21,.28+(i%2)*.12,.24),11,8)
-        blob("chocolate",(0,.78,.13),(.80,.25,.67),16,9)
         # Slightly rounded, not protruding facial features.
         for side in (-1,1):
             blob("black",(side*.32,-.02,-.895),(.098,.145,.062),13,9)
@@ -68,7 +71,9 @@ def sculpt_chibi_part(part,S):
         line("blue",[(0,-.28,-.571),(0,-.51,-.55)],.026)
         blob("sky",(0,-.38,-.565),(.19,.12,.036),13,7)
     elif part=="LowerTorso":
-        blob("sky",(0,.03,0),(.76,.55,.50),19,12)
+        from orchard_sculpt import loft
+        loft(g,"sky",[(0,-.43,.01,.69,.44),(0,-.27,.01,.77,.52),
+              (0,.09,.01,.73,.49),(0,.44,0,.64,.42)],18)
         blob("blue",(0,-.38,-.045),(.76,.14,.47),16,8)
         for side in (-1,1):
             blob("sky",(side*.33,-.42,-.10),(.31,.22,.47),14,8)

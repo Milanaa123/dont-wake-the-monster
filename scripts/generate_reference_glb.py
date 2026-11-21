@@ -11,6 +11,9 @@ OUT = pathlib.Path("dist/visual-library")
 OUT.mkdir(parents=True, exist_ok=True)
 PI = math.pi
 MAT = {
+    "ochre":"CB874B","loam":"946C4D","loamedge":"926F4F","clod":"775D43","grasslit":"C1D779",
+    "fur":"8E849E","footfur":"71677D","sage":"A6BF82","moss":"748E63",
+    "hairlit":"85634F","nose":"564550","rind":"4F853E","rindedge":"92B94D","leafvein":"ADCB79",
     "cream":"FFF7E7","ivory":"F9E8D0","ink":"4A3845","eye":"251F32",
     "shine":"FFFFFF","blush":"F2A6AA","blush2":"E989A5","straw":"E6C473",
     "orange":"F2A74D","red":"E75C61","berry":"D84F60","pink":"F7B4C4",
@@ -35,9 +38,15 @@ def lerp(a,b,t): return add(mul(a,1-t),mul(b,t))
 class Sculpt:
     def __init__(self,name):
         self.name=name
-        self.data=defaultdict(lambda:[[],[]]) # material: positions, normals
+        self.joints={}
+        self.data=defaultdict(lambda:[[],[]])
+    def joint(self,name,pivot,parent="Body"):
+        self.joints[name]=(parent,pivot)
     def tri(self,m,a,b,c,na=None,nb=None,nc=None):
         n=norm(cross(sub(b,a),sub(c,a)))
+        if na and sum(x*y for x,y in zip(n,na)) < 0:
+            b,c,nb,nc = c,b,nc,nb
+            n=tuple(-v for v in n)
         self.data[m][0].extend((a,b,c))
         self.data[m][1].extend((na or n,nb or n,nc or n))
     def quad(self,m,a,b,c,d,vertex_normals=None):

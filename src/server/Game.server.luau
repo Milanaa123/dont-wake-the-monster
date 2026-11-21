@@ -10,6 +10,7 @@ local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Config"))
 local Personality = require(ReplicatedStorage:WaitForChild("PetPersonality"))
+local AudioSource = require(ReplicatedStorage.AudioSource)
 local Affection = require(ReplicatedStorage:WaitForChild("PetAffection"))
 local World = require(script.Parent:WaitForChild("World"))
 local ArtLibrary = require(script.Parent:WaitForChild("ReferenceMeshLibrary"))
@@ -191,13 +192,16 @@ local function careUpdate(player: Player)
     local profile = profiles[player]
     if not profile then return end
     local petInfo = Config.Pets[profile.petIndex]
+    if player.Character then
+        player.Character:SetAttribute("GardenCare",if profile.carrying then "Carry" elseif profile.petting then "Pet" else "")
+    end
     remote:FireClient(player, {
         type = "petCare",
         petting = profile.petting,
         carrying = profile.carrying,
         cat = Affection.isCat(petInfo.description or ""),
         purr = profile.purr,
-        purrSoundConfigured = type(Config.PurrSoundId) == "number" and Config.PurrSoundId > 0,
+        purrSoundConfigured = AudioSource.resolve(Config.PurrSoundId,"original-cat-purr-loop") ~= nil,
     })
 end
 
@@ -786,6 +790,11 @@ local function gardenAction(player: Player, command: string, arg: any)
         return
     end
     if ok then
+        if player.Character and (command=="GardenPlant" or command=="GardenHarvest" or command=="GardenFertilize") then
+            if command=="GardenFertilize" then ArtLibrary.water(player.Character) end
+            player.Character:SetAttribute("GardenGesture",command)
+            player.Character:SetAttribute("GestureAt",workspace:GetServerTimeNow())
+        end
         if command == "GardenPlant" then onceMetric(player, profile, "FirstSeedPlanted") end
         if newlyDiscovered then metric(player, "SecretRecipeFound") end
         if profile.loaded then profile.dirty = true end
@@ -1108,6 +1117,7 @@ end)
 
 local function monsterAction()
     local choice = rng:NextInteger(1, 4)
+    World.monsterGesture()
     if choice == 1 then
         notice("GIGGLES STOMPS! JUMP AWAY!", Color3.fromRGB(255, 113, 146))
         local spot = Vector3.new(rng:NextNumber(-35, 35), 9, rng:NextNumber(-35, 35))
@@ -1115,8 +1125,10 @@ local function monsterAction()
         task.delay(0.8, function() monsterStrike(spot, 28, 55, true) end)
     elseif choice == 2 then
         notice("GIANT SNEEZE! HOLD ON!", Color3.fromRGB(136, 229, 255))
-        World.wave(Vector3.new(0, 14, 0), 60, Color3.fromRGB(122, 213, 255))
-        task.delay(0.9, function() monsterStrike(Vector3.new(0, 12, 0), 58, 55, false) end)
+        local body=World.monsterPosition()
+        local epicentre=Vector3.new(body.X,12,body.Z)
+        World.wave(epicentre, 60, Color3.fromRGB(122, 213, 255))
+        task.delay(0.9, function() monsterStrike(epicentre, 58, 55, false) end)
     elseif choice == 3 then
         notice("THE SKY IS RAINING JELLY!", Color3.fromRGB(255, 223, 114))
         for _ = 1, 3 do
@@ -1270,7 +1282,11 @@ local lastHeartbeat = 0
 RunService.Heartbeat:Connect(function(dt: number)
     lastHeartbeat += dt
     if lastHeartbeat < 1 / 18 then return end
+    local interval=lastHeartbeat
     lastHeartbeat = 0
+    local nearest: Vector3? = nil
+    local nearestDistance=math.huge
+    local bossPosition=World.monsterPosition()
     local t = os.clock()
     for player, profile in pairs(profiles) do
         local root = rootFor(player)
@@ -1285,7 +1301,14 @@ RunService.Heartbeat:Connect(function(dt: number)
             root.CFrame = CFrame.new(0, 16, 85)
             root.AssemblyLinearVelocity = Vector3.zero
         end
+        if phase=="AWAKE" and root and not profile.knockedOut then
+            local distance=(root.Position-bossPosition).Magnitude
+            if distance<nearestDistance then nearest,nearestDistance=root.Position,distance end
+        end
         if root and pet and pet.Parent and pet.PrimaryPart then
+            local mode=if profile.carrying then "Carry" elseif profile.petting then "Pet"
+                elseif profile.idleAction=="Naps" and phase=="SLEEP" then "Nap" else "Follow"
+            if pet:GetAttribute("MotionMode")~=mode then pet:SetAttribute("MotionMode",mode) end
             if profile.carrying then
                 pet:PivotTo(pet:GetPivot():Lerp(World.carryPose(pet, root, t), 0.32))
                 continue
@@ -1303,11 +1326,27 @@ RunService.Heartbeat:Connect(function(dt: number)
                 behind *= 0.55
             end
             local bob = if habit == "Jumps" then math.abs(math.sin(t * 7)) * 2.2 elseif habit == "Naps" then wobble * 0.15 else wobble
-            local target = root.Position + side + behind + Vector3.new(0, 3.2 + bob, 0)
+            local target = root.Position + side + behind
+            if pet:GetAttribute("Airborne") then
+                target += Vector3.new(0,2.5+bob,0)
+            else
+                local query=profile.petGroundQuery
+                if not query then
+                    query=RaycastParams.new()
+                    query.RespectCanCollide=true
+                    profile.petGroundQuery=query
+                end
+                query.FilterDescendantsInstances={player.Character,pet}
+                local floor=workspace:Raycast(target+Vector3.yAxis*5,-Vector3.yAxis*30,query)
+                local groundY=if floor then floor.Position.Y else root.Position.Y-3
+                local lift=if habit=="Jumps" then math.max(bob,0) else .04*math.abs(bob)
+                target=Vector3.new(target.X,groundY+2.05*pet:GetScale()+lift,target.Z)
+            end
             if (pet.PrimaryPart.Position - target).Magnitude > 60 then
                 pet:PivotTo(CFrame.new(target))
             else
-                local facing = CFrame.lookAt(target, root.Position + Vector3.new(0, 2, 0))
+                local toward=Vector3.new(root.Position.X,target.Y,root.Position.Z)
+                local facing=if (toward-target).Magnitude>.01 then CFrame.lookAt(target,toward) else CFrame.new(target)
                 if profile.effect == "Spin" and profile.effectUntil > t then
                     facing *= CFrame.Angles(0, t * 11, 0)
                 elseif personality and (habit == "Dances" or habit == "ChasesTail") and profile.effectUntil < t then
@@ -1324,6 +1363,7 @@ RunService.Heartbeat:Connect(function(dt: number)
             end
         end
     end
+    World.followMonster(nearest,interval)
 end)
 
 task.spawn(function()

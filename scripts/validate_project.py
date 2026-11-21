@@ -176,7 +176,7 @@ for name in ("Environment_OrangeTree", "Environment_WoodFence",
 assert "if applied == 4 then" in mesh_bridge, "Partial GLB imports must preserve fallback"
 assert "local angle = (slot - 1) / 12 * math.pi * 2 + math.pi / 2" in world, "First garden no longer faces spawn"
 assert r"spawn.\n    -- Remaining plots" not in world, "Escaped newline accidentally comments out garden angle"
-assert "CFrame.new(0, 9, 85)" in world, "First-play spawn overlaps garden"
+assert "CFrame.new(0, 7.08, 85)" in world, "First-play spawn overlaps garden"
 assert "ReferenceMeshLibrary.applyCrop(visual, center, p.seed, stage)" in world, "Imported 3D crops not wired"
 assert "ReferenceMeshLibrary.applySetDress(scenery)" in world, "Imported world set is not wired"
 mesh_bridge = read("src/server/ReferenceMeshLibrary.luau")
@@ -482,7 +482,7 @@ for marker in ("function Beds.decorateLawn(", "function Beds.decoratePlot(",
                "Random.new(5713 + plotIndex * 67)"):
     assert marker in organic, f"Organic crop bed reference geometry missing: {marker}"
 assert 'OrganicGardenBeds.decorateLawn(model, center)' in world
-assert 'OrganicGardenBeds.decoratePlot(plot, place, index)' in world
+assert 'OrganicGardenBeds.decoratePlot(soil, place, index)' in world and 'soil.Parent=plot' in world
 assert 'part(plot, "WoodFrame"' not in world, "Large rectangular tray still blocks organic soil"
 assert 'lawn.CanCollide = true' in world, "Farm walkable grass physics disabled"
 assert 'plot:SetAttribute("PosX", place.Position.X)' in world, "Plot coordinates altered"
@@ -494,7 +494,7 @@ for marker in ("CurvedMelonStripe", "math.sqrt(math.max(.06",
     assert marker in crop_ref, f"Playable fruit detailing regressed: {marker}"
 assert '"StripedRind"' not in crop_ref, "Old detached straight watermelon stripes restored"
 mesh_bridge = read("src/server/ReferenceMeshLibrary.luau")
-assert "mesh.Size.X * 1.31" in mesh_bridge, "Dense imported strawberry foliage missing"
+assert "7.3*source.Size.Y/width" in mesh_bridge, "Imported crop exceeds the usable width of its plot"
 assert "makeVisual(source, visual, \"ImportedCropMesh\"" in mesh_bridge
 print("OK: nine organic soil beds and playable fruit geometry replace square wooden trays")
 

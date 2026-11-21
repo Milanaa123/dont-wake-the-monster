@@ -220,6 +220,11 @@ assert(grow.hunt.mutations.Moonlit, "mutation recorded in album")
 local restoredGarden = Garden.load(Garden.serialize(grow))
 assert(restoredGarden.hunt.mutations.Moonlit, "mutation collection persists")
 assert(restoredGarden.crops.Berry == grow.crops.Berry, "mutated crop stock persists")
+assert(not Garden.harvest(restoredGarden, 1), "empty plot cannot pay a second time")
+restoredGarden.seeds.Carrot = 1
+assert(Garden.plant(restoredGarden, 1, "Carrot"), "a harvested and reloaded bed accepts a different crop")
+assert(restoredGarden.plots[1].mutation == nil and not restoredGarden.plots[1].assistUsed, "a new crop starts clean")
+assert(not Garden.harvest(restoredGarden, 1), "new crop has its own growth clock")
 print("PASS: forest discovery, nine cache cooldowns, free rare seeds, 28-plant book, weather mutations and pet tending")
 
 """

@@ -19,6 +19,10 @@ SPECIES = {
 def sculpt_species(name, base, second, S):
     g=S("Pet_"+name)
     k=SPECIES[name]
+    def side_joint(label,side,pivot,parent="Body"):
+        g.joint(label+("L" if side<0 else "R"),pivot,parent)
+    def leg(side,z):
+        side_joint("Fore" if z<0 else "Hind",side,(side*.60,.62,z))
     def ell(mat,center,radii,seg=14,rings=8):
         g.blob(mat,center,radii,seg,rings,0.008)
     def tube(mat,points,r):
@@ -38,7 +42,7 @@ def sculpt_species(name, base, second, S):
             if blush:
                 ell("blush",(cx+side*(rx*.77),cy-.18*ry,cz-rz*.8),(.20,.10,.055),9,6)
         if nose:
-            ell("chocolate",(cx,cy-.2*ry,cz-rz-.99),(.13,.09,.085),11,7)
+            ell("chocolate",(cx,cy-.2*ry,cz-rz-.035),(.13,.09,.085),11,7)
         if smile:
             tube("chocolate",[(cx-.17,cy-.35*ry,cz-rz*.88),
                 (cx,cy-.39*ry,cz-rz*.95),(cx+.17,cy-.34*ry,cz-rz*.87)],[.026,.03,.023])
@@ -74,17 +78,21 @@ def sculpt_species(name, base, second, S):
         for side in (-1,1):
             if k in ("deer","unicorn"):
                 for z in (-.30,1.24):
+                    leg(side,z)
                     g.tube(base,[(side*.48,1.19,z),(side*.52,.64,z-.03),
                                 (side*.54,.16,z-.08)],[.20,.17,.10],9)
                     foot(side,z-.08,.54,.11,.72,"chocolate")
             elif k not in ("salamander","dinosaur"):
                 for z in (-.25,1.18):
+                    leg(side,z)
                     ell(base,(side*(.56 if k=="ferret" else .68),.38,z),
                         (.26,.38,.33),12,7)
                     foot(side,z-.14,.66,.18,.99,"ivory" if k in ("lamb","bunny") else second)
             else:
                 for z in (-.39,1.48):
+                    leg(side,z)
                     foot(side,z,.64,.20,.83)
+        g.joint("Body",(0,0,0))
         headprops = {
           "kitten":((0,1.74,-.58),1.02,.87,.80,.45),
           "fox":((0,1.78,-.65),.92,.83,.78,.43),
@@ -100,6 +108,7 @@ def sculpt_species(name, base, second, S):
           "cookie":((0,1.89,-.49),.94,.80,.69,.42),
         }
         (hc,rx,ry,rz,es)=headprops[k]
+        g.joint("Head",(0,hc[1]-ry*.62,hc[2]+rz*.32))
         face(*hc,rx,ry,rz,es,smile=True,nose=k not in ("salamander","dinosaur"))
         if k in ("kitten","fox"):
             for side in (-1,1):
@@ -111,18 +120,22 @@ def sculpt_species(name, base, second, S):
                         (side*1.33,y+(t-1)*.12,-1.40)],[.019,.015,.009])
             # large expressive cheeks and genuinely curved, fluffy tail
             ell("ivory",(0,1.45,-1.36),(.48,.27,.28),15,9)
+            g.joint("Tail",(0,.85,1.35))
             tube(base,[(.24,.82,1.39),(.58,1.05,1.87),
                 (.87,1.69,2.02),(.76,2.16,2.09)],[.27,.29,.22,.06])
             if k=="fox":
                 ell("ivory",(.76,2.10,2.04),(.24,.32,.23),12,7)
+                g.joint("Head",g.joints["Head"][1])
                 ell("ivory",(0,1.41,-1.41),(.63,.27,.36))
         elif k=="dog":
             for side in (-1,1):
                 ell(second,(side*.99,2.08,-.26),(.38,.70,.34),15,10)
             ell("ivory",(0,1.42,-1.53),(.62,.37,.36))
             ell("black",(0,1.59,-1.84),(.21,.15,.13))
+            g.joint("Tail",(0,.85,1.35))
             tube(base,[(0,.88,1.55),(.4,1.20,1.93),(.7,1.30,2.07)],
                 [.25,.17,.06])
+            g.joint("Head",g.joints["Head"][1])
             if name=="Snorf":
                 for side in (-1,1):
                     ell("chocolate",(side*.77,1.80,-1.17),(.27,.22,.08),12,7)
@@ -137,6 +150,7 @@ def sculpt_species(name, base, second, S):
             for side in (-1,1):
                 ell(second,(side*.63,1.94,-.64),(.32,.38,.31),12,7)
                 ell("ivory",(side*.26,1.23,-1.48),(.31,.21,.29))
+            g.joint("Tail",(0,.85,1.35))
             tube(base,[(0,.71,2.06),(.22,.78,2.58),(.62,1.11,2.71)],[.22,.21,.10])
         elif k in ("lamb","bear","cookie"):
             for side in (-1,1):
@@ -163,8 +177,10 @@ def sculpt_species(name, base, second, S):
             for side in (-1,1):
                 ear(side,(side*.57,2.63,-.43),(side*1.02,3.18,-.42),.23)
             ell("ivory",(0,1.98,-1.47),(.40,.32,.41))
+            g.joint("Tail",(0,.85,1.35))
             tube(second,[(0,1.48,1.7),(.10,1.17,2.1),(.18,.94,2.38)],
                 [.30,.21,.07])
+            g.joint("Head",g.joints["Head"][1])
             if k=="deer":
                 for side in (-1,1):
                     tube("bark",[(side*.37,2.85,-.36),(side*.52,3.42,-.37),
@@ -181,6 +197,7 @@ def sculpt_species(name, base, second, S):
                     ell("pink" if i%2 else "lilac",
                         (.52,2.75-i*.17,-.17+i*.24),(.37,.23,.35),11,7)
         elif k in ("salamander","dinosaur"):
+            g.joint("Tail",(0,.85,1.35))
             tube(base,[(0,.87,1.77),(0,.66,2.27),(0,.43,2.86),(0,.34,3.21)],
                  [.43,.36,.23,.017])
             for i in range(5):
@@ -190,6 +207,7 @@ def sculpt_species(name, base, second, S):
             if k=="salamander":
                 for side in (-1,1):
                     ell("gold",(side*.38,1.48,-1.38),(.16,.10,.10))
+        g.joint("Head",g.joints["Head"][1])
         # different hats, masks, gradients painted as geometry.
         if name=="Zuzu":
             for i in range(3):
@@ -209,20 +227,24 @@ def sculpt_species(name, base, second, S):
             ell(base,(0,.78,.21),(1.20,.70,1.08),20,13)
             ell("ivory",(0,.42,-.48),(.80,.29,.56),17,10)
             for side in (-1,1):
+                g.joint("Body",(0,0,0))
                 ell(base,(side*.62,1.36,-.56),(.44,.42,.44),14,9)
                 ell("eye",(side*.65,1.42,-.91),(.21,.26,.10))
                 ell("shine",(side*.56,1.54,-1.00),(.069,.068,.026),10,6)
                 for z in (-.4,.81):
+                    leg(side,z)
                     ell(base,(side*1.02,.26,z),(.55,.24,.44),14,8)
                     for j in range(3):
                         ell("leaflight",(side*(1.24+j*.18),.12,z-.3+j*.16),
                             (.22,.10,.24),10,6)
+            g.joint("Body",(0,0,0))
             tube("chocolate",[(-.32,.52,-1.01),(0,.46,-1.13),(.32,.52,-1.01)],
                  [.032,.035,.032])
         elif k=="axolotl":
             ell(base,(0,.71,.50),(.73,.51,1.54),18,12)
             face(0,1.36,-.73,1.14,.62,.70,.47,nose=False)
             for side in (-1,1):
+                side_joint("Gill",side,(side*1.04,1.5,-.50))
                 for j in range(3):
                     yy=1.85-j*.36
                     pts=[(side*1.04,yy,-.50),(side*1.58,yy+.16,-.44),
@@ -231,7 +253,9 @@ def sculpt_species(name, base, second, S):
                     for q in range(3):
                         lf("rose",pts[1],(side*(1.53+q*.12),yy+.20+q*.14,-.39),.11)
                 for z in (-.3,1.26):
+                    leg(side,z)
                     foot(side,z,.60,.20,.63)
+            g.joint("Tail",(0,.88,1.69))
             lf("pink",(0,.88,1.69),(0,1.04,2.75),.44)
         elif k=="turtle":
             ell(base,(0,.46,.68),(.84,.36,1.02),19,12)
@@ -241,10 +265,13 @@ def sculpt_species(name, base, second, S):
                 a=i*2*pi/8
                 ell("leaflight",(sin(a)*.78,1.69, .42+cos(a)*.88),
                     (.32,.09,.34),12,7)
+            g.joint("Head",(0,.84,-.64))
             face(0,.95,-1.10,.64,.55,.65,.29)
             for side in (-1,1):
                 for z in (-.22,1.10):
+                    leg(side,z)
                     ell(base,(side*1.05,.24,z),(.47,.24,.37),14,8)
+            g.joint("Body",(0,0,0))
             ell("ivory",(0,.55,1.90),(.25,.25,.38))
         elif k in ("chick","owl","puffin"):
             palette = "cream" if k=="owl" else base
@@ -252,7 +279,9 @@ def sculpt_species(name, base, second, S):
             for side in (-1,1):
                 if k=="owl":
                     ell("cream",(side*.47,1.48,-.74),(.48,.62,.23),15,10)
+                side_joint("Wing",side,(side*.78,1.49,.24))
                 ell(second,(side*.91,1.11,.24),(.39,.66,.58),15,10)
+                g.joint("Body",(0,0,0))
                 ell("eye",(side*.37,1.45,-.93),(.19,.26,.11),14,9)
                 ell("shine",(side*.30,1.55,-1.04),(.059,.07,.031),9,6)
                 tube("orange",[(side*.45,.24,.14),(side*.45,.04,-.11)],
@@ -271,6 +300,7 @@ def sculpt_species(name, base, second, S):
         elif k=="butterfly":
             ell(base,(0,1.43,.17),(.34,.85,.32),18,11)
             for side in (-1,1):
+                side_joint("Wing",side,(side*.13,1.62,.19))
                 for sign,scale in ((1,1),(-1,.66)):
                     mat="pink" if sign==1 else "lilac"
                     a=(side*.13,1.62,.19)
@@ -279,6 +309,7 @@ def sculpt_species(name, base, second, S):
                     lf(mat,a,b,.91*scale,.24)
                     ell("gold",(side*1.21,2.11 if sign==1 else .89,.40),
                         (.22,.18,.11),12,7)
+                g.joint("Body",(0,0,0))
                 tube("chocolate",[(side*.10,2.12,-.13),
                     (side*.38,2.66,-.15)],[.055,.025])
             face(0,1.64,-.20,.48,.49,.39,.20,nose=False,smile=False)
@@ -286,6 +317,7 @@ def sculpt_species(name, base, second, S):
             ell(base,(0,.72,.21),(1.43,.61,1.02),22,13)
             ell(second,(0,.93,-.33),(1.07,.29,.68),17,9)
             for side in (-1,1):
+                side_joint("Claw",side,(side*.82,.65,-.41))
                 tube(base,[(side*.82,.65,-.41),(side*1.47,.75,-.64),
                     (side*2.04,.85,-.90)],[.24,.20,.12])
                 ell(second,(side*2.09,.92,-1.04),(.50,.43,.52),16,11)
@@ -293,6 +325,7 @@ def sculpt_species(name, base, second, S):
                     y=.53-j*.07
                     tube(base,[(side*1.04,y,j*.36),(side*1.56,y-.21,.5+j*.42),
                         (side*1.83,.16,.63+j*.42)],[.13,.11,.04])
+                g.joint("Body",(0,0,0))
                 tube(base,[(side*.51,1.16,-.52),(side*.52,1.67,-.70)],
                      [.13,.09])
                 ell("eye",(side*.53,1.77,-.77),(.25,.25,.22),13,8)
@@ -303,12 +336,14 @@ def sculpt_species(name, base, second, S):
             ell(base,(0,1.05,.28),(1.18,1.06,1.03),23,14)
             for i in range(8):
                 a=i*2*pi/8
+                g.joint("Tendril"+str(i),(sin(a)*.58,.45,cos(a)*.60))
                 tube(base,[(sin(a)*.58,.45,cos(a)*.60),
                     (sin(a)*1.44,.29,cos(a)*1.37),
                     (sin(a)*1.81,.50,cos(a)*1.76)],[.25,.18,.048])
                 for j in range(2):
                     ell("pink",(sin(a)*(1+j*.21),.12,cos(a)*(.98+j*.19)),
                         (.12,.05,.12),8,5)
+            g.joint("Body",(0,0,0))
             for side in (-1,1):
                 ell("eye",(side*.44,1.35,-.72),(.20,.26,.10))
                 ell("shine",(side*.36,1.47,-.82),(.065,.067,.028),9,6)
@@ -317,23 +352,32 @@ def sculpt_species(name, base, second, S):
             ell(base,(0,1.17,.30),(.80,1.05,.71),20,13)
             face(0,1.82,-.29,.80,.67,.67,.31)
             for side in (-1,1):
+                g.joint("Body",(0,0,0))
                 ear(side,(side*.50,2.29,-.28),(side*.79,3.19,-.32),.27)
+                side_joint("Wing",side,(side*.58,1.45,.14))
                 for layer in range(3):
                     lf("violet" if layer==0 else second,
                        (side*.67,1.59,.32),
                        (side*(2.70-layer*.35),2.15-layer*.43,.64),
                        .66-layer*.14,.20)
+            g.joint("Body",(0,0,0))
             for side in (-1,1):
                 foot(side,.46,.50,.17,.56)
         elif k=="sprite":
             ell(base,(0,1.34,.32),(.81,.91,.79),19,12)
             face(0,1.86,-.41,.83,.73,.69,.37,nose=False)
             for side in (-1,1):
+                side_joint("Wing",side,(side*.72,1.55,.15))
                 lf("lilac",(side*.72,1.55,.15),(side*1.71,2.31,.17),.41,.25)
+            g.joint("Body",(0,0,0))
             for i in range(6):
                 a=i*2*pi/6
                 ell("gold",(sin(a)*1.08,1.82+cos(a)*.82,.12),
                     (.12,.12,.12),10,6)
+    if "Head" in g.joints:
+        g.joint("Head",g.joints["Head"][1])
+    else:
+        g.joint("Body",(0,0,0))
     # No recycled animal with a different name: special variants get original details.
     if name in ("Wobble","Mochi"):
         ell("gold",(0,2.53,-.46),(.31,.22,.32),11,7)

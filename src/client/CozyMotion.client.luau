@@ -10,6 +10,7 @@ type AnimatedEntry = {
     size: Vector3,
     kind: string,
     seed: number,
+    born: number,
 }
 local animated: {[MeshPart]: AnimatedEntry} = {}
 local viewDistance = 140
@@ -37,6 +38,7 @@ local function track(descendant: Instance)
     seed += math.floor(descendant.Position.X * 7 + descendant.Position.Z * 13)
     animated[descendant] = {
         mesh = descendant,
+        born = os.clock(),
         base = descendant.CFrame,
         size = descendant.Size,
         kind = kind,
@@ -61,7 +63,6 @@ end
 RunService.RenderStepped:Connect(function(dt: number)
     elapsed += dt
     if elapsed < 1 / 30 then return end
-    local delta = elapsed
     elapsed = 0
     local now = Workspace.DistributedGameTime
     local camera = Workspace.CurrentCamera
@@ -93,14 +94,21 @@ RunService.RenderStepped:Connect(function(dt: number)
                 local bob = math.sin(offsetTime * rate) * amount
                 local tilt = math.sin(offsetTime * rate * .74) *
                     (if isBird then .058 else if isCalm then .018 else .043)
-                mesh.CFrame = root.CFrame * CFrame.new(0, bob, 0)
+                local scale=parent:GetScale()
+                local offset=(mesh:GetAttribute("VisualOffset") or Vector3.zero)*scale
+                mesh.CFrame = root.CFrame * CFrame.new(offset + Vector3.new(0,bob,0))
                     * CFrame.Angles(0, 0, tilt)
                 local inhale = 1 + .012 * math.sin(offsetTime * 2.8)
-                mesh.Size = entry.size * Vector3.new(inhale, 1 / inhale, inhale)
+                -- Model:ScaleTo controls giant/mini food reactions.
+                if not mesh:HasTag("OrchardRig") then mesh.Size = entry.size * scale * Vector3.new(inhale, 1 / inhale, inhale) end
             end
         elseif entry.kind == "plant" then
             local tilt = math.sin(offsetTime * 1.27) * 0.018
-            mesh.CFrame = entry.base * CFrame.Angles(tilt, 0, tilt * 0.44)
+            local growth=math.clamp((os.clock()-entry.born)/.42,0,1)
+            local scale=if mesh.Name=="ImportedCropMesh" then 1-.23*(1-growth)^3 else 1
+            if growth<1 or mesh.Size~=entry.size then mesh.Size=entry.size*scale end
+            local half=entry.size.Y*.5
+            mesh.CFrame=entry.base*CFrame.new(0,-half,0)*CFrame.Angles(tilt,0,tilt*.44)*CFrame.new(0,half*scale,0)
         elseif entry.kind == "tree" then
             local tilt = math.sin(offsetTime * 0.78) * 0.007
             mesh.CFrame = entry.base * CFrame.Angles(tilt * 0.62, 0, tilt)
@@ -111,8 +119,11 @@ RunService.RenderStepped:Connect(function(dt: number)
                 * CFrame.Angles(nod, 0, 0)
         elseif entry.kind == "boss" and mesh.Transparency < 0.9 then
             local inhale = 1 + math.sin(offsetTime * 1.24) * 0.008
-            mesh.Size = entry.size * inhale
-            mesh.CFrame = entry.base * CFrame.new(0, math.sin(offsetTime * 1.24) * 0.10, 0)
+            if not mesh:HasTag("OrchardRig") then mesh.Size = entry.size * inhale end
+            local model=mesh.Parent
+            local rest=mesh:GetAttribute("BossRest")
+            local base=if rest and model and model:IsA("Model") then model:GetPivot()*rest else entry.base
+            mesh.CFrame = base * CFrame.new(0, math.sin(offsetTime * 1.24) * 0.10, 0)
         end
     end
 end)
