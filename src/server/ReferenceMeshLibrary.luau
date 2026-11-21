@@ -1,12 +1,8 @@
 --!strict
--- Optional production mesh art bridge. The original GLB art library is generated
--- by scripts/generate_reference_glb.py, imported into Studio by its owner,
--- then staged under ServerStorage/DWTM_ArtLibrary.
---
--- IMPORTANT: A GitHub file cannot produce an authorized Roblox MeshId by itself.
--- If models are absent, gameplay falls back to its existing procedural artwork.
+-- Resolve private imported artwork first, then the geometry shipped in the place.
 local ServerStorage = game:GetService("ServerStorage")
 
+local Geometry = require(script.Parent.OrchardGeometry)
 local Bridge = {}
 local ROOT_NAME = "DWTM_ArtLibrary"
 
@@ -68,15 +64,27 @@ end
 local function findMesh(groupName: string, assetName: string): MeshPart?
     stageImportedPacks()
     local root = ServerStorage:FindFirstChild(ROOT_NAME)
-    if not root then return nil end
-    local group = root:FindFirstChild(groupName)
-    if not group then return nil end
-    local obj = group:FindFirstChild(assetName, true)
+    local group = if root then root:FindFirstChild(groupName) else nil
+    local obj = if group then group:FindFirstChild(assetName,true) else nil
     if obj and obj:IsA("MeshPart") then return obj end
     if obj and obj:IsA("Model") then
-        return obj:FindFirstChildWhichIsA("MeshPart", true)
+        local mesh = obj:FindFirstChildWhichIsA("MeshPart",true)
+        if mesh then return mesh end
     end
-    return nil
+    return Geometry.cached(assetName)
+end
+
+function Bridge.prepare(owner: Instance, group: string, keys: {string}, ready: () -> (), failed: (() -> ())?)
+    task.defer(function()
+        for _, key in ipairs(keys) do
+            if not owner.Parent then return end
+            if not findMesh(group,key) and not Geometry.load(key) then
+                if failed and owner.Parent then failed() end
+                return
+            end
+        end
+        if owner.Parent then ready() end
+    end)
 end
 
 local function makeVisual(source: MeshPart, parent: Instance, name: string,
@@ -95,20 +103,78 @@ local function makeVisual(source: MeshPart, parent: Instance, name: string,
         mesh:Destroy()
         return nil
     end
-    local sourceSpan = if name == "ImportedWaterPond" then math.max(mesh.Size.X, mesh.Size.Z)
-        else mesh.Size.Y
+    local full = source:GetAttribute("ArtSize") or mesh.Size
+    local sourceSpan = if name == "ImportedWaterPond" then math.max(full.X, full.Z)
+        else full.Y
     local ratio = height / math.max(sourceSpan, 0.001)
     mesh.Size = mesh.Size * ratio
-    mesh.CFrame = pivot
+    Geometry.mount(mesh,pivot,ratio)
+    mesh:SetAttribute("VisualOffset",(mesh:GetAttribute("PieceCenter") or Vector3.zero)*ratio)
+    if mesh:FindFirstChildWhichIsA("Motor6D",true) then mesh:AddTag("OrchardRig") end
     mesh.Parent = parent
     return mesh
+end
+
+-- Place a ground-hugging asset by its horizontal span, keeping the authored aspect.
+function Bridge.ground(owner: Instance, key: string, frame: CFrame, span: number, replaced: Instance?)
+    local group=if key:sub(1,5)=="Crop_" then "Crops" else "World"
+    Bridge.prepare(owner,group,{key},function()
+        local source=findMesh(group,key)
+        if not source then return end
+        local height=span*source.Size.Y/math.max(source.Size.X,source.Size.Z)
+        local mesh=makeVisual(source,owner,key,frame*CFrame.new(0,height/2,0),height)
+        if mesh and replaced and replaced.Parent then replaced:Destroy() end
+    end)
+end
+
+function Bridge.water(character: Model)
+    local hand=character:FindFirstChild("RightHand")
+    local source=findMesh("World","Environment_WateringCan")
+    if not hand or not hand:IsA("BasePart") or not source then return end
+    local old=character:FindFirstChild("HeldWateringCan")
+    if old then old:Destroy() end
+    local can=source:Clone()
+    can.Name="HeldWateringCan"
+    can.Size=source.Size*1.4
+    can.Anchored=false
+    can.CanCollide=false
+    can.CanQuery=false
+    can.CanTouch=false
+    can.Massless=true
+    can.CFrame=hand.CFrame*CFrame.new(0,-.36,-.19)*CFrame.Angles(-.48,0,0)
+    local weld=Instance.new("WeldConstraint")
+    weld.Part0,weld.Part1=hand,can
+    weld.Parent=can
+    local nozzle=Instance.new("Attachment")
+    nozzle.Position=Vector3.new(0,can.Size.Y*.09,-can.Size.Z*.49)
+    nozzle.Parent=can
+    local drops=Instance.new("ParticleEmitter")
+    drops.Rate=0
+    drops.Color=ColorSequence.new(Color3.fromRGB(164,216,217))
+    drops.Transparency=NumberSequence.new(.22,.91)
+    drops.Size=NumberSequence.new(.065,.032)
+    drops.Lifetime=NumberRange.new(.19,.36)
+    drops.EmissionDirection=Enum.NormalId.Front
+    drops.Acceleration=Vector3.new(0,-25,0)
+    drops.Speed=NumberRange.new(2.4,3.3)
+    drops.SpreadAngle=Vector2.new(9,9)
+    drops.Parent=nozzle
+    can.Parent=character
+    task.delay(.29,function() if can.Parent then drops:Emit(12) end end)
+    game:GetService("Debris"):AddItem(can,1.03)
 end
 
 -- The 15 original mesh parts are attached to R15's existing moving bones.
 -- Roblox's native Humanoid/Animate script keeps all walk/run/jump animations.
 -- We never replace player control, physics or the standard character rig.
 function Bridge.applyGardenerAvatar(character: Model): boolean
-    if character:GetAttribute("DWTMStorybookAvatar") == true then return true end
+    if character:GetAttribute("DWTMStorybookAvatar") == true then
+        for _,child in ipairs(character:GetDescendants()) do
+            if child:IsA("BasePart") and child.Parent and child.Parent:IsA("Accessory") then child.Transparency=1 end
+            if child:IsA("Decal") and child.Parent==character:FindFirstChild("Head") then child.Transparency=1 end
+        end
+        return true
+    end
     local humanoid = character:FindFirstChildOfClass("Humanoid")
     if not humanoid or humanoid.RigType ~= Enum.HumanoidRigType.R15 then return false end
     local names = {
@@ -118,6 +184,20 @@ function Bridge.applyGardenerAvatar(character: Model): boolean
         "LeftUpperLeg", "LeftLowerLeg", "LeftFoot",
         "RightUpperLeg", "RightLowerLeg", "RightFoot",
     }
+    local keys = {}
+    for _, name in ipairs(names) do table.insert(keys,"Avatar_"..name) end
+    for _, key in ipairs(keys) do
+        if not findMesh("Avatar",key) then
+            if not character:GetAttribute("GardenerLoading") then
+                character:SetAttribute("GardenerLoading",true)
+                Bridge.prepare(character,"Avatar",keys,function()
+                    character:SetAttribute("GardenerLoading",nil)
+                    Bridge.applyGardenerAvatar(character)
+                end,function() character:SetAttribute("GardenerLoading",nil) end)
+            end
+            return false
+        end
+    end
     local planned = {}
     -- The appearance must be complete; avoid half-colored / half-imported avatars.
     for _, name in ipairs(names) do
@@ -144,9 +224,14 @@ function Bridge.applyGardenerAvatar(character: Model): boolean
         mesh.CanQuery = false
         mesh.CastShadow = true
         local scale = limb.Size.Y / math.max(original.Size.Y, 0.001)
-        if record.name == "Head" then scale *= 1.20 end
+        local lift=0
+        if record.name == "Head" then
+            local chest=character:FindFirstChild("UpperTorso") :: BasePart
+            scale=math.max(scale*1.20,chest.Size.X*1.07/original.Size.X)
+            lift=(original.Size.Y*scale-limb.Size.Y)*.43
+        end
         mesh.Size = original.Size * scale
-        mesh.CFrame = limb.CFrame
+        mesh.CFrame = limb.CFrame*CFrame.new(0,lift,0)
         mesh.Parent = costume
         local weld = Instance.new("WeldConstraint")
         weld.Name = "AnimatedR15Attachment"
@@ -165,6 +250,8 @@ function Bridge.applyGardenerAvatar(character: Model): boolean
             item.Transparency = 1
         end
     end
+    local oldOutfit = character:FindFirstChild("NativeGardenOutfit")
+    if oldOutfit then oldOutfit:Destroy() end
     character:SetAttribute("DWTMStorybookAvatar", true)
     return true
 end
@@ -174,11 +261,16 @@ function Bridge.applySleepingMonster(boss: Model): MeshPart?
     if not source then return nil end
     local height = 52
     local mesh = makeVisual(source, boss, "ImportedSleepingMonster",
-        CFrame.new(0, 8 + height / 2, 0), height)
+        boss:GetPivot() * CFrame.new(0,10+height/2-29,0), height)
     if not mesh then return nil end
+    mesh:SetAttribute("BossRest",boss:GetPivot():ToObjectSpace(mesh.CFrame))
     for _, obj in ipairs(boss:GetDescendants()) do
-        if obj:IsA("BasePart") and obj ~= mesh then
-            obj.Transparency = 1
+        if obj:IsA("BasePart") and obj ~= mesh and not obj:IsDescendantOf(mesh) then
+            if mesh:HasTag("OrchardRig") and obj~=boss.PrimaryPart then
+                obj:Destroy()
+            else
+                obj.Transparency = 1
+            end
         end
     end
     return mesh
@@ -201,7 +293,11 @@ end
 function Bridge.applyPet(pet: Model, species: string): boolean
     if pet:FindFirstChild("ImportedCharacterMesh") then return true end
     local source = findMesh("Pets", "Pet_" .. species)
-    if not source or not pet.PrimaryPart then return false end
+    if not pet.PrimaryPart then return false end
+    if not source then
+        Bridge.prepare(pet,"Pets",{"Pet_"..species},function() Bridge.applyPet(pet,species) end)
+        return false
+    end
     local root = pet.PrimaryPart
     local visual = makeVisual(source, pet, "ImportedCharacterMesh", root.CFrame, 4.1)
     if not visual then return false end
@@ -209,10 +305,12 @@ function Bridge.applyPet(pet: Model, species: string): boolean
     -- Retain the movement root, name tag and sound; avoid replicating dozens
     -- of hidden old parts to phones.
     for _, obj in ipairs(pet:GetDescendants()) do
-        if obj:IsA("BasePart") and obj ~= visual and obj ~= root then
+        if obj:IsA("BasePart") and obj ~= visual and obj ~= root and not obj:IsDescendantOf(visual)
+            and not obj:FindFirstAncestor("PersonalityAccessory") then
             obj:Destroy()
         end
     end
+    pet:SetAttribute("NativeSpeciesStyled",false)
     root.Transparency = 1
     root.CastShadow = false
     return true
@@ -223,21 +321,24 @@ function Bridge.applyCrop(visual: Model, center: Vector3,
     if stage < 1 then return false end
     local name = "Crop_" .. seedType .. "_S" .. tostring(stage)
     local source = findMesh("Crops", name)
-    if not source then return false end
-    local targetHeight = if stage == 1 then 1.25 elseif stage == 2 then 2.35 else 3.65
-    local mesh = makeVisual(source, visual, "ImportedCropMesh",
-        CFrame.new(center + Vector3.new(0, targetHeight / 2 + 0.10, 0)), targetHeight)
-    -- Spread bush silhouettes across the organic soil patch without
-    -- multiplying imported meshes/draw calls on lower-end phones.
-    if mesh and stage >= 2 then
-        local bush = seedType == "Berry" or seedType == "FrostBerry"
-            or seedType == "Tomato" or seedType == "Pepper"
-            or seedType == "GummyGrape" or seedType == "Jellybean"
-        if bush then
-            mesh.Size = Vector3.new(mesh.Size.X * 1.31, mesh.Size.Y,
-                mesh.Size.Z * 1.31)
-        end
+    if not source then
+        Bridge.prepare(visual,"Crops",{name},function()
+            if visual:FindFirstChild("ImportedCropMesh") then return end
+            if Bridge.applyCrop(visual,center,seedType,stage) then
+                for _, item in ipairs(visual:GetChildren()) do
+                    if item:IsA("BasePart") and item.Name ~= "ImportedCropMesh"
+                        and not string.match(item.Name,"^MutatedSparkle_") then item:Destroy() end
+                end
+            end
+        end)
+        return false
     end
+    local targetHeight = if stage == 1 then 1.25 elseif stage == 2 then 2.35 else 3.65
+    -- Fit the entire rosette or vine inside its own 8.2-stud plot.
+    local width = math.max(source.Size.X,source.Size.Z)
+    local fitHeight = math.min(targetHeight,7.3*source.Size.Y/width)
+    local mesh = makeVisual(source, visual, "ImportedCropMesh",
+        CFrame.new(center + Vector3.new(0,fitHeight/2+.25,0)),fitHeight)
     return mesh ~= nil
 end
 
@@ -255,6 +356,7 @@ function Bridge.decorateEntrance(world: Instance): number
     local count = 0
     local function place(source: MeshPart, name: string, p: Vector3,
         scaleHeight: number, yaw: number)
+        scaleHeight = math.min(scaleHeight,4.7*source.Size.Y/math.max(source.Size.X,source.Size.Z))
         local mesh = makeVisual(source, garden, name,
             CFrame.new(p + Vector3.new(0, scaleHeight * 0.5, 0))
                 * CFrame.Angles(0, yaw, 0), scaleHeight)
@@ -283,6 +385,15 @@ function Bridge.decorateEntrance(world: Instance): number
         place(wheat, "WheatBorder_" .. i, Vector3.new(x, 7.06, z),
             3.4 + (i%2)*0.25, i * 0.27)
     end
+    for i, key in ipairs({"Carrot","Tomato","Corn"}) do
+        local crop = findMesh("Crops","Crop_"..key.."_S3")
+        if crop then
+            for j=0,2 do
+                place(crop,key.."Border"..j,Vector3.new(-10.7-j*4.8,7.22,87+i*3.5),
+                    if key=="Corn" then 4.4 else 2.9,.48*(i+j))
+            end
+        end
+    end
     -- A second, lighter planting on the cottage side balances the camera.
     for i = 1, 4 do
         local z = 68 + i * 4.7
@@ -294,8 +405,6 @@ end
 
 function Bridge.applySetDress(parent: Instance): number
     stageImportedPacks()
-    local root = ServerStorage:FindFirstChild(ROOT_NAME)
-    if not root then return 0 end
     local applied = 0
     local environment = parent:FindFirstChild("CottageGardenEnvironment", true)
     if not environment then return 0 end
@@ -303,12 +412,14 @@ function Bridge.applySetDress(parent: Instance): number
     local placement = {
         {"GardenCottage", "CozyOrchardCottage", Vector3.new(37, 13.5, 88), 13},
         {"WaterPond", "ShadedOrchardPond", Vector3.new(54, 7.25, 91), 14},
-        {"GardenerToucan", "OriginalGardenHelper", Vector3.new(32, 9.6, 78), 5.2},
+        {"GardenerToucan", "OriginalGardenHelper", Vector3.new(-16.5, 9.6, 71), 5.2},
         {"BloomingHedge", "OriginalFlowerHedge", Vector3.new(49, 9.0, 80), 4.0},
     }
     for _, record in ipairs(placement) do
         local source = findMesh("World", "Environment_" .. record[1])
         if source then
+            local done = environment:FindFirstChild("Imported" .. record[1])
+            if done then applied += 1 continue end
             local previous = environment:FindFirstChild(record[2])
             if previous then previous:Destroy() end
             local mesh = makeVisual(source, environment, "Imported" .. record[1],

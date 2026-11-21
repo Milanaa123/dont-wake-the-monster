@@ -4,6 +4,7 @@
 -- Detail pieces are anchored, non-collidable, and created once by the server.
 local Lighting = game:GetService("Lighting")
 
+local Art=require(script.Parent.ReferenceMeshLibrary)
 local Cottage = {}
 local LEAF_DARK = Color3.fromRGB(83, 145, 86)
 local LEAF = Color3.fromRGB(127, 183, 94)
@@ -159,11 +160,11 @@ function Cottage.applyLighting()
     Lighting.ClockTime = 16.1
     Lighting.Brightness = 2.1
     Lighting.ExposureCompensation = -0.07
-    Lighting.Ambient = Color3.fromRGB(170, 166, 148)
-    Lighting.OutdoorAmbient = Color3.fromRGB(204, 193, 157)
+    Lighting.Ambient = Color3.fromRGB(126, 128, 117)
+    Lighting.OutdoorAmbient = Color3.fromRGB(170, 177, 149)
     Lighting.EnvironmentDiffuseScale = 0.4
     Lighting.EnvironmentSpecularScale = 0.32
-    Lighting.ShadowSoftness = 0.43
+    Lighting.ShadowSoftness = 0.38
     Lighting.GlobalShadows = true
 
     local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere") or Instance.new("Atmosphere")
@@ -171,7 +172,7 @@ function Cottage.applyLighting()
     atmosphere.Color = Color3.fromRGB(251, 225, 176)
     atmosphere.Decay = Color3.fromRGB(187, 204, 165)
     atmosphere.Density = 0.17
-    atmosphere.Haze = 1.4
+    atmosphere.Haze = 0.95
     atmosphere.Glare = 0.22
     atmosphere.Offset = 0.05
     atmosphere.Parent = Lighting
@@ -308,6 +309,13 @@ function Cottage.decorateWorld(world: Instance)
             p.CFrame *= CFrame.Angles(0, -a, 0)
         end
     end
+    local function patch(key: string, pos: Vector3, width: number): Folder
+        local detail=Instance.new("Folder")
+        detail.Name="FieldDetails"
+        detail.Parent=folder
+        Art.ground(folder,key,CFrame.new(pos)*CFrame.Angles(0,pos.X*.13,0),width,detail)
+        return detail
+    end
     -- Dense-looking but deliberately bounded original orchard.
     for i = 1, 11 do
         local a = (i / 11) * math.pi * 2 + 0.17
@@ -315,24 +323,26 @@ function Cottage.decorateWorld(world: Instance)
         local treePos = Vector3.new(math.cos(a) * r, 7, math.sin(a) * r)
         if (treePos - Vector3.new(37, 7, 88)).Magnitude > 21
             and (treePos - Vector3.new(54, 7, 91)).Magnitude > 14 then
-            fruitTree(folder, treePos, i, rng)
+            fruitTree(patch("Environment_OrangeTree",treePos,13+i%3), treePos, i, rng)
         end
     end
     for i = 1, 21 do
         local a = rng:NextNumber(0, math.pi * 2)
         local r = rng:NextNumber(80, 104)
-        wildBerryBush(folder, Vector3.new(math.cos(a) * r, 7, math.sin(a) * r), rng)
+        local pos=Vector3.new(math.cos(a)*r,7,math.sin(a)*r)
+        wildBerryBush(patch("Crop_Berry_S3",pos,4.8),pos,rng)
     end
     for i = 1, 12 do
         local a = (i / 12) * math.pi * 2
         local r = rng:NextNumber(84, 101)
-        wheatClump(folder, Vector3.new(math.cos(a) * r, 7, math.sin(a) * r), rng:NextNumber(0.8, 1.2))
+        local pos=Vector3.new(math.cos(a)*r,7,math.sin(a)*r)
+        wheatClump(patch("Crop_WhisperWheat_S3",pos,3.4),pos,rng:NextNumber(.8,1.2))
     end
     for _, p in ipairs({
         Vector3.new(-85, 7, 10), Vector3.new(91, 7, -2),
         Vector3.new(-48, 7, -73), Vector3.new(42, 7, 82),
     }) do
-        melonPatch(folder, p)
+        melonPatch(patch("Crop_LavaMelon_S3",p,6.1),p)
     end
     for i = 1, 23 do
         local a = rng:NextNumber(0, math.pi * 2)
@@ -409,11 +419,16 @@ function Cottage.decorateFarm(parent: Instance, center: CFrame)
     end
 
     -- Toy-sized enamel watering can, a natural place to orient the player.
+    local canFolder=Instance.new("Folder")
+    canFolder.Name="WateringCanDetails"
+    canFolder.Parent=parent
     local canCenter = (center * CFrame.new(-9.9, 1.35, 12.5)).Position
-    ball(parent, "WateringCan", canCenter, Vector3.new(2.5, 1.9, 1.8), Color3.fromRGB(159, 198, 215))
+    ball(canFolder, "WateringCan", canCenter, Vector3.new(2.5, 1.9, 1.8), Color3.fromRGB(159, 198, 215))
     local spoutEnd = canCenter + (center.RightVector * -2.0) + Vector3.new(0, 0.55, 0)
-    beam(parent, "WateringSpout", canCenter, spoutEnd, 0.38, Color3.fromRGB(121, 166, 196))
-    ball(parent, "WateringRose", spoutEnd, Vector3.new(0.78, 0.27, 0.78), Color3.fromRGB(222, 230, 211))
+    beam(canFolder, "WateringSpout", canCenter, spoutEnd, 0.38, Color3.fromRGB(121, 166, 196))
+    ball(canFolder, "WateringRose", spoutEnd, Vector3.new(0.78, 0.27, 0.78), Color3.fromRGB(222, 230, 211))
+
+    Art.ground(parent,"Environment_WateringCan",center*CFrame.new(-9.9,.73,12.5),2.9,canFolder)
 
     -- Low detail density: twelve tiny meadow daisies and pebbles around the beds.
     for i = 1, 12 do

@@ -78,6 +78,18 @@ try {
     Capture "01-after-installer.png" | Out-Null
     if (!$studio) { throw "No RobloxStudioBeta.exe found after official install attempt" }
 
+    # The installer creates the EXE before it finishes writing it.
+    $ready = $false
+    $until = (Get-Date).AddSeconds(140)
+    do {
+        try {
+            $check = Get-AuthenticodeSignature -LiteralPath $studio
+            $ready = $check.Status -eq 'Valid' -and $check.SignerCertificate.Subject -match 'Roblox' -and
+                ((Get-Process RobloxStudioBeta -ErrorAction SilentlyContinue) -or $process.HasExited)
+        } catch { $ready = $false }
+        if (!$ready) { Start-Sleep -Seconds 3 }
+    } while (!$ready -and (Get-Date) -lt $until)
+    if (!$ready) { throw "The Studio installation did not finish with a signed executable." }
     $report.installed = $true
     Write-Host "Studio found. Launching local .rbxlx place without credentials."
     $place = Join-Path $root "dist\dont-wake-the-monster.rbxlx"

@@ -164,25 +164,8 @@ def sculpt_world(name,S):
             if i%2==0:
                 blossom((p[0]+.11,.30,p[2]-.27),pink=True,scale=.73)
     elif name=="SleepingMonster":
-        b("lavender",(0,2.25,.42),(2.49,2.25,2.16),23,14)
-        b("lilac",(0,3.95,-1.14),(2.26,2.03,1.88),24,14)
-        b("rose",(0,2.18,-1.38),(1.45,1.52,.30),18,10)
-        for side in (-1,1):
-            b("lilac",(side*2.36,2.79,-.37),(.85,1.18,.98),17,10)
-            b("lavender",(side*1.55,.72,-.77),(.93,.44,.98),15,10)
-            lf("pink",(side*1.26,5.29,-1.08),
-              (side*1.53,6.45,-1.13),.59)
-            b("pink",(side*1.21,3.44,-2.79),(.42,.24,.12),12,7)
-            beam("chocolate",[(side*.54,4.16,-2.86),
-                              (side*1.29,4.12,-2.85)],.075)
-        b("pink",(0,3.45,-2.89),(.29,.20,.14),12,7)
-        tube("chocolate",[(-.32,3.14,-2.84),(0,3.05,-2.89),
-                          (.32,3.14,-2.84)],[.042,.045,.037])
-        for i in range(12):
-            a=i*pi/11
-            b("leaf" if i%3 else "leaflight",
-              (cos(a)*1.52,5.73+sin(a)*.25,-1.22),
-              (.40,.31,.44),11,7)
+        from orchard_sculpt import monster
+        return monster(S)
     elif name=="GardenerToucan":
         # Small black garden companion: blue cap, pale grey beak and a large
         # golden circular eyering like the user's styling reference.

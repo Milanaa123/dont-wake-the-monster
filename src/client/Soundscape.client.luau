@@ -1,6 +1,6 @@
 --!strict
 -- Client-only cozy audio mix with an accessible mute button.
--- Sound remains SILENT until creator-owned Roblox audio IDs are configured.
+-- The offline Studio kit resolves the same originals from its local content directory.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
@@ -8,6 +8,7 @@ local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
 local Config = require(ReplicatedStorage:WaitForChild("AudioConfig"))
 local remote = ReplicatedStorage:WaitForChild("MonsterRemote") :: RemoteEvent
+local AudioSource = require(ReplicatedStorage.AudioSource)
 local player = Players.LocalPlayer
 
 local soundGroup = Instance.new("SoundGroup")
@@ -61,35 +62,17 @@ local d = Instance.new("UICorner")
 d.CornerRadius = UDim.new(0, 12)
 d.Parent = fxButton
 
-local function authorizedId(id: any): boolean
-    return type(id) == "number" and id > 0 and id == math.floor(id)
-end
 local function refreshButtons()
     musicButton.Text = if musicEnabled then "🎵 MUSIC ON" else "🔇 MUSIC OFF"
     fxButton.Text = if effectsEnabled then "🔊 EFFECTS ON" else "🔇 EFFECTS OFF"
-    if not authorizedId(Config.MusicAssetId) and not authorizedId(Config.ChaseMusicAssetId) then musicButton.Text = "🎵 AUDIO PENDING" end
+    if not music and not chase then musicButton.Text = "🎵 AUDIO PENDING" end
 end
-local function targetMusicVolume(): number
-    if not musicEnabled then return 0 end
-    return if phase == "AWAKE" then Config.MusicVolume * 0.25 else Config.MusicVolume
-end
-
-if authorizedId(Config.MusicAssetId) then
-    local sound = Instance.new("Sound")
-    sound.Name = "OriginalCozyGardenTheme"
-    sound.SoundId = "rbxassetid://" .. Config.MusicAssetId
-    sound.Volume = Config.MusicVolume
-    sound.Looped = true
-    sound.SoundGroup = soundGroup
-    sound.Parent = SoundService
-    music = sound
-    sound:Play()
-end
-local function loopTrack(assetId: any, name: string, volume: number, group: SoundGroup): Sound?
-    if not authorizedId(assetId) then return nil end
+local function loopTrack(assetId: number?, file: string, name: string, volume: number, group: SoundGroup): Sound?
+    local uri=AudioSource.resolve(assetId,file)
+    if not uri then return nil end
     local sound = Instance.new("Sound")
     sound.Name = name
-    sound.SoundId = "rbxassetid://" .. tostring(assetId)
+    sound.SoundId = uri
     sound.Volume = volume
     sound.Looped = true
     sound.SoundGroup = group
@@ -97,8 +80,9 @@ local function loopTrack(assetId: any, name: string, volume: number, group: Soun
     sound:Play()
     return sound
 end
-chase = loopTrack(Config.ChaseMusicAssetId, "OriginalMonsterChaseTheme", 0, soundGroup)
-ambience = loopTrack(Config.AmbienceAssetId, "OriginalSleepyForestAmbience",
+music = loopTrack(Config.MusicAssetId,"calm-garden-theme","OriginalCozyGardenTheme",Config.MusicVolume,soundGroup)
+chase = loopTrack(Config.ChaseMusicAssetId, "monster-chase-theme", "OriginalMonsterChaseTheme", 0, soundGroup)
+ambience = loopTrack(Config.AmbienceAssetId, "sleepy-forest-ambience", "OriginalSleepyForestAmbience",
     if musicEnabled then Config.AmbienceVolume else 0, soundGroup)
 
 local function crossfadeMusic()
@@ -126,16 +110,20 @@ fxButton.MouseButton1Click:Connect(function()
     refreshButtons()
 end)
 
+local cueFiles: {[string]: string} = {TinyViolin="tiny-violin-fail", SuspiciousMeow="suspicious-meow",
+    RecordScratch="cartoon-record-scratch", ComedySting="comedy-drum-sting"}
 local function playCue(id: string)
     if not effectsEnabled then return end
     local assetId = Config.Cues[id]
-    if not authorizedId(assetId) then return end
+    if assetId==nil then return end
+    local uri=AudioSource.resolve(assetId,cueFiles[id] or id)
+    if not uri then return end
     local now = os.clock()
     if now - (recent[id] or -100) < 0.35 then return end
     recent[id] = now
     local effect = Instance.new("Sound")
     effect.Name = "Original_" .. id
-    effect.SoundId = "rbxassetid://" .. assetId
+    effect.SoundId = uri
     effect.Volume = Config.CueVolume
     effect.SoundGroup = effectsGroup
     effect.Parent = SoundService

@@ -16,9 +16,11 @@ local ReferenceFoliageLayer = require(script.Parent:WaitForChild("ReferenceFolia
 local ReferenceGroundLight = require(script.Parent:WaitForChild("ReferenceGroundLight"))
 local NativePetSilhouettes = require(script.Parent:WaitForChild("NativePetSilhouettes"))
 
+local AudioSource = require(game:GetService("ReplicatedStorage").AudioSource)
 local World = {}
 local scenery: Folder
 local monster: Model
+local den = CFrame.identity
 local monsterEyes: {BasePart} = {}
 local monsterLids: {BasePart} = {}
 local monsterSleepLines: {BasePart} = {}
@@ -66,7 +68,7 @@ local function billboard(parent: Instance, label: string, position: Vector3, wid
     gui.Size = UDim2.fromOffset(width, 95)
     gui.StudsOffset = Vector3.new(0, 4, 0)
     gui.AlwaysOnTop = true
-    gui.MaxDistance = 190
+    gui.MaxDistance = 44
     gui.Parent = anchor
     local t = Instance.new("TextLabel")
     t.Size = UDim2.fromScale(1, 1)
@@ -85,7 +87,10 @@ local function lollipopTree(index: number, position: Vector3)
     -- the playable game still gets layered original orange-tree geometry,
     -- rather than large generic spheres.
     if ReferenceMeshLibrary.applyOrchardTree(scenery, index, position) then return end
-    PainterlyOrchardTree.build(scenery, index, position)
+    local tree = PainterlyOrchardTree.build(scenery, index, position)
+    ReferenceMeshLibrary.prepare(tree,"World",{"Environment_OrangeTree"},function()
+        if ReferenceMeshLibrary.applyOrchardTree(tree.Parent,index,position) then tree:Destroy() end
+    end)
 end
 
 local function mushroom(position: Vector3, color: Color3, scale: number)
@@ -129,18 +134,16 @@ function World.build()
 
     local spawn = Instance.new("SpawnLocation")
     spawn.Name = "SafeSpawn"
-    spawn.Size = Vector3.new(15, 1, 15)
-    spawn.CFrame = CFrame.new(0, 9, 85)
+    spawn.Size = Vector3.new(15, .25, 15)
+    spawn.CFrame = CFrame.new(0, 7.08, 85)
     spawn.Material = Enum.Material.Grass
     spawn.Color = Color3.fromRGB(184, 207, 141)
-    spawn.Transparency = 0.42
+    spawn.Transparency = 1
     spawn.Anchored = true
     spawn.Neutral = true
     spawn.CanCollide = true
     spawn.Duration = 0
     spawn.Parent = scenery
-    billboard(scenery, "DON'T WAKE THE MONSTER!", Vector3.new(0, 21, 93), 540)
-    billboard(scenery, "FEED YOUR PET • MAKE CHAOS • SURVIVE", Vector3.new(0, 15, 63), 470)
 
     local rng = Random.new(82041) -- stable decorative layout
     local colors = {PINK, BLUE, MINT, YELLOW, PURPLE}
@@ -192,10 +195,50 @@ function World.build()
     if nativeBeds or nativeBackdrop then
         ReferenceFoliageLayer.build(scenery, nativeBackdrop, nativeBeds)
     end
+    local function refreshFoliage()
+        if nativeBeds or nativeBackdrop then
+            ReferenceFoliageLayer.build(scenery,nativeBackdrop,nativeBeds)
+        else
+            local old = scenery:FindFirstChild("ReferencePaintedFoliage")
+            if old then old:Destroy() end
+        end
+    end
+    if nativeBeds then
+        ReferenceMeshLibrary.prepare(scenery,"Crops",{"Crop_Berry_S3","Crop_LavaMelon_S3",
+            "Crop_WhisperWheat_S3","Crop_Carrot_S3","Crop_Tomato_S3","Crop_Corn_S3"},function()
+            if ReferenceMeshLibrary.decorateEntrance(scenery)>0 then
+                local old = scenery:FindFirstChild("ReferenceNativeGarden")
+                if old then old:Destroy() end
+                nativeBeds=false
+                refreshFoliage()
+            end
+        end)
+    end
+    if nativeBackdrop then
+        ReferenceMeshLibrary.prepare(scenery,"World",{"Environment_OrangeTree","Environment_WoodFence",
+            "Environment_GardenCottage","Environment_WaterPond","Environment_GardenerToucan",
+            "Environment_BloomingHedge"},function()
+            if ReferenceMeshLibrary.applySetDress(scenery)==4 then
+                local old = scenery:FindFirstChild("ReferenceNativeBackdrop")
+                if old then old:Destroy() end
+                nativeBackdrop=false
+                refreshFoliage()
+            end
+        end)
+    end
     ReferenceGroundLight.build(scenery)
+    for i=1,20 do
+        local side=if i%2==0 then 1 else -1
+        local ground=Vector3.new(side*(15+(i%4)*4.6),7.18,54+math.floor(i/2)*4.8)
+        ReferenceMeshLibrary.ground(scenery,"Environment_MeadowVerge",
+            CFrame.new(ground)*CFrame.Angles(0,i*.82,0),6.2+(i%3)*.7,nil)
+    end
+    ReferenceMeshLibrary.ground(scenery,"Environment_StonePath",
+        CFrame.new(8,7.12,87)*CFrame.Angles(0,.72,0),15,nil)
 
     lastAwakeState = nil
     monster = Instance.new("Model")
+    monster.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
     monster.Name = "GigglesTheGiant"
     monster.Parent = scenery
     table.clear(monsterEyes)
@@ -243,10 +286,44 @@ function World.build()
     halo.CanCollide = false
 
     importedSleepingMonster = ReferenceMeshLibrary.applySleepingMonster(monster)
+    if not importedSleepingMonster then
+        ReferenceMeshLibrary.prepare(monster,"World",{"Environment_SleepingMonster"},function()
+            importedSleepingMonster = ReferenceMeshLibrary.applySleepingMonster(monster)
+        end)
+    end
     -- The spawn is on the southern side (+Z); face the garden entrance.
     monster:PivotTo(monster:GetPivot() * CFrame.Angles(0, math.pi, 0))
+    den = monster:GetPivot()
 
     return scenery
+end
+
+function World.monsterPosition(): Vector3
+    return monster:GetPivot().Position
+end
+
+function World.followMonster(target: Vector3?, dt: number)
+    local current=monster:GetPivot()
+    local foot=Vector3.new(current.X,0,current.Z)
+    local destination=if target then Vector3.new(target.X,0,target.Z) else Vector3.zero
+    -- Keep the giant in the inner arena and keep the personal beds accessible.
+    if destination.Magnitude>36 then destination=destination.Unit*36 end
+    local delta=destination-foot
+    local step=(if target then 6.8 else 10)*math.min(dt,.20)
+    local nextFoot=if delta.Magnitude<=step then destination else foot+delta.Unit*step
+    local height=den.Y-3*math.clamp((nextFoot.Magnitude-25)/8,0,1)
+    local pos=Vector3.new(nextFoot.X,height,nextFoot.Z)
+    local facing=if target then Vector3.new(target.X-pos.X,0,target.Z-pos.Z) else den.LookVector
+    local heading=if facing.Magnitude>.01 then CFrame.lookAt(Vector3.zero,facing.Unit).Rotation else current.Rotation
+    local desired=CFrame.new(pos)*current.Rotation:Lerp(heading,1-math.exp(-dt*3.2))
+    if not target and nextFoot.Magnitude<.04 and desired.LookVector:Dot(den.LookVector)>.9998 then desired=den end
+    if current~=desired then monster:PivotTo(desired) end
+    local walking=(nextFoot-foot).Magnitude>.03
+    if monster:GetAttribute("Walking")~=walking then monster:SetAttribute("Walking",walking) end
+end
+
+function World.monsterGesture()
+    monster:SetAttribute("AttackAt",workspace:GetServerTimeNow())
 end
 
 function World.setMonsterAwake(awake: boolean)
@@ -256,7 +333,9 @@ function World.setMonsterAwake(awake: boolean)
     if awake then
         MonsterWakeVFX.wake(scenery, Vector3.new(0, 8, 0))
     end
-    if importedSleepingMonster and importedSleepingMonster.Parent then
+    monster:SetAttribute("Awake",awake)
+    local rigged = importedSleepingMonster and importedSleepingMonster:GetAttribute("ArtSize") ~= nil
+    if importedSleepingMonster and importedSleepingMonster.Parent and not rigged then
         importedSleepingMonster.Transparency = if awake then 1 else 0
         for _, obj in ipairs(monster:GetDescendants()) do
             if obj:IsA("BasePart") and obj ~= importedSleepingMonster then
@@ -265,17 +344,17 @@ function World.setMonsterAwake(awake: boolean)
         end
     end
     for _, lid in ipairs(monsterLids) do
-        if lid.Parent then lid.Transparency = if awake then 1 else 0 end
+        if lid.Parent then lid.Transparency = if awake or importedSleepingMonster then 1 else 0 end
     end
     for _, line in ipairs(monsterSleepLines) do
-        if line.Parent then line.Transparency = if awake then 1 else 0 end
+        if line.Parent then line.Transparency = if awake or importedSleepingMonster then 1 else 0 end
     end
     -- Sleep is golden-hour cozy; wakeup temporarily cools the same landscape.
     TweenService:Create(Lighting, TweenInfo.new(1.8), {
         ClockTime = if awake then 19.0 else 16.1,
         Brightness = if awake then 1.42 else 2.1,
         OutdoorAmbient = if awake then Color3.fromRGB(151, 155, 189)
-            else Color3.fromRGB(204, 193, 157),
+            else Color3.fromRGB(170, 177, 149),
     }):Play()
     local grade = Lighting:FindFirstChild("CottageColorGrade")
     if grade and grade:IsA("ColorCorrectionEffect") then
@@ -295,13 +374,7 @@ function World.setMonsterAwake(awake: boolean)
     end
 end
 
-function World.makePet(name: string, color: Color3, pointy: boolean): Model
-    local pet = Instance.new("Model")
-    pet.Name = name
-    pet.Parent = scenery
-    local body = orb(pet, "SquishyBody", Vector3.new(0, 0, 0), Vector3.new(4.4, 4, 4), color)
-    body.CanCollide = false
-    pet.PrimaryPart = body
+local function drawLegacyPet(pet: Model,species: string,color: Color3,pointy: boolean)
     for _, x in ipairs({-1.15, 1.15}) do
         orb(pet, "EyeWhite", Vector3.new(x, 0.5, -1.85), Vector3.new(1.35, 1.65, 0.6), Color3.fromRGB(255, 255, 255))
         orb(pet, "Pupil", Vector3.new(x, 0.35, -2.23), Vector3.new(0.64, 0.9, 0.25), Color3.fromRGB(48, 35, 74))
@@ -314,7 +387,6 @@ function World.makePet(name: string, color: Color3, pointy: boolean): Model
         orb(pet, "TinyFoot", Vector3.new(x * 0.7, -1.86, -0.9), Vector3.new(1.25, 0.7, 1.45), color)
     end
     orb(pet, "PuffTail", Vector3.new(0, -0.2, 2.05), Vector3.new(1.8, 1.8, 1.8), color)
-    local species = (string.match(name, "^[^_]+") or name):gsub("^Wild", "")
     if species == "Pip" or species == "Zuzu" then
         -- Two explicitly feline companions. The SAME cat species can have
         -- entirely different personalities per player.
@@ -444,6 +516,19 @@ function World.makePet(name: string, color: Color3, pointy: boolean): Model
         end
     end
     StorybookPetArt.decorate(pet, species, color)
+end
+
+function World.makePet(name: string, color: Color3, pointy: boolean): Model
+    local pet = Instance.new("Model")
+    pet.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
+    pet:SetAttribute("CoatColor",color)
+    pet.Name = name
+    pet.Parent = scenery
+    local body = orb(pet, "SquishyBody", Vector3.new(0, 0, 0), Vector3.new(4.4, 4, 4), color)
+    body.CanCollide = false
+    pet.PrimaryPart = body
+    local species = (string.match(name, "^[^_]+") or name):gsub("^Wild", "")
+    pet:SetAttribute("Airborne",species=="Echo" or species=="Twinkle" or species=="Doodle" or species=="Swoop")
     local tag = Instance.new("BillboardGui")
     tag.Name = "PetNameTag"
     tag.Size = UDim2.fromOffset(140, 36)
@@ -463,18 +548,27 @@ function World.makePet(name: string, color: Color3, pointy: boolean): Model
     tagText.Parent = tag
     local light = Instance.new("PointLight")
     light.Range = 11
-    light.Brightness = 0.4
+    light.Brightness = 0.12
     light.Color = color
     light.Parent = body
     -- Imported sculpt takes priority. With no asset permissions, pets still
     -- have family-specific native silhouettes instead of identical blobs.
     if not ReferenceMeshLibrary.applyPet(pet, species) then
+        drawLegacyPet(pet,species,color,pointy)
         NativePetSilhouettes.apply(pet, species, color)
     end
     return pet
 end
 
 function World.tintPet(pet: Model, tint: Color3)
+    local mesh = pet:FindFirstChild("ImportedCharacterMesh")
+    if mesh and mesh:IsA("MeshPart") then
+        local mix=if tint==pet:GetAttribute("CoatColor") then Color3.new(1,1,1) else Color3.new(1,1,1):Lerp(tint,.70)
+        mesh.Color=mix
+        for _,child in ipairs(mesh:GetChildren()) do
+            if child:IsA("MeshPart") then child.Color=mix end
+        end
+    end
     for _, item in ipairs(pet:GetDescendants()) do
         if item:IsA("BasePart") and (item.Name == "SquishyBody" or item.Name == "Ear") then
             item.Color = tint
@@ -529,8 +623,8 @@ function World.createGarden(userId: number, ownerName: string, slot: number): bo
     -- Place the first player garden directly ahead of the southern spawn.
     -- Remaining plots retain their distinct 12-player radial slots.
     local angle = (slot - 1) / 12 * math.pi * 2 + math.pi / 2
-    local origin = Vector3.new(math.cos(angle) * 61, 8.3, math.sin(angle) * 61)
-    local center = CFrame.lookAt(origin, Vector3.new(0, 8.3, 0))
+    local origin = Vector3.new(math.cos(angle) * 61, 7.26, math.sin(angle) * 61)
+    local center = CFrame.lookAt(origin, Vector3.new(0, origin.Y, 0))
     local model = Instance.new("Model")
     model.Name = "Farm_" .. tostring(userId)
     model.Parent = scenery
@@ -560,7 +654,11 @@ function World.createGarden(userId: number, ownerName: string, slot: number): bo
         plot:SetAttribute("PosZ", place.Position.Z)
         -- Edgeless organic earth replaces nine raised wooden boxes.
         -- Positions and attributes still match the existing garden persistence.
-        OrganicGardenBeds.decoratePlot(plot, place, index)
+        local soil = Instance.new("Model")
+        soil.Name="SoilDetails"
+        soil.Parent=plot
+        OrganicGardenBeds.decoratePlot(soil, place, index)
+        ReferenceMeshLibrary.ground(plot,"Environment_LoamBed",place*CFrame.Angles(0,index*math.pi/2,0),7.35,soil)
         local mini = part(plot, "NumberAnchor", Vector3.new(0.2, 0.2, 0.2), place * CFrame.new(0, 1.6, -2.9), Color3.new(1, 1, 1))
         mini.Transparency = 1
         mini.CanCollide = false
@@ -582,7 +680,7 @@ function World.createGarden(userId: number, ownerName: string, slot: number): bo
         end)
         local tag = Instance.new("BillboardGui")
         tag.Size = UDim2.fromOffset(84, 24)
-        tag.MaxDistance = 28
+        tag.MaxDistance = 12
         tag.AlwaysOnTop = false
         tag.Parent = mini
         local t = Instance.new("TextLabel")
@@ -739,8 +837,8 @@ function World.setPurr(pet: Model, level: number, soundId: number?)
     local root = pet.PrimaryPart
     if not root then return end
     local existing = root:FindFirstChild("SoftPurrLoop")
-    local valid = type(soundId) == "number" and soundId > 0 and soundId == math.floor(soundId)
-    if not valid then
+    local uri=AudioSource.resolve(soundId,"original-cat-purr-loop")
+    if not uri then
         if existing and existing:IsA("Sound") then existing:Stop() end
         return
     end
@@ -754,7 +852,7 @@ function World.setPurr(pet: Model, level: number, soundId: number?)
         sound.RollOffMaxDistance = 64
         sound.RollOffMinDistance = 3
         sound.RollOffMode = Enum.RollOffMode.InverseTapered
-        sound.SoundId = "rbxassetid://" .. tostring(soundId)
+        sound.SoundId = uri
         sound.Volume = 0
         sound.Parent = root
     end
@@ -778,6 +876,7 @@ end
 function World.emotePet(pet: Model, mood: string, action: string?)
     local root = pet.PrimaryPart
     if not root then return end
+    pet:SetAttribute("PetMood",mood)
     local gui = root:FindFirstChild("MoodBubble")
     if not gui then return end
     local label = gui:FindFirstChild("MoodText")

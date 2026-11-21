@@ -93,3 +93,23 @@ jobs:
           path: dist/dont-wake-the-monster.rbxlx
           if-no-files-found: error
           retention-days: 14
+
+      - name: Build and verify the local Studio kit
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/bake_orchard.py
+          git diff --exit-code -- assets/OrchardGeometry.model.json
+          python3 scripts/package_studio.py dist/dont-wake-the-monster.rbxlx dist/StudioKit
+          curl --fail --location --retry 3 https://github.com/lune-org/lune/releases/download/v0.11.1/lune-0.11.1-linux-x86_64.zip -o /tmp/lune.zip
+          unzip -oq /tmp/lune.zip -d /tmp/lune
+          chmod +x /tmp/lune/lune
+          /tmp/lune/lune run scripts/test_orchard_place.luau dist/StudioKit/DontWakeTheMonster-Studio.rbxlx
+
+      - name: Upload Windows Studio kit
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-studio-kit
+          path: dist/StudioKit.zip
+          if-no-files-found: error
+          retention-days: 14

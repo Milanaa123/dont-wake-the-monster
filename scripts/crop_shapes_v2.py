@@ -4,6 +4,8 @@ import random
 
 def sculpt_crop(name, stage, S):
     g=S("Crop_"+name+"_S"+str(stage))
+    from orchard_varieties import variety
+    if variety(g,name,stage): return g
     rng=random.Random(sum((i+1)*ord(c) for i,c in enumerate(name))+stage*11)
     t=stage/3
     h={1:.55,2:.78,3:1.0}[stage]
@@ -55,30 +57,18 @@ def sculpt_crop(name, stage, S):
                         if heights[i]<=yr<=heights[i+1])
                 fraction=(yr-heights[hi])/(heights[hi+1]-heights[hi])
                 rad=radii[hi]+(radii[hi+1]-radii[hi])*fraction
-                for j in range(3):
-                    xf=(j-1)*.56 + (row%2)*.15
-                    x=cx+rad*s*xf
-                    z=cz-rad*s*(1-xf*xf)**.5-.011*s
+                count = (6,9,10,7)[row]
+                for j in range(count):
+                    a=(j+.5*(row%2))*2*pi/count
+                    x=cx+sin(a)*(rad+.004)*s
+                    z=cz-cos(a)*(rad+.004)*s
                     y=cy+yr*s
-                    w=.022*s;hh=.037*s
-                    g.tri("cream",(x,y+hh,z),(x-w,y,z),
-                          (x,y-hh,z))
-                    g.tri("cream",(x,y+hh,z),(x,y-hh,z),
-                          (x+w,y,z))
+                    w=.012*s
+                    g.quad("straw",(x,y+.023*s,z),(x+w*cos(a),y,z+w*sin(a)),
+                           (x,y-.019*s,z),(x-w*cos(a),y,z-w*sin(a)))
     def melon(p,r,mat):
-        ell(mat,p,(r*1.16,r*.92,r),19,11)
-        # Banded rind, following the surface, including both ends.
-        for i in range(-2,3):
-            ang=i*.42
-            pts=[]
-            for j in range(7):
-                a=pi*j/6
-                wobble=ang+.055*sin(a*6+i*.8)
-                pts.append((p[0]+sin(wobble)*r*1.16*sin(a),
-                            p[1]+cos(a)*r*.915,
-                            p[2]-cos(wobble)*r*.999*sin(a)))
-            g.tube("leafdeep",pts,[.052*r]*7,5)
-        cap((p[0],p[1]+r*.82,p[2]),r)
+        from orchard_sculpt import melon_rind
+        melon_rind(g,p,r,mat)
     # distinguish plant type by original reference silhouettes
     typ = (
       "berry" if name in ("Berry","FrostBerry") else
@@ -97,11 +87,14 @@ def sculpt_crop(name, stage, S):
             p=(ox,.15,oz)
             top=(ox*.96,(.58+(.18 if i%2 else 0))*h,oz*.94)
             stem(p,top,.064)
-            for j in range(5 if stage==3 else 3):
-                b=a+j*2*pi/(5 if stage==3 else 3)
-                lf(lit if j%3==0 else leaf,top,
-                    (top[0]+sin(b)*.67*h,top[1]+.13*h,
-                     top[2]+cos(b)*.61*h),.33*h)
+            from orchard_sculpt import leaflet
+            for j in range(3):
+                axis=a+j*2*pi/3
+                base=(top[0]+sin(axis)*.18*h,top[1]+.10*h,top[2]+cos(axis)*.18*h)
+                stem(top,base,.026*h)
+                for k in (-1,0,1):
+                    leaflet(g,base,pi/2-axis+k*.76,(.52 if k else .7)*h,.20*h,
+                            lit if (i+j+k)%4==0 else leaf)
             if stage>=2:
                 fruit=(ox*.95+sin(a+1)*.33,(.30+(.12 if i%2 else 0))*h,oz*.94-.22)
                 stem(top,(fruit[0],fruit[1]+.14*h,fruit[2]),.033)
@@ -174,11 +167,24 @@ def sculpt_crop(name, stage, S):
                     ear=(p[0]+sin(a)*.11,height*1.32,
                          p[2]+cos(a)*.12)
                     ell("dandelion",ear,(.23*h,.62*h,.20*h),12,8)
+                    for row in range(6):
+                        t=(row+.5)/6
+                        for kernel in range(5):
+                            b=kernel*2*pi/5+.18*(row%2)
+                            rr=sin(pi*t)**.55
+                            ell("straw" if (row+kernel)%4==0 else "gold",
+                                (ear[0]+.22*h*rr*sin(b),ear[1]+(t-.5)*1.10*h,
+                                 ear[2]+.20*h*rr*cos(b)),(.065*h,.067*h,.064*h),5,3)
                     for b in (a-1.0,a+1.0):
                         lf(leaf,(p[0],height*.77,p[2]),
                             (p[0]+sin(b)*.43,height*1.58,
                              p[2]+cos(b)*.43),.22)
                 else:
+                    for awn in (-1,1):
+                        for j in range(4):
+                            y=height*1.42+j*.21*h
+                            stem((p[0],y,p[2]),(p[0]+awn*.23*h,y+.50*h,
+                                 p[2]+cos(a)*.13*h),.012*h,"straw")
                     for j in range(5):
                         y=height*1.41+j*.19*h
                         ell("straw" if name=="WhisperWheat" else "gold",

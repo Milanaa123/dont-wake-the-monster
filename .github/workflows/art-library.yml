@@ -4,6 +4,8 @@ on:
     paths:
       - "scripts/generate_reference_glb.py"
       - "scripts/creature_shapes_v2.py"
+      - "scripts/orchard_sculpt.py"
+      - "scripts/orchard_varieties.py"
       - "scripts/crop_shapes_v2.py"
       - "scripts/world_shapes_v2.py"
       - "scripts/gardener_avatar_v1.py"

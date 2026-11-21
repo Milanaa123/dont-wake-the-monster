@@ -20,6 +20,12 @@
         "StreamingMinRadius": 64,
         "StreamingTargetRadius": 128
       }
+    },
+    "ServerStorage": {
+      "$className": "ServerStorage",
+      "OrchardGeometry": {
+        "$path": "assets/OrchardGeometry.model.json"
+      }
     }
   }
 }
