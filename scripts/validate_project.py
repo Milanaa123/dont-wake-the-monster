@@ -536,3 +536,15 @@ assert 'HttpService:GenerateGUID(false)' in server, "Every server must use a uni
 assert 'persistence:release(player.UserId, profile)' in server
 assert 'if persistence:save(player.UserId, profile) then' in server
 print("OK: atomic DataStore session lease and safe final-release integration")
+
+# Celebrations must not flood mobile scenes with large replicated neon spheres.
+world = read("src/server/World.luau")
+burst = world.split("function World.burst(", 1)[1].split("function World.wave(", 1)[0]
+for token in ("PaintedCelebrationPetal", "Instance.new(\"WedgePart\")",
+              "math.clamp(math.floor(count), 0, 18)",
+              "Enum.Material.SmoothPlastic", "CanCollide = false",
+              "CanTouch = false", "CanQuery = false", "Debris:AddItem(leaf, 1.3)"):
+    assert token in burst, f"Lightweight painterly gameplay VFX regressed: {token}"
+assert 'Enum.Material.Neon' not in burst
+assert 'orb(scenery, "Burst"' not in burst
+print("OK: bounded, no-collision painterly celebrations replace neon sphere spam")
