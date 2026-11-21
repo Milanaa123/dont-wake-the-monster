@@ -30,8 +30,8 @@ def add_family_details(g, name, species, base, secondary):
     if species == "bear":
         head()
         # Small pale plush muzzle and smile attached to the moving head.
-        blob("cream", (0, 1.67, -1.19), (.43, .31, .15), 15, 8)
-        blob("chocolate", (0, 1.73, -1.36), (.118, .076, .047))
+        blob("cream", (0, 1.65, -1.23), (.29, .17, .09), 15, 8)
+        blob("chocolate", (0, 1.73, -1.325), (.097, .065, .045))
         for side in (-1, 1):
             blob("blush", (side*.79, 1.88, -1.05), (.153,.087,.033))
             blob("pink", (side*.80, 2.57, -.665), (.18,.13,.040))
@@ -56,25 +56,24 @@ def add_family_details(g, name, species, base, secondary):
         rim=[]
         for i in range(25):
             a=2*pi*i/24
-            rim.append((1.21*sin(a), .91+.085*cos(a*2),
-                        .45+1.30*cos(a)))
-        vine("leafdeep", rim, [.045]*len(rim))
+            rim.append((1.04*sin(a), .90+.055*cos(a*2),
+                        .78+1.08*cos(a)))
+        vine("leafdeep", rim, [.038]*len(rim))
         for j in range(6):
             a=2*pi*j/6
-            bx=.74*sin(a)
-            bz=.45+.80*cos(a)
-            # Shell surface with a rounded top at y ~= 1.9.
-            y=1.1+.99*(max(.05,1-(bx/1.28)**2-
-                             ((bz-.45)/1.37)**2))**.5
+            bx=.64*sin(a)
+            bz=.78+.71*cos(a)
+            # Patterns lie on the newly compact 1.13x.70x1.18 shell,
+            # rather than floating above its former oversized volume.
             outline=[]
             for i in range(7):
                 b=2*pi*i/6
-                xx=bx+.19*sin(b)
-                zz=bz+.22*cos(b)
-                yy=1.1+.99*(max(.05,1-(xx/1.28)**2-
-                                 ((zz-.45)/1.37)**2))**.5+.025
+                xx=bx+.17*sin(b)
+                zz=bz+.18*cos(b)
+                yy=.95+.70*(max(.05,1-(xx/1.13)**2-
+                                 ((zz-.78)/1.18)**2))**.5+.022
                 outline.append((xx,yy,zz))
-            vine("leafdeep",outline,[.023]*7)
+            vine("leafdeep",outline,[.018]*7)
         blob("cream",(0,.94,-1.61),(.32,.19,.15),12,6)
 
     elif species in ("chick", "owl", "puffin"):
