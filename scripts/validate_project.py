@@ -529,10 +529,11 @@ print("OK: unobtrusive mobile-first onboarding based on real game progress")
 profile_store = read("src/server/ProfileStore.luau")
 for marker in ('function ProfileStore.load(', 'function ProfileStore.save(',
                'function ProfileStore.release(', 'LEASE_SECONDS = 240',
-               'lease.expiresAt > os.time()', 'if not ours(self, previous) then',
+               'lease.expiresAt > os.time()', 'if not ours(self, previous, profile.dataSessionId) then',
                'profile.loaded = false', 'self.store:UpdateAsync('):
     assert marker in profile_store, f"Cross-server DataStore safeguards missing: {marker}"
 assert 'HttpService:GenerateGUID(false)' in server, "Every server must use a unique lease token"
+assert 'profile.dataSessionId = result._dwtmLease.token' in server, "Per-visit lease must be bound to active profile"
 assert 'persistence:release(player.UserId, profile)' in server
 assert 'if persistence:save(player.UserId, profile) then' in server
 print("OK: atomic DataStore session lease and safe final-release integration")
