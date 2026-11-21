@@ -118,17 +118,19 @@ def sculpt_sticker_personality(g, name, species):
         # A small tapered carrot between the rabbit's front paws.
         g.joint("Body",(0,0,0))
         from orchard_sculpt import loft
-        loft(g,"orange",[(0,.63,-1.10,.015,.016),
-                         (0,.74,-1.12,.095,.09),
-                         (0,.97,-1.15,.13,.12),
-                         (0,1.16,-1.18,.105,.10),
-                         (0,1.19,-1.18,.026,.02)],12)
+        # The carrot must sit IN FRONT of the head and paws, otherwise its
+        # orange mesh disappears inside the face from the game camera.
+        loft(g,"orange",[(0,.60,-1.50,.013,.014),
+                         (0,.73,-1.52,.095,.09),
+                         (0,.96,-1.54,.13,.12),
+                         (0,1.15,-1.55,.105,.10),
+                         (0,1.19,-1.55,.025,.02)],12)
         for i in range(3):
             a=2*pi*i/3
-            g.leaf("leaflight",(0,1.18,-1.18),
-                   (sin(a)*.23,1.47,-1.16+cos(a)*.13),.082,.055,5,2)
+            g.leaf("leaflight",(0,1.18,-1.55),
+                   (sin(a)*.23,1.43,-1.53+cos(a)*.13),.085,.045,5,2)
         for side in (-1,1):
-            g.blob("ivory",(side*.22,.76,-1.19),(.19,.18,.17),11,7)
+            g.blob("ivory",(side*.22,.76,-1.63),(.17,.16,.14),11,7)
     elif species=="lamb":
         # Pastel bow on the white fluffy collar, not an imported decal.
         g.joint("Body",(0,0,0))
