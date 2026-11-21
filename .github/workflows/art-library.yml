@@ -4,6 +4,10 @@ on:
     paths:
       - "scripts/generate_reference_glb.py"
       - "scripts/creature_shapes_v2.py"
+      - "scripts/pet_detail_sculpts.py"
+      - "scripts/storybook_family_sculpts.py"
+      - "scripts/storybook_crop_blooms.py"
+      - "scripts/test_storybook_art.py"
       - "scripts/orchard_sculpt.py"
       - "scripts/orchard_varieties.py"
       - "scripts/crop_shapes_v2.py"
@@ -28,6 +32,7 @@ jobs:
           python3 -m py_compile scripts/generate_reference_glb.py
           python3 scripts/generate_reference_glb.py
           python3 scripts/check_art_release.py
+          python3 scripts/test_storybook_art.py
           python3 - <<'PY'
           import json, struct, pathlib
           root = pathlib.Path("dist/visual-library")
