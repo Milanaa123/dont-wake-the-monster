@@ -31,28 +31,27 @@ def sculpt_kitten_face(g, base, second):
 
     # Two sculpted muzzle lobes instead of a generic big oval balloon.
     for side in (-1, 1):
-        g.blob("ivory", (side*.22, 1.43, -1.395),
-               (.305, .225, .218), 13, 8)
+        g.blob("ivory", (side*.19, 1.40, -1.40),
+               (.235, .145, .132), 13, 8)
         # No black brow ridges: at game-camera scale they looked angry.
         # Tiny bead eyes already give the soft, friendly sticker expression.
         # Cheek ruff has pointed individual clumps, not sphere tufts.
-        for j in range(4):
-            y=1.37 + j*.13
-            basept=(side*.75, y, -1.17)
-            tip=(side*(1.07 + .07*(3-j)), y + .11*(j-1), -1.15)
-            g.leaf(second if j%3==0 else "ivory", basept,
-                   tip, .135-.012*j, .065, 5, 2)
+        for j in range(2):
+            y=1.42+j*.13
+            basept=(side*.74, y, -1.16)
+            tip=(side*(.94 + .03*j), y+.035*(j-1), -1.16)
+            g.leaf("ivory", basept, tip, .075, .022, 4, 2)
 
-    g.blob("rose", (0, 1.59, -1.575), (.107,.075,.085), 11, 7)
+    g.blob("rose", (0, 1.49, -1.535), (.083,.058,.052), 11, 7)
     # Lower central cleft and a small smile follow the two muzzle lobes.
     g.tube("chocolate", [
-        (0, 1.525, -1.58),
-        (0, 1.435, -1.594),
-        (-.105, 1.395, -1.574),
+        (0, 1.449, -1.54),
+        (0, 1.390, -1.545),
+        (-.088, 1.362, -1.52),
     ], [.018,.018,.009], 6)
     g.tube("chocolate", [
-        (0, 1.435, -1.594),
-        (.108, 1.385, -1.574),
+        (0, 1.390, -1.545),
+        (.088, 1.362, -1.52),
     ], [.018,.008], 6)
 
     # Soft top-of-head tufts emphasize a swept feline fur silhouette.
