@@ -6,6 +6,13 @@ def sculpt_crop(name, stage, S):
     g=S("Crop_"+name+"_S"+str(stage))
     from orchard_varieties import variety
     if variety(g,name,stage): return g
+    # The authored sweetcorn and bell pepper have unique cob/husk and
+    # hanging four-lobe silhouettes; do not run the generic grain/tomato
+    # branch on top of them.
+    if name in ("Corn","Pepper"):
+        from storybook_vegetables import sweetcorn, bell_pepper
+        (sweetcorn if name=="Corn" else bell_pepper)(g,stage)
+        return g
     rng=random.Random(sum((i+1)*ord(c) for i,c in enumerate(name))+stage*11)
     t=stage/3
     h={1:.55,2:.78,3:1.0}[stage]
