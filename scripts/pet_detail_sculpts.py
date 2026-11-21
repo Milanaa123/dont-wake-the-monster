@@ -176,6 +176,7 @@ def sculpt_sticker_personality(g, name, species):
                    .08,.025,4,2)
         g.blob("gold",(pos[0],pos[1],pos[2]-.06),(.065,.06,.04),8,5)
     elif species=="axolotl":
-        g.joint("Head",g.joints["Head"][1])
+        # The axolotl uses a single body mesh and gill joints, not a Head joint.
+        g.joint("Body",(0,0,0))
         for side in (-1,1):
             g.blob("blush",(side*.80,1.19,-1.26),(.20,.095,.05),10,6)
