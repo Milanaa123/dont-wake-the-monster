@@ -37,19 +37,36 @@ def sculpt_species(name, base, second, S):
         ell(mat or base,(side*x,y,z),(.28*scale,.21*scale,.39*scale))
     def face(cx,cy,cz,rx=1.02,ry=.88,rz=.67,eyes=.45,blush=True,smile=True,
              nose=True,eye_scale=.22):
-        ell(base,(cx,cy,cz),(rx,ry,rz),19,12)
+        # The sticker references use soft, uninterrupted plush faces and
+        # SMALL black bead eyes. Former concentric white eyeballs made every
+        # creature resemble a toy frog rather than a baby animal.
+        ell(base,(cx,cy,cz),(rx,ry,rz),20,13)
         for side in (-1,1):
-            ex=cx+side*eyes;ey=cy+.10*ry;ez=cz-rz*.92
-            ell("cream",(ex,ey,ez+.04),(.28*eye_scale/.22,.33*eye_scale/.22,.08),12,8)
-            ell("eye",(ex,ey,ez-.07),(.17*eye_scale/.22,.235*eye_scale/.22,.07),12,8)
-            ell("shine",(ex-.07,ey+.095,ez-.125),(.056,.067,.024),9,6)
+            ex=cx+side*eyes
+            ey=cy+.095*ry
+            # Place each eye on the ellipsoid's FRONT surface, taking its
+            # horizontal position into account (not a floating flat plane).
+            faceDepth=rz*(1-(eyes/rx)**2-(.095)**2)**.5
+            ez=cz-faceDepth-.022
+            dot=.116*(eye_scale/.22)
+            ell("eye",(ex,ey,ez),(dot,dot*1.24,.053),12,8)
+            ell("shine",(ex-side*.036,ey+.045,ez-.05),
+                (.027,.031,.017),8,5)
             if blush:
-                ell("blush",(cx+side*(rx*.77),cy-.18*ry,cz-rz*.8),(.20,.10,.055),9,6)
+                bx=rx*.71
+                blushDepth=rz*(1-(bx/rx)**2-(.17)**2)**.5
+                ell("blush",(cx+side*bx,cy-.17*ry,
+                    cz-blushDepth-.018),(.172,.091,.033),10,6)
         if nose:
-            ell("chocolate",(cx,cy-.2*ry,cz-rz-.035),(.13,.09,.085),11,7)
+            # Previously this was inside the head mesh, so faces appeared
+            # to lack noses. Push a small matte nose outside the surface.
+            ell("chocolate",(cx,cy-.205*ry,cz-rz*.98-.035),
+                (.092,.061,.047),10,6)
         if smile:
-            tube("chocolate",[(cx-.17,cy-.35*ry,cz-rz*.88),
-                (cx,cy-.39*ry,cz-rz*.95),(cx+.17,cy-.34*ry,cz-rz*.87)],[.026,.03,.023])
+            z=cz-rz*.95-.025
+            tube("chocolate",[(cx-.137,cy-.31*ry,z+.01),
+                (cx,cy-.365*ry,z-.016),
+                (cx+.137,cy-.31*ry,z+.01)],[.016,.019,.016])
     def ear(side,basept,tip,length=.32,color=None):
         # 3D tapered ear with a thin inset leaf.
         g.tube(color or base,[basept,tuple((p+q)/2 for p,q in zip(basept,tip)),tip],
@@ -113,7 +130,8 @@ def sculpt_species(name, base, second, S):
         }
         (hc,rx,ry,rz,es)=headprops[k]
         g.joint("Head",(0,hc[1]-ry*.62,hc[2]+rz*.32))
-        face(*hc,rx,ry,rz,es,smile=True,nose=k not in ("salamander","dinosaur"))
+        face(*hc,rx,ry,rz,es,smile=k!="kitten",
+            nose=k not in ("salamander","dinosaur","kitten"))
         if k in ("kitten","fox"):
             if k=="kitten":
                 sculpt_kitten_face(g, base, second)
@@ -125,8 +143,11 @@ def sculpt_species(name, base, second, S):
                     y=1.58+t*.105
                     tube("ivory",[(side*.34,y,-1.33),(side*.89,y-.06,-1.49),
                         (side*1.33,y+(t-1)*.12,-1.40)],[.019,.015,.009])
-            # large expressive cheeks and genuinely curved, fluffy tail
-            ell("ivory",(0,1.45,-1.36),(.48,.27,.28),15,9)
+            # Fox gets a broad white mask; kitten has two individually
+            # sculpted muzzle lobes already and should not get a third
+            # bulbous oval pasted across its nose and mouth.
+            if k=="fox":
+                ell("ivory",(0,1.45,-1.36),(.48,.27,.28),15,9)
             g.joint("Tail",(0,.85,1.35))
             tube(base,[(.24,.82,1.39),(.58,1.05,1.87),
                 (.87,1.69,2.02),(.76,2.16,2.09)],[.27,.29,.22,.06])
