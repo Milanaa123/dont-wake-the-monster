@@ -262,9 +262,11 @@ def sculpt_species(name, base, second, S):
             ell("ivory",(0,.42,-.48),(.80,.29,.56),17,10)
             for side in (-1,1):
                 g.joint("Body",(0,0,0))
+                # Raised round frog eye sockets are a species feature.
+                # The pupils themselves must be small storybook beads.
                 ell(base,(side*.62,1.36,-.56),(.44,.42,.44),14,9)
-                ell("eye",(side*.65,1.42,-.91),(.21,.26,.10))
-                ell("shine",(side*.56,1.54,-1.00),(.069,.068,.026),10,6)
+                ell("eye",(side*.65,1.42,-.94),(.135,.155,.064),12,8)
+                ell("shine",(side*.60,1.48,-1.001),(.036,.039,.016),8,5)
                 for z in (-.4,.81):
                     leg(side,z)
                     ell(base,(side*1.02,.26,z),(.55,.24,.44),14,8)
@@ -272,8 +274,10 @@ def sculpt_species(name, base, second, S):
                         ell("leaflight",(side*(1.24+j*.18),.12,z-.3+j*.16),
                             (.22,.10,.24),10,6)
             g.joint("Body",(0,0,0))
-            tube("chocolate",[(-.32,.52,-1.01),(0,.46,-1.13),(.32,.52,-1.01)],
-                 [.032,.035,.032])
+            # Short smile centred on the snout, not a heavy black stripe
+            # stretching from one side of the body to the other.
+            tube("chocolate",[(-.23,.62,-.98),(0,.575,-1.095),(.23,.62,-.98)],
+                 [.019,.020,.019])
         elif k=="axolotl":
             ell(base,(0,.71,.50),(.73,.51,1.54),18,12)
             face(0,1.36,-.73,1.14,.62,.70,.47,nose=False)
@@ -319,12 +323,20 @@ def sculpt_species(name, base, second, S):
                 side_joint("Wing",side,(side*.78,1.49,.24))
                 ell(second,(side*.91,1.11,.24),(.39,.66,.58),15,10)
                 g.joint("Body",(0,0,0))
-                ell("eye",(side*.37,1.45,-.93),(.19,.26,.11),14,9)
-                ell("shine",(side*.30,1.55,-1.04),(.059,.07,.031),9,6)
+                ell("eye",(side*.37,1.46,-.936),(.126,.154,.070),12,8)
+                ell("shine",(side*.325,1.515,-1.003),(.031,.036,.015),8,5)
                 tube("orange",[(side*.45,.24,.14),(side*.45,.04,-.11)],
                      [.12,.08])
-            g.tube("orange",[(0,1.22,-.78),(0,1.03,-1.25),
-                        (0,.99,-1.31)],[.21,.12,.013],11)
+            # A tiny triangulated beak has a recognizable chick silhouette
+            # without the oversized carrot-like tube from the old model.
+            beak_top=(0,1.20,-.95)
+            beak_left=(-.16,1.095,-1.02)
+            beak_right=(.16,1.095,-1.02)
+            beak_tip=(0,1.015,-1.26)
+            g.tri("orange",beak_top,beak_left,beak_tip)
+            g.tri("orange",beak_top,beak_tip,beak_right)
+            g.tri("ochre",beak_left,beak_right,beak_tip)
+            g.tri("ochre",beak_top,beak_right,beak_left)
             if k=="chick":
                 for i in range(3):
                     lf("straw",(-.20+i*.20,2.14,.16),(-.32+i*.29,2.67,.12),.17)
