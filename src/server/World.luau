@@ -577,16 +577,45 @@ function World.tintPet(pet: Model, tint: Color3)
 end
 
 function World.burst(position: Vector3, color: Color3, count: number, reach: number?)
+    -- A short scattering of hand-painted leaves/flower confetti instead of
+    -- bright neon spheres. Cap replicated pieces even during chaotic rounds.
     local rng = Random.new()
-    local maxReach = reach or 11
-    for i = 1, math.min(count, 32) do
-        local d = Vector3.new(rng:NextNumber(-1, 1), rng:NextNumber(0.1, 1), rng:NextNumber(-1, 1)).Unit
-        local start = position + Vector3.new(0, 2, 0)
-        local b = orb(scenery, "Burst", start, Vector3.new(0.6, 0.6, 0.6) * rng:NextNumber(0.8, 2), color, Enum.Material.Neon)
-        b.CanCollide = false
-        local goal = start + d * rng:NextNumber(maxReach * 0.4, maxReach)
-        TweenService:Create(b, TweenInfo.new(rng:NextNumber(0.7, 1.35), Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = goal, Transparency = 1, Size = Vector3.new(0.1, 0.1, 0.1)}):Play()
-        Debris:AddItem(b, 1.6)
+    local total = math.clamp(math.floor(count), 0, 18)
+    local radius = math.clamp(reach or 9, 1, 11)
+    for i = 1, total do
+        local angle = (i / math.max(total, 1)) * math.pi * 2
+            + rng:NextNumber(-0.24, 0.24)
+        local distance = rng:NextNumber(radius * 0.22, radius * 0.66)
+        local start = position + Vector3.new(
+            math.cos(angle) * 0.22, rng:NextNumber(1.15, 2.0),
+            math.sin(angle) * 0.22)
+        local leaf = Instance.new("WedgePart")
+        leaf.Name = "PaintedCelebrationPetal"
+        leaf.Size = Vector3.new(rng:NextNumber(0.21, 0.44), 0.075,
+            rng:NextNumber(0.42, 0.78))
+        leaf.CFrame = CFrame.new(start)
+            * CFrame.Angles(rng:NextNumber(-.35, .35), angle, .20)
+        leaf.Material = Enum.Material.SmoothPlastic
+        leaf.Color = if i % 5 == 0 then Color3.fromRGB(255, 244, 204)
+            elseif i % 3 == 0 then color:Lerp(Color3.fromRGB(163, 207, 132), .26)
+            else color
+        leaf.Anchored = true
+        leaf.CanCollide = false
+        leaf.CanTouch = false
+        leaf.CanQuery = false
+        leaf.CastShadow = false
+        leaf.Transparency = 0.08
+        leaf.Parent = scenery
+        local goal = start + Vector3.new(math.cos(angle) * distance,
+            rng:NextNumber(.25, 1.5), math.sin(angle) * distance)
+        TweenService:Create(leaf, TweenInfo.new(rng:NextNumber(.75, 1.18),
+            Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            CFrame = CFrame.new(goal) * CFrame.Angles(
+                rng:NextNumber(.45, 1.6), angle + math.pi * 1.4, .46),
+            Transparency = 1,
+            Size = leaf.Size * .40,
+        }):Play()
+        Debris:AddItem(leaf, 1.3)
     end
 end
 
