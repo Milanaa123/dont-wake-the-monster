@@ -19,6 +19,7 @@ SPECIES = {
 def sculpt_species(name, base, second, S):
     from pet_detail_sculpts import (
         sculpt_bunny_ears, sculpt_fluffy_collarette, sculpt_kitten_face,
+        sculpt_sticker_personality,
     )
     g=S("Pet_"+name)
     k=SPECIES[name]
@@ -380,6 +381,9 @@ def sculpt_species(name, base, second, S):
                 a=i*2*pi/6
                 ell("gold",(sin(a)*1.08,1.82+cos(a)*.82,.12),
                     (.12,.12,.12),10,6)
+    # The supplied sticker references define the character-language only.
+    # Produce actual 3D geometry; preserve every gameplay pet and its joints.
+    sculpt_sticker_personality(g, name, k)
     if "Head" in g.joints:
         g.joint("Head",g.joints["Head"][1])
     else:
