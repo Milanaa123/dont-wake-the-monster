@@ -182,10 +182,14 @@ def sculpt_crop(name, stage, S):
             p=(sin(a)*.95,.05,cos(a)*.95)
             height=(1.05+(.33 if i%3 else 0))*h+ .27
             top=(p[0],height*2.0,p[2])
-            stem(p,top,.052,"leafdeep")
-            lf(leaf,(p[0],height*.52,p[2]),
+            # Golden straw and airy, delicate awns for mature wheat.
+            # Dark green stems and oversized seed ellipsoids looked unlike
+            # the pale vertical wheat in the supplied farm reference.
+            wheat=name=="WhisperWheat"
+            stem(p,top,.036 if wheat else .052,"straw" if wheat else "leafdeep")
+            lf("straw" if wheat else leaf,(p[0],height*.52,p[2]),
                 (p[0]+sin(a)*.65,height*1.15,
-                 p[2]+cos(a)*.57),.21)
+                 p[2]+cos(a)*.57),.17 if wheat else .21)
             if stage>=2:
                 if name=="Corn":
                     ear=(p[0]+sin(a)*.11,height*1.32,
@@ -203,6 +207,26 @@ def sculpt_crop(name, stage, S):
                         lf(leaf,(p[0],height*.77,p[2]),
                             (p[0]+sin(b)*.43,height*1.58,
                              p[2]+cos(b)*.43),.22)
+                elif name=="WhisperWheat":
+                    # Two opposing rows of pointed, curved seed husks and
+                    # slender awns create the recognizable delicate wheat ear,
+                    # far closer to the reference than bulky green cylinders.
+                    for tier in range(8):
+                        y=height*1.30+tier*.15*h
+                        taper=(1-.066*tier)
+                        for side in (-1,1):
+                            root=(p[0],y,p[2])
+                            end=(p[0]+side*.19*h*taper,
+                                 y+.31*h*taper,
+                                 p[2]+cos(a+tier*.31)*.062*h)
+                            lf("ivory" if (tier+i)%7==0 else "straw",
+                               root,end,.073*h*taper,.032)
+                            stem(end,(end[0]+side*.075*h,
+                                      end[1]+.23*h,
+                                      end[2]+sin(a)*.035*h),.008*h,"straw")
+                    stem((p[0],height*1.30,p[2]),
+                         (p[0]+sin(a)*.035,height*2.03,p[2]),
+                         .028*h,"straw")
                 else:
                     for awn in (-1,1):
                         for j in range(4):
@@ -211,8 +235,7 @@ def sculpt_crop(name, stage, S):
                                  p[2]+cos(a)*.13*h),.012*h,"straw")
                     for j in range(5):
                         y=height*1.41+j*.19*h
-                        ell("straw" if name=="WhisperWheat" else "gold",
-                            (p[0]+sin(a+j)*.11*h,y,
+                        ell("gold",(p[0]+sin(a+j)*.11*h,y,
                              p[2]+cos(a+j)*.10*h),
                             (.13*h,.27*h,.13*h),10,7)
     elif typ=="tomato":
