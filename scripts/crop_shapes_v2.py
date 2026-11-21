@@ -286,8 +286,10 @@ def sculpt_crop(name, stage, S):
                     (root[0]+sin(a+side)*.45*h,.89*h,
                      root[2]+cos(a+side)*.42*h),.22*h)
             if stage>=2:
-                flower((top[0],top[1],top[2]-.08),col,1.58*h)
+                from storybook_crop_blooms import blossom
+                blossom(g,name,(top[0],top[1],top[2]-.08),1.50*h)
             else:
+                # A green unopened bud is visually distinct from a bloom.
                 ell(leaf,(top[0],top[1],top[2]),(.24,.29,.23),11,7)
     elif typ=="mushroom":
         for i in range(5 if stage==3 else 3):
@@ -296,14 +298,8 @@ def sculpt_crop(name, stage, S):
             cap_at=(p[0],(.55+(.22 if i%2 else 0))*h,p[2])
             stem(p,cap_at,.22,"ivory")
             if stage>=2:
-                ell("lilac" if name=="Moonshroom" else "blue",
-                    cap_at,(.44*h,.24*h,.44*h),18,9)
-                for j in range(4):
-                    b=j*pi/2
-                    ell("cream",
-                        (cap_at[0]+sin(b)*.24*h,cap_at[1]+.20*h,
-                         cap_at[2]+cos(b)*.22*h),
-                        (.055*h,.042*h,.055*h),8,5)
+                from storybook_crop_blooms import mushroom
+                mushroom(g,name,cap_at,.44*h,h)
             for k in range(2):
                 b=a+k*pi/2
                 lf(leaf,p,(p[0]+sin(b)*.43,p[1]+.16,
