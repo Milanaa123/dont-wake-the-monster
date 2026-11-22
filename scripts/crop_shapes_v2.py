@@ -44,39 +44,6 @@ def sculpt_crop(name, stage, S):
             lf("leafdeep",(center[0],center[1]+.20*s,center[2]),
                (center[0]+sin(a)*.38*s,center[1]+.13*s,
                 center[2]+cos(a)*.35*s),.13*s)
-    def strawberry_shape(p,s,mat,ripe):
-        # A true tapered berry silhouette, not a red sphere. The tiny seed
-        # marks are low-poly diamonds that follow the actual fruit surface.
-        cx,cy,cz=p
-        heights=[-.37,-.30,-.15,.10,.31,.37]
-        radii=[.025,.19,.285,.31,.19,.025]
-        sides=12
-        for band in range(len(heights)-1):
-            for j in range(sides):
-                a=2*pi*j/sides
-                b=2*pi*(j+1)/sides
-                def v(k,angle):
-                    return (cx+sin(angle)*radii[k]*s,
-                            cy+heights[k]*s,
-                            cz-cos(angle)*radii[k]*s)
-                g.quad(mat,v(band,a),v(band,b),
-                       v(band+1,b),v(band+1,a))
-        if ripe:
-            for row,yr in enumerate((-.22,-.04,.14,.26)):
-                # The front-most small diamonds sit just outside the hull.
-                hi=next(i for i in range(len(heights)-1)
-                        if heights[i]<=yr<=heights[i+1])
-                fraction=(yr-heights[hi])/(heights[hi+1]-heights[hi])
-                rad=radii[hi]+(radii[hi+1]-radii[hi])*fraction
-                count = (5,7,8,5)[row]
-                for j in range(count):
-                    a=(j+.5*(row%2))*2*pi/count
-                    x=cx+sin(a)*(rad+.004)*s
-                    z=cz-cos(a)*(rad+.004)*s
-                    y=cy+yr*s
-                    w=.012*s
-                    g.quad("straw",(x,y+.023*s,z),(x+w*cos(a),y,z+w*sin(a)),
-                           (x,y-.019*s,z),(x-w*cos(a),y,z-w*sin(a)))
     def melon(p,r,mat):
         from orchard_sculpt import melon_rind
         melon_rind(g,p,r,mat)
@@ -90,59 +57,8 @@ def sculpt_crop(name, stage, S):
       "flower" if name in ("Sunflower","MoonLotus","Starbloom","CloudCotton") else
       "mushroom" if name in ("Moonshroom","NeonMushroom") else "fantasy")
     if typ=="berry":
-        # A spreading carpet of strawberry trifoliate leaves; fruit under the canopy.
-        # The reference shows a full leafy carpet with red fruit hanging
-        # between overlapping trifoliate crowns, not a few isolated berries.
-        n=7 if stage==3 else 5 if stage==2 else 3
-        for i in range(n):
-            a=i*2.39996
-            ox=sin(a)*1.11; oz=cos(a)*1.00
-            p=(ox,.15,oz)
-            top=(ox*.96,(.58+(.18 if i%2 else 0))*h,oz*.94)
-            stem(p,top,.064)
-            from orchard_sculpt import leaflet
-            for j in range(3):
-                axis=a+j*2*pi/3
-                base=(top[0]+sin(axis)*.18*h,top[1]+.10*h,top[2]+cos(axis)*.18*h)
-                stem(top,base,.026*h)
-                for k in (-1,0,1):
-                    leaflet(g,base,pi/2-axis+k*.76,(.52 if k else .7)*h,.20*h,
-                            lit if (i+j+k)%4==0 else leaf)
-            if stage>=2:
-                # Two naturally staggered ripe berries on selected runners
-                # form a much denser patch without an expensive extra rosette.
-                berries=2 if stage==3 and i%4==0 else 1
-                for j in range(berries):
-                    fruit=(ox*.95+sin(a+1+j*.74)*(.33+.11*j),
-                           (.30+(.12 if i%2 else 0)-.09*j)*h,
-                           oz*.94-.22-.22*j)
-                    stem(top,(fruit[0],fruit[1]+.14*h,fruit[2]),.027)
-                    # A young berry is visibly pale; only the final stage
-                    # has the saturated color and its individual yellow seeds.
-                    ripened=stage==3
-                    fruit_color=("red" if name=="Berry" else "sky") if ripened else "pink"
-                    strawberry_shape(fruit,h*(.90 if j else 1),
-                        fruit_color,ripened)
-                    cap(fruit,h*(.90 if j else 1))
-                if stage==2 and i%2==0:
-                    # Intermediate plant still blossoms while fruit sets.
-                    flower((top[0]-.15,top[1]+.06,top[2]-.17),
-                           scale=.45)
-                elif stage==3 and i%7==0:
-                    flower((top[0]-.15,top[1]+.06,top[2]-.17),
-                           scale=.43)
-            elif i%2==1:
-                flower((top[0],top[1]+.07,top[2]-.18),scale=.55)
-        if stage == 3:
-            for j in range(8):
-                a=j*2*pi/8
-                lf(lit if j%3==0 else leaf,
-                   (0,.28,0),
-                   (sin(a)*1.38,.60,cos(a)*1.21),.39)
-        # winding runners joining rosettes
-        for a in (0,1,2):
-            ang=a*2*pi/3
-            stem((0,.16,0),(sin(ang)*1.16,.18,cos(ang)*1.16),.055)
+        from storybook_crop_blooms import strawberry_bed
+        strawberry_bed(g,name,stage)
     elif typ=="melon":
         # Three round fruit on broad trailing vines, like the supplied garden.
         angles=[0,2.35,4.48]
