@@ -118,3 +118,85 @@ for _,piece in outfit.StorybookGardener:GetChildren() do
 end
 drain()
 print(string.format("PASS: parsed Studio place, mounted %d assets / %d mesh sections, checked all rigid bind poses, 90 crop bounds, 31 entrance plants, pet rig and 15 moving R15 attachments",n,sections))
+
+-- Step the shipped client against the mounted Motor6Ds in the built place.
+-- Only the engine clock, streaming signals and camera are supplied by this harness.
+local function signal()
+    local event={}
+    function event:Connect(callback)
+        self.callback=callback
+        return {Disconnect=function() self.callback=nil end}
+    end
+    return event
+end
+
+local roots={}
+local function fixture(key,modelName)
+    local model=r.Instance.new("Model")
+    model.Name=modelName
+    model.Parent=island
+    local body=geometry.load(key):Clone()
+    geometry.mount(body,r.CFrame.new(),1)
+    body.Parent=model
+    local root={
+        Name=key,Parent=model,Position=r.Vector3.zero,
+        DescendantAdded=signal(),DescendantRemoving=signal(),
+        IsA=function(_,class) return class=="BasePart" end,
+        GetDescendants=function() return body:GetDescendants() end,
+    }
+    table.insert(roots,root)
+    return model,body
+end
+
+local _,idleBody=fixture("Pet_Floofle","Floofle")
+local responding,activeBody=fixture("Pet_Floofle","Floofle")
+local bossModel,bossBody=fixture("Environment_SleepingMonster","GigglesTheGiant")
+local frameEvent=signal()
+local tags={
+    GetTagged=function(_,tag) return if tag=="OrchardRig" then roots else {} end,
+    GetInstanceAddedSignal=signal,GetInstanceRemovedSignal=signal,
+}
+local clock=10
+local rigScript=place:GetService("StarterPlayer").StarterPlayerScripts.OrchardRigMotion
+local env={
+    game={GetService=function(_,name)
+        if name=="RunService" then return {PreSimulation=frameEvent} end
+        assert(name=="CollectionService")
+        return tags
+    end},
+    os={clock=function() return clock end},
+    workspace={CurrentCamera={CFrame=r.CFrame.new(0,1,5)},GetServerTimeNow=function() return clock end},
+    UserSettings=function() return {GetService=function() return {SavedQualityLevel={Value=3}} end} end,
+    Vector2=r.Vector2,CFrame=r.CFrame,
+}
+luau.load(rigScript.Source,{environment=env,injectGlobals=true,debugName=rigScript.Name})()
+local function step(frames)
+    for _=1,frames do
+        clock+=1/15
+        frameEvent.callback()
+    end
+end
+local function difference(joint)
+    local a=activeBody[joint][joint].Transform
+    local b=idleBody[joint][joint].Transform
+    return (a.LookVector-b.LookVector).Magnitude+(a.UpVector-b.UpVector).Magnitude
+end
+step(3)
+assert(difference("Head")<.0001)
+responding:SetAttribute("FedAt",clock)
+step(6)
+assert(difference("Head")>.025 and difference("ForeL")>.02 and difference("EarR")>.018,
+    "Accepted feed must move the face, forepaws and ears")
+step(15)
+assert(difference("Head")<.0001,"A finished feed should return to the ongoing idle pose")
+responding:SetAttribute("MotionMode","Pet")
+step(20)
+assert(difference("Head")>.20 and difference("EarL")>.10,"Petting pose missing")
+responding:SetAttribute("MotionMode","Nap")
+step(20)
+assert(difference("Head")>.30 and difference("EarR")>.25,"Napping pose missing")
+assert(bossBody.EyeL.LocalTransparencyModifier>.99 and bossBody.LidL.LocalTransparencyModifier<.01)
+bossModel:SetAttribute("Awake",true)
+step(23)
+assert(bossBody.EyeL.LocalTransparencyModifier<.01 and bossBody.LidL.LocalTransparencyModifier>.99)
+print("PASS: shipped client drives feed, recovery, petting, nap and boss eyelids on mounted joints at low quality")

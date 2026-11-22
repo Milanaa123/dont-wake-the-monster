@@ -98,6 +98,25 @@ assert "pink" in crops["Berry",2].data
 assert "red" in crops["Berry",3].data
 assert "straw" in crops["Berry",3].data
 assert "rind" in crops["LavaMelon",3].data
+# Reversed receptacle walls still pass index and finite-normal checks.
+# Test each triangle in isolation on the same berry profile used by the bed.
+from storybook_crop_blooms import strawberry
+single_berry=Sculpt("BerryProfile")
+strawberry(single_berry,(0,0,0),1,"red",True)
+positions=single_berry.data["red"][0]
+for i in range(0,len(positions),3):
+    a,b,c=positions[i:i+3]
+    if max(a[1],b[1],c[1])>.16 or min(a[1],b[1],c[1])<-.35:
+        continue  # Recessed crown and end caps have different normal directions.
+    ab=[v-u for u,v in zip(a,b)]
+    ac=[v-u for u,v in zip(a,c)]
+    nx=ab[1]*ac[2]-ab[2]*ac[1]
+    nz=ab[0]*ac[1]-ab[1]*ac[0]
+    assert nx*(a[0]+b[0]+c[0])+nz*(a[2]+b[2]+c[2])>0, "Inverted berry wall"
+for crop in ("Berry","FrostBerry"):
+    extents=[bounds(crops[crop,stage]) for stage in (1,2,3)]
+    widths=[axes[0][1]-axes[0][0] for axes in extents]
+    assert widths[0]<widths[1]<widths[2], f"{crop}: growth must expand the crown"
 for melon in ("LavaMelon", "AuroraMelon"):
     assert "dandelion" in crops[melon,1].data, (
         f"{melon}: yellow blossoms missing from seedlings"
