@@ -26,65 +26,91 @@ def sculpt_world(name,S):
         b("gold",(at[0],at[1],at[2]-.08*scale),
           (.065*scale,.065*scale,.05*scale),9,6)
     if name=="OrangeTree":
-        # Reference-style citrus: the crown is a mass of overlapping
-        # irregular, angular leaves, not a pile of green ellipsoids.
+        from orchard_sculpt import rounded_sections
         rng=random.Random(4129)
-        tube("bark",[(0,0,0),(.06,1.60,0),(-.07,3.11,0),(.05,3.70,0)],
-            [.37,.34,.24,.12])
-        for i in range(6):
-            a=2*pi*i/6
-            x=cos(a)*1.68; z=sin(a)*1.62
-            tube("bark",[(0,2.39,0),(x*.51,3.12,z*.47),
-                (x*.90,3.83+(i%3)*.24,z*.86)],[.17,.12,.052])
-        # Low-detail inner mass creates depth, cards form the detailed surface.
-        for i in range(5):
-            a=2*pi*i/5
-            center=(cos(a)*.90,4.00+(i%3)*.19,sin(a)*.91)
-            b("leafdeep" if i%2 else "leaf",
-              center,(1.43,1.05,1.40),12,7)
-        b("leaf",(0,4.50,.0),(1.63,1.05,1.62),14,8)
-        # A fixed-seed cloud of individual leaf planes, facing many directions.
-        # doubleSided material allows one surface per leaf at half the draw cost.
-        for i in range(520):
-            a = i*2.399963229728653
-            ty=rng.uniform(-.87,.99)
-            ring=(1-ty*ty)**.50
-            radial=2.04+rng.uniform(-.31,.48)
-            x=cos(a)*ring*radial
-            z=sin(a)*ring*radial
-            y=4.12+ty*1.43+rng.uniform(-.16,.16)
-            leaflen=rng.uniform(.25,.62)
-            leafw=rng.uniform(.12,.32)
-            tilt=rng.uniform(-.55,.64)
-            # Stable jagged silhouette and dappled colors, broad leaves in
-            # the foreground, smaller clipped leaves behind fruit.
-            dx=cos(a)*leaflen*.6
-            dz=sin(a)*leaflen*.6
-            root=(x-dx*.43,y-leaflen*.35,z-dz*.43)
-            left=(x+sin(a)*leafw,y+tilt*.16,z-cos(a)*leafw)
-            right=(x-sin(a)*leafw,y-tilt*.16,z+cos(a)*leafw)
-            tip=(x+dx,y+leaflen*.47+tilt*.12,z+dz)
-            col=("leaflight" if i%7==0 else
-                 "leafdeep" if i%5==0 else
-                 "lime" if i%9==0 else "leaf")
-            g.tri(col,root,left,tip)
-            g.tri(col,root,tip,right)
-        # Large golden fruit must sit in front of foliage and read clearly
-        # from the game camera. Each has a stalk and a little pointed leaf.
-        for i in range(17):
-            a=i*2.399963
-            nx=sin(a)*1.69
-            nz=cos(a)*1.73
-            p=(nx,3.60+(i%5)*.37,nz-.60)
-            b("orange",p,(.26+(i%3)*.025,.29,.26),13,8)
-            tube("bark",[(p[0],p[1]+.26,p[2]),
-                (p[0]+.06,p[1]+.45,p[2]+.07)],[.042,.028])
-            lf("leafdeep",(p[0],p[1]+.35,p[2]),
-                (p[0]+.36,p[1]+.46,p[2]-.03),.15)
+        rounded_sections(g,"bark",[(0,.025,0,.57,.49),(.035,.25,.04,.405,.35),
+            (.14,.76,.08,.32,.285),(.17,1.42,.10,.29,.26),
+            (.02,2.05,.03,.265,.23),(-.19,2.60,-.04,.22,.195),
+            (-.31,3.13,-.06,.13,.12)],16)
+        for j in range(6):
+            a=j*2*pi/6+.14
+            u,v=cos(a),sin(a)
+            g.tube("bark",[(.07,.56,.04),(.32*u,.17,.29*v),
+                   (.66*u,.085,.58*v),(.86*u,.038,.80*v)],[.19,.15,.079,.018],9)
+
+        def citrus_leaf(root,a,length,width,drop,pigment):
+            u,v=cos(a),sin(a)
+            rows=[]
+            for t,breadth in ((0,.06),(.27,.72),(.56,1),(.78,.77),(1,.055)):
+                x,y,z=root
+                x+=length*t*u
+                z+=length*t*v
+                y+=.14*length*sin(pi*t)+drop*t
+                w=width*breadth
+                rows.append([(x-v*w,y-.25*w,z+u*w),(x,y+.21*w,z),
+                             (x+v*w,y-.37*w,z-u*w)])
+            for first,next_row in zip(rows,rows[1:]):
+                for k in (0,1):
+                    g.quad(pigment,first[k],next_row[k],next_row[k+1],first[k+1])
+
+        # Vary the branch heights and leave windows through the lower crown.
+        # Short sprays fan from each terminal instead of pointing out of one sphere.
         for i in range(8):
-            a=i*2*pi/8
-            lf("leafdeep",(0,.30,0),
-               (sin(a)*.83,.78,cos(a)*.72),.24)
+            a=i*2.399963+.35
+            u,v=cos(a),sin(a)
+            tier=i//4
+            reach=1.34-.40*tier+.17*sin(i)
+            cx,cz=reach*u,reach*v
+            cy=3.24+.91*tier+.21*sin(3*i)
+            branch=(-.06,1.45+.20*(i%3)+.48*tier,.04)
+            tube("bark",[branch,(.38*cx,cy-.96,.38*cz),(.73*cx,cy-.59,.73*cz),
+                 (cx,cy-.16,cz)],[.21-.04*tier,.17,.105,.049])
+            # A low scalloped cushion seals interior gaps between the leaves.
+            layers=[]
+            for j,(r,h) in enumerate(((.18,-.46),(.75,-.31),(1.0,.02),(.91,.34),
+                                      (.56,.57),(.12,.68))):
+                row=[]
+                for k in range(16):
+                    azimuth=2*pi*k/16
+                    lobe=1+.078*cos(5*azimuth+.44*i)+.046*sin(3*azimuth+.64*j)
+                    row.append((cx+1.11*r*lobe*cos(azimuth),cy+h+.067*r*sin(3*azimuth+i),
+                                cz+1.02*r*lobe*sin(azimuth)))
+                layers.append(row)
+            for j,(lo,hi) in enumerate(zip(layers,layers[1:])):
+                for k in range(16):
+                    nxt=(k+1)%16
+                    g.quad("leafdeep" if j<2 else "leaf",lo[k],hi[k],hi[nxt],lo[nxt])
+            for k in range(16):
+                g.tri("leaf",(cx,cy+.69,cz),layers[-1][(k+1)%16],layers[-1][k])
+                g.tri("leafdeep",(cx,cy-.47,cz),layers[0][k],layers[0][(k+1)%16])
+            for j in range(11):
+                azimuth=j*2.39996+.31*i
+                ty=((j+.5)/11)*1.47-.55
+                ring=(1-ty*ty)**.5
+                root=(cx+.99*ring*cos(azimuth),cy+.56*ty+.055,cz+.91*ring*sin(azimuth))
+                for k in (-1,1):
+                    citrus_leaf(root,azimuth+.62*k+rng.uniform(-.22,.22),
+                        rng.uniform(.38,.67),rng.uniform(.13,.19),rng.uniform(-.33,.055),
+                        ("leaf","leaflight","lime","leaf")[(i+j+(k>0))%4])
+            if i%2==0:
+                flower=(cx+1.02*cos(a+.5),cy+.16,cz+.98*sin(a+.5))
+                x,y,z=flower
+                for j in range(5):
+                    angle=j*2*pi/5
+                    g.leaf("cream",flower,(x+.16*cos(angle),y+.105*sin(angle)+.041,
+                           z+.11*sin(angle)),.070,.037,3,2)
+                g.blob("gold",(x,y+.033,z),(.042,.042,.042),7,4)
+            for j in range(2 if i%3 else 3):
+                angle=a+(j-.55)*1.43
+                u,v=cos(angle),sin(angle)
+                x,z=cx+.83*u,cz+.78*v
+                y=cy-.42+.14*sin(i+2*j)
+                radius=.27+.052*((i+j)%3)
+                stem=(x,y+radius*.94,z)
+                g.tube("leafdeep",[(x-.22*u,y+radius+.26,z-.22*v),stem],
+                       [.041,.029],7)
+                g.blob("orange",(x,y,z),(radius,radius*.92,radius),11,6)
+                citrus_leaf(stem,angle+.77,.34,.095,-.085,"leafdeep")
     elif name=="WoodFence":
         for x in (-2.60,0,2.60):
             beam("wood",[(x,0,0),(x,1.60,0)],.15)
@@ -227,14 +253,33 @@ def sculpt_world(name,S):
                    (x+sign*.25,y-.095+.10*(k%2),z-.16),.117,.060)
             if j%2: wall_flower((a[0],a[1]+.10,-2.50),True,.86)
     elif name=="StonePath":
-        for i in range(8):
-            x=sin(i*1.31)*.17;z=i*1.45
-            b("stone",(x,.03,z),(.90,.13,.73),16,8)
+        rng=random.Random(211)
+        for i in range(9):
+            x=.23*sin(i*.82)
+            z=i*1.24
+            rim=[]
+            yaw=rng.uniform(-.35,.35)
+            for j in range(9):
+                a=j*2*pi/9+yaw
+                r=rng.uniform(.85,1.14)
+                rim.append((1.01*r*cos(a),.60*r*sin(a)))
+            rows=[[(x+dx*scale,height+.018*cos(j*2+i),z+dz*scale)
+                   for j,(dx,dz) in enumerate(rim)] for scale,height in
+                  ((.84,.022),(1,.069),(.92,.164),(.68,.195))]
+            for k,(lo,hi) in enumerate(zip(rows,rows[1:])):
+                for j in range(len(rim)):
+                    n=(j+1)%len(rim)
+                    g.quad("loamedge" if k==0 else "stone",lo[j],hi[j],hi[n],lo[n])
+            for j in range(len(rim)):
+                g.tri("stone",(x+.08,.20,z-.08),rows[-1][(j+1)%9],rows[-1][j])
+                g.tri("loamedge",(x,.014,z),rows[0][j],rows[0][(j+1)%9])
             if i%2==0:
-                for j in range(3):
-                    a=i+j*2.4
-                    lf("leaflight",(x+.8,.13,z),
-                       (x+.8+sin(a)*.34,.27,z+cos(a)*.31),.13)
+                side=1 if i%4==0 else -1
+                tuft=(x+side*.78,.07,z+.35)
+                for k in range(5):
+                    a=k*2.39996
+                    lf("leaflight" if k%2 else "leaf",tuft,
+                       (tuft[0]+.22*cos(a),.23+.10*sin(k),tuft[2]+.24*sin(a)),.058,.075)
     elif name=="WaterPond":
         b("stone",(0,0,0),(3.19,.16,2.48),28,7)
         b("water",(0,.11,0),(2.82,.08,2.14),26,6)

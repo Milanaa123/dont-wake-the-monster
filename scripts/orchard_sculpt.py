@@ -17,56 +17,143 @@ def loft(g, mat, rings, sides=20):
             g.tri(mat, middle, a if lower else b, b if lower else a)
 
 
+def rounded_sections(g, pigment, rings, sides=20):
+    """Smooth elliptical sections, including the lean of each section centre."""
+    from generate_reference_glb import norm, cross, sub
+    def point(ring, angle):
+        x,y,z,rx,rz=ring
+        return x+rx*cos(angle),y,z+rz*sin(angle)
+    for j in range(len(rings)-1):
+        for i in range(sides):
+            positions,normals=[],[]
+            for k,col in ((j,i),(j+1,i),(j+1,i+1),(j,i+1)):
+                ring=rings[k]
+                angle=col*2*pi/sides
+                positions.append(point(ring,angle))
+                up=sub(point(rings[min(k+1,len(rings)-1)],angle),
+                       point(rings[max(k-1,0)],angle))
+                tangent=(-ring[3]*sin(angle),0,ring[4]*cos(angle))
+                normals.append(norm(cross(up,tangent)))
+            g.quad(pigment,*positions,vertex_normals=normals)
+    for k in (0,-1):
+        for i in range(sides):
+            a,b=(point(rings[k],c*2*pi/sides) for c in (i,i+1))
+            g.tri(pigment,rings[k][:3],*( (a,b) if k==0 else (b,a) ))
+
+
 def monster(S):
-    g = S("Environment_SleepingMonster")
-    # The pear-shaped thorax broadens at the haunches and pinches at the neck.
-    loft(g, "fur", [(0,.32,.34,.92,.88),(0,.58,.47,1.47,1.14),
-         (0,1.16,.40,1.68,1.26),(0,1.85,.28,1.57,1.12),
-         (0,2.46,.11,1.39,.96),(0,2.80,-.02,1.08,.81),
-         (0,2.91,-.10,.65,.61)])
-    for i in range(17):
-        a = .13 + i*.165
-        x, z = 1.38*cos(a), .15-1.01*sin(a)
-        y = 2.36+.16*abs(cos(a))
-        g.leaf("sage" if i%3 else "moss", (x,y,z), (x*1.09,y-.44-(i%3)*.09,z-.13), .21,.09,5,3)
-    g.joint("Head", (0,2.62,-.15))
-    loft(g,"fur",[(0,2.42,-.35,.71,.60),(0,2.56,-.49,1.11,.82),
-         (0,2.89,-.51,1.42,1.02),(0,3.35,-.44,1.48,1.04),
-         (0,3.77,-.32,1.24,.92),(0,4.01,-.21,.91,.76),(0,4.13,-.16,.53,.49)])
+    g=S("Environment_SleepingMonster")
+    g.joint("Body",(0,0,0))
+    rounded_sections(g,"fur",[(0,.28,.34,.91,.79),(0,.47,.40,1.39,1.10),
+        (0,.87,.35,1.68,1.24),(0,1.38,.26,1.71,1.27),(0,1.90,.22,1.58,1.16),
+        (0,2.30,.12,1.24,.94),(0,2.49,.04,.88,.73)],28)
+    g.joint("Head",(0,2.11,-.15))
+    rounded_sections(g,"fur",[(0,1.94,-.41,.79,.67),(0,2.05,-.47,1.19,.83),
+        (0,2.29,-.49,1.52,1.01),(0,2.62,-.45,1.65,1.13),
+        (0,2.97,-.39,1.63,1.12),(0,3.33,-.33,1.47,.99),
+        (0,3.57,-.27,1.18,.84),(0,3.73,-.21,.79,.58),
+        (0,3.81,-.19,.36,.30)],32)
+
     for s in (-1,1):
-        # Pinna and inner shell follow different tapered cross sections.
-        loft(g,"fur",[(s*.88,3.64,-.18,.37,.32),(s*1.09,3.89,-.14,.33,.26),
-             (s*1.25,4.18,-.12,.23,.20),(s*1.27,4.36,-.14,.075,.09)],14)
-        g.leaf("blush",(s*.98,3.77,-.42),(s*1.30,4.27,-.25),.17,.045,5,3)
-        g.blob("cream",(s*.38,2.90,-1.38),(.53,.31,.32),14,8)
-        for j in range(3):
-            g.tube("bark",[(s*.44,2.88+j*.05,-1.62),(s*.77,2.91+j*.04,-1.63),
-                           (s*.99,2.94+j*.06,-1.55)],[.014,.011,.004],5)
-    g.blob("nose",(0,3.05,-1.64),(.25,.14,.14),16,9)
+        # Slightly turning ivory horns share a broad root with the moss cap.
+        rounded_sections(g,"ivory",[(s*.98,3.42,-.18,.285,.25),
+            (s*1.04,3.61,-.17,.275,.24),(s*1.12,3.81,-.15,.233,.20),
+            (s*1.17,4.00,-.13,.164,.15),(s*1.18,4.15,-.16,.085,.085),
+            (s*1.15,4.23,-.21,.020,.023)],18)
+    # A continuous moss canopy. Vary its hem rather than intersecting an
+    # oversized sphere with the face. Broad drooping leaf tips break its rim.
+    profile=[(2.97,1.63,-.39,1.12),(3.33,1.47,-.33,.99),
+             (3.57,1.18,-.27,.84),(3.73,.79,-.21,.58),
+             (3.81,.36,-.19,.30),(3.88,.02,-.19,.02)]
+    def on_crown(angle,y,lift):
+        for lo,hi in zip(profile,profile[1:]):
+            if y<=hi[0]:
+                t=(y-lo[0])/(hi[0]-lo[0])
+                rx,cz,rz=(a+t*(b-a) for a,b in zip(lo[1:],hi[1:]))
+                return ((rx+lift)*cos(angle),y+.028,cz+(rz+lift)*sin(angle))
+        raise ValueError("Outside the crown profile")
+
+    sectors=42
+    def moss_point(i,j):
+        angle=2*pi*i/sectors
+        hem=3.40-.071*cos(9*angle+.35*sin(3*angle))
+        height=(3.88,3.81,3.73,3.57,hem)[j]
+        return on_crown(angle,height,.032)
+    for j in range(4):
+        for i in range(sectors):
+            g.quad("sage",moss_point(i,j),moss_point(i+1,j),
+                   moss_point(i+1,j+1),moss_point(i,j+1))
+    for i in range(sectors):
+        g.tri("sage",(0,3.908,-.19),moss_point(i+1,0),moss_point(i,0))
+    for i in range(15):
+        angle=2*pi*i/15
+        rows=[]
+        for j,(height,width) in enumerate(((3.71,.040),(3.59,.108),(3.46,.145),
+                                          (3.33,.127),(3.23,.089),(3.18,.024))):
+            yy=height+.055*cos(3*angle)*(j/5)
+            aa=angle+.077*(j/5)**2
+            rows.append([on_crown(aa+side*width,yy,.055+.041*(1-abs(side)))
+                         for side in (-1,0,1)])
+        for top,bottom in zip(rows,rows[1:]):
+            for k in (0,1):
+                g.quad("leaflight" if i%4==0 else "leaf",top[k],top[k+1],
+                       bottom[k+1],bottom[k])
     for i in range(7):
-        a=i*.59
-        g.leaf("sage" if i%2 else "leafdeep",(cos(a)*.56,3.98,-.21),
-               (cos(a)*.91,4.26+sin(a)*.13,-.53+sin(a)*.38),.19,.055,5,3)
-    for s, suffix in ((-1,"L"),(1,"R")):
-        g.joint("Eye"+suffix,(s*.68,3.32,-1.39),"Head")
-        g.blob("eye",(s*.68,3.32,-1.39),(.145,.202,.087),14,9)
-        g.blob("shine",(s*.655,3.40,-1.465),(.046,.049,.018),9,6)
-        g.joint("Lid"+suffix,(s*.68,3.32,-1.40),"Head")
-        g.tube("nose",[(s*.49,3.34,-1.49),(s*.61,3.30,-1.51),(s*.75,3.29,-1.50),
-                    (s*.87,3.34,-1.45)],[.023,.035,.032,.016],7)
-        g.joint("Arm"+suffix,(s*1.21,2.34,-.12))
-        loft(g,"fur",[(s*1.37,.96,-.54,.25,.26),(s*1.49,1.11,-.49,.38,.38),
-             (s*1.57,1.51,-.26,.34,.35),(s*1.49,2.06,-.12,.38,.37),
-             (s*1.25,2.40,-.04,.32,.30)],16)
+        angle=i*2.39996+.46
+        x,y,z=on_crown(angle,3.72+.08*cos(i),.068)
+        center=(x,y+.019,z)
+        for j in range(5):
+            a=j*2*pi/5+.37*i
+            g.leaf("cream" if i%3 else "pink",center,
+                   (x+.16*cos(a),y+.075,z+.16*sin(a)),.072,.044,4,2)
+        g.blob("gold",(x,y+.061,z),(.044,.046,.044),8,5)
+    # Closed lids follow the head depth across the full arc of each cheek.
+    def face_z(x):
+        return -.45-1.13*sqrt(1-(x/1.65)**2)
+    for s,suffix in ((-1,"L"),(1,"R")):
+        x=s*.66
+        z=face_z(x)
+        pivot=(x,2.72,z)
+        g.joint("Eye"+suffix,pivot,"Head")
+        g.blob("eye",(x,2.72,z-.012),(.117,.158,.080),15,9)
+        g.blob("shine",(x-.029,2.768,z-.08),(.027,.031,.014),9,5)
+        g.joint("Lid"+suffix,pivot,"Head")
+        lid=[]
+        for j in range(9):
+            t=(j-4)/4
+            xx=x+.226*t
+            lid.append((xx,2.735-.085*(1-t*t),face_z(xx)-.027))
+        g.tube("nose",lid,[.014+.018*sin(pi*j/8) for j in range(9)],7)
+        g.joint("Head",g.joints["Head"][1])
+        # A shallow cheek follows the sloping face at both ends.
+        cheek=[]
+        for j in range(12):
+            a=j*pi/6
+            xx=s*1.03+.15*cos(a)
+            cheek.append((xx,2.49+.075*sin(a),face_z(xx)+.013))
+        middle=(s*1.03,2.49,face_z(s*1.03)-.025)
+        for j in range(12):
+            g.tri("blush",middle,cheek[(j+1)%12],cheek[j])
+        g.joint("Arm"+suffix,(s*1.28,1.93,-.22))
+        rounded_sections(g,"fur",[(s*1.44,.39,-.73,.27,.32),
+            (s*1.49,.51,-.76,.47,.50),(s*1.51,.78,-.67,.49,.51),
+            (s*1.55,1.12,-.48,.40,.41),(s*1.48,1.53,-.33,.36,.36),
+            (s*1.33,1.93,-.25,.31,.29),(s*1.22,2.09,-.22,.17,.17)],22)
         for j in (-1,0,1):
-            g.leaf("ivory",(s*1.39+j*.115,1.12,-.81),(s*1.39+j*.11,1.0,-.86),.043,.02)
-        g.joint("Leg"+suffix,(s*.87,.89,.26))
-        loft(g,"footfur",[(s*.92,.04,-.26,.49,.54),(s*.94,.13,-.31,.57,.65),
-             (s*.93,.36,-.21,.53,.60),(s*.90,.66,.08,.41,.42),
-             (s*.86,1.0,.22,.37,.34)],16)
-    g.joint("Tail",(0,.78,1.31))
-    g.tube("fur",[(0,.78,1.14),(.20,.65,1.71),(.48,.80,2.17),(.66,1.05,2.39),
-            (.79,1.24,2.49)],[.38,.42,.34,.23,.07],14)
+            g.blob("ivory",(s*1.46+j*.21,.52,-1.16+.075*abs(j)),
+                   (.087,.080,.102),10,6)
+        g.joint("Leg"+suffix,(s*.83,.79,.30))
+        rounded_sections(g,"footfur",[(s*.89,.045,-.22,.40,.52),
+            (s*.91,.13,-.23,.53,.64),(s*.91,.33,-.18,.54,.61),
+            (s*.89,.55,.03,.42,.46),(s*.83,.80,.24,.33,.32)],20)
+    g.joint("Head",g.joints["Head"][1])
+    for s in (-1,1):
+        g.blob("nose",(s*.093,2.52,-1.566),(.033,.029,.026),9,5)
+    g.tube("nose",[(-.15,2.36,-1.528),(-.085,2.315,-1.525),(0,2.31,-1.524),
+           (.090,2.32,-1.525),(.15,2.365,-1.529)],[.013,.020,.021,.018,.012],7)
+    g.joint("Tail",(0,.71,1.21))
+    g.tube("fur",[(0,.74,1.07),(.21,.60,1.64),(.50,.65,1.98),
+        (.72,.82,2.19),(.83,.95,2.22)],[.35,.39,.29,.155,.045],14)
     return g
 
 

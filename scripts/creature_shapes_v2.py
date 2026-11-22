@@ -18,13 +18,16 @@ SPECIES = {
 
 def sculpt_species(name, base, second, S):
     from pet_detail_sculpts import (
-        seated_rabbit, sculpt_fluffy_collarette, sculpt_kitten_face,
+        seated_rabbit, spaniel, sculpt_fluffy_collarette, sculpt_kitten_face,
         sculpt_sticker_personality,
     )
     g=S("Pet_"+name)
     k=SPECIES[name]
     if k=="bunny":
         seated_rabbit(g,base)
+        return g
+    if k=="dog":
+        spaniel(g,base,second)
         return g
     def side_joint(label,side,pivot,parent="Body"):
         g.joint(label+("L" if side<0 else "R"),pivot,parent)
@@ -78,13 +81,12 @@ def sculpt_species(name, base, second, S):
         inset_tip=(tip[0],tip[1]-.10,tip[2]-.05)
         lf("pink",inset_root,inset_tip,length*.54)
     def coat_patch(color,center,radii):ell(color,center,radii,13,8)
-    if k in ("kitten","fox","dog","ferret","bear","lamb","deer","unicorn",
+    if k in ("kitten","fox","ferret","bear","lamb","deer","unicorn",
              "salamander","dinosaur","cookie"):
         # Body length, leg length, head placement intentionally differ by family.
         bodyshape = {
           "kitten":((0,.82,.38),(.85,.60,1.27)),
           "fox":((0,.85,.39),(.73,.56,1.32)),
-          "dog":((0,.88,.36),(.93,.67,1.25)),
           "ferret":((0,.72,.69),(.69,.50,1.75)),
           "bear":((0,1.02,.45),(1.11,.87,1.15)),
           "lamb":((0,1.01,.48),(1.12,.81,1.22)),
@@ -119,7 +121,6 @@ def sculpt_species(name, base, second, S):
         headprops = {
           "kitten":((0,1.74,-.58),1.02,.87,.80,.45),
           "fox":((0,1.78,-.65),.92,.83,.78,.43),
-          "dog":((0,1.77,-.61),1.04,.87,.83,.43),
           "ferret":((0,1.49,-.83),.76,.66,.71,.33),
           "bear":((0,1.95,-.44),1.06,.90,.78,.44),
           "lamb":((0,1.91,-.56),.93,.83,.72,.38),
@@ -169,22 +170,6 @@ def sculpt_species(name, base, second, S):
                        (.75+sin(a)*.20,2.29+cos(a)*.20,2.16),
                        .16,.02)
                 g.joint("Head",g.joints["Head"][1])
-        elif k=="dog":
-            for side in (-1,1):
-                ell(second,(side*.99,2.08,-.26),(.38,.70,.34),15,10)
-            ell("ivory",(0,1.42,-1.53),(.62,.37,.36))
-            ell("black",(0,1.59,-1.84),(.21,.15,.13))
-            g.joint("Tail",(0,.85,1.35))
-            tube(base,[(0,.88,1.55),(.4,1.20,1.93),(.7,1.30,2.07)],
-                [.25,.17,.06])
-            g.joint("Head",g.joints["Head"][1])
-            if name=="Snorf":
-                for side in (-1,1):
-                    ell("chocolate",(side*.77,1.80,-1.17),(.27,.22,.08),12,7)
-                ell("chocolate",(0,1.55,-1.68),(.28,.16,.10))
-                # A tiny tongue below the nose gives the dog a unique
-                # playful smile without a flat facial expression decal.
-                ell("rose",(0,1.29,-1.78),(.10,.13,.045),10,6)
         elif k=="ferret":
             for side in (-1,1):
                 ell(second,(side*.63,1.94,-.64),(.32,.38,.31),12,7)

@@ -63,51 +63,28 @@ def sculpt_kitten_face(g, base, second):
                .085, .032, 4, 2)
 
 
-def _rounded_sections(g, pigment, rings, sides=20):
-    """Smooth elliptical sections, including the lean of each section centre."""
-    from generate_reference_glb import norm, cross, sub
-    def point(ring, angle):
-        x,y,z,rx,rz=ring
-        return x+rx*cos(angle),y,z+rz*sin(angle)
-    for j in range(len(rings)-1):
-        for i in range(sides):
-            positions,normals=[],[]
-            for k,col in ((j,i),(j+1,i),(j+1,i+1),(j,i+1)):
-                ring=rings[k]
-                angle=col*2*pi/sides
-                positions.append(point(ring,angle))
-                up=sub(point(rings[min(k+1,len(rings)-1)],angle),
-                       point(rings[max(k-1,0)],angle))
-                tangent=(-ring[3]*sin(angle),0,ring[4]*cos(angle))
-                normals.append(norm(cross(up,tangent)))
-            g.quad(pigment,*positions,vertex_normals=normals)
-    for k in (0,-1):
-        for i in range(sides):
-            a,b=(point(rings[k],c*2*pi/sides) for c in (i,i+1))
-            g.tri(pigment,rings[k][:3],*( (a,b) if k==0 else (b,a) ))
-
-
 def seated_rabbit(g, fur):
     """A compact pear-shaped lap rabbit, with paws wrapped around its carrot."""
+    from orchard_sculpt import rounded_sections
     g.joint("Body",(0,0,0))
-    _rounded_sections(g,fur,[(0,.10,.19,.39,.37),(0,.25,.22,.65,.55),
+    rounded_sections(g,fur,[(0,.10,.19,.39,.37),(0,.25,.22,.65,.55),
                        (0,.58,.22,.78,.65),(0,.95,.14,.68,.54),
                        (0,1.28,-.02,.49,.40),(0,1.49,-.10,.33,.26)])
     g.joint("Tail",(0,.58,.69))
-    _rounded_sections(g,"white",[(0,.42,.74,.13,.12),(.02,.55,.86,.25,.24),
+    rounded_sections(g,"white",[(0,.42,.74,.13,.12),(.02,.55,.86,.25,.24),
                       (.03,.75,.91,.30,.27),(.04,.94,.89,.22,.19),
                       (.02,1.05,.84,.06,.06)],14)
     for side,suffix in ((-1,"L"),(1,"R")):
         g.joint("Hind"+suffix, (side*.46,.47,.19))
-        _rounded_sections(g,fur,[(side*.58,.065,-.08,.20,.31),
+        rounded_sections(g,fur,[(side*.58,.065,-.08,.20,.31),
                           (side*.60,.14,-.07,.27,.40),(side*.62,.29,.02,.30,.41),
                           (side*.57,.48,.14,.26,.32),(side*.49,.59,.19,.12,.19)],16)
         g.joint("Fore"+suffix,(side*.48,1.14,-.15))
-        _rounded_sections(g,fur,[(side*.23,.63,-.62,.09,.09),(side*.26,.71,-.64,.15,.15),
+        rounded_sections(g,fur,[(side*.23,.63,-.62,.09,.09),(side*.26,.71,-.64,.15,.15),
                           (side*.36,.85,-.55,.18,.17),(side*.47,1.03,-.34,.17,.16),
                           (side*.46,1.17,-.20,.12,.13)],14)
     g.joint("Head",(0,1.36,-.10))
-    _rounded_sections(g,fur,[(0,1.22,-.27,.35,.31),(0,1.35,-.29,.70,.51),
+    rounded_sections(g,fur,[(0,1.22,-.27,.35,.31),(0,1.35,-.29,.70,.51),
                     (0,1.57,-.30,.95,.68),(0,1.84,-.28,1.00,.73),
                     (0,2.11,-.23,.93,.68),(0,2.35,-.19,.75,.53),
                     (0,2.51,-.15,.46,.34),(0,2.56,-.14,.15,.13)],28)
@@ -130,7 +107,7 @@ def seated_rabbit(g, fur):
             lean=(.46 if side<0 else .28)*t+.06*sin(pi*t)
             rings.append((root+side*lean,height-.16*t*(side<0),-.16+.09*t-.105*t*t,
                           width,.09+.055*sin(pi*t) if i<len(widths)-1 else .025))
-        _rounded_sections(g,fur,rings,18)
+        rounded_sections(g,fur,rings,18)
         # Inset follows the forward arc of the same elliptical sections.
         rows=[]
         for i in range(1,len(rings)-1):
@@ -142,7 +119,7 @@ def seated_rabbit(g, fur):
             for j in range(4):
                 g.quad("pink",a[j],b[j],b[j+1],a[j+1])
     g.joint("Body",(0,0,0))
-    _rounded_sections(g,"orange",[(.07,.40,-.76,.019,.018),(.035,.57,-.74,.093,.09),
+    rounded_sections(g,"orange",[(.07,.40,-.76,.019,.018),(.035,.57,-.74,.093,.09),
                       (0,.83,-.73,.164,.15),(-.02,.99,-.71,.17,.155),
                       (-.03,1.08,-.69,.10,.095)],14)
     for i in range(4):
@@ -190,12 +167,6 @@ def sculpt_sticker_personality(g, name, species):
         for side in (-1,1):
             g.leaf("pink",(side*.07,1.42,-1.28),
                    (side*.18,1.13,-1.27),.09,.025,4,2)
-    elif species=="dog":
-        g.joint("Head",g.joints["Head"][1])
-        # Triangular kerchief follows the throat down under the muzzle.
-        g.leaf("brick",(-.55,1.19,-1.17),(.55,1.19,-1.17),.25,.07,5,2)
-        g.leaf("brick",(0,1.21,-1.18),(0,.72,-1.18),.35,.065,5,2)
-        g.blob("gold",(0,1.09,-1.26),(.09,.09,.05),9,5)
     elif species=="fox":
         g.joint("Head",g.joints["Head"][1])
         g.tube("leafdeep",[(-.48,1.25,-1.0),(0,1.14,-1.12),(.49,1.24,-1.0)],
@@ -219,3 +190,82 @@ def sculpt_sticker_personality(g, name, species):
         g.joint("Body",(0,0,0))
         for side in (-1,1):
             g.blob("blush",(side*.80,1.19,-1.26),(.20,.095,.05),10,6)
+
+
+def spaniel(g, coat, cream):
+    """Small warm spaniel with a continuous piebald head and low, folded ears."""
+    from math import sqrt
+    from generate_reference_glb import norm,cross
+    from orchard_sculpt import rounded_sections
+
+    g.joint("Body",(0,0,0))
+    rounded_sections(g,cream,[(0,.22,.32,.42,.52),(0,.36,.34,.63,.77),
+                     (0,.64,.35,.76,.97),(0,.90,.32,.73,.90),
+                     (0,1.14,.21,.56,.67),(0,1.29,.07,.31,.38)])
+    for side,suffix in ((-1,"L"),(1,"R")):
+        for fore in (True,False):
+            z=-.27 if fore else .86
+            g.joint(("Fore" if fore else "Hind")+suffix,(side*.48,.67,z))
+            rounded_sections(g,cream,[(side*.52,.045,z-.10,.16,.23),
+                (side*.54,.12,z-.11,.22,.30),(side*.54,.25,z-.07,.23,.30),
+                (side*.52,.45,z+.015,.16,.18),(side*.47,.65,z,.18,.21),
+                (side*.39,.76,z+.02,.12,.15),(side*.35,.81,z+.03,.05,.07)],14)
+    g.joint("Tail",(0,.79,1.09))
+    g.tube(coat,[(0,.79,1.06),(.12,.87,1.33),(.26,1.10,1.48),
+                 (.33,1.32,1.49)],[.18,.19,.17,.135],12)
+    g.tube(cream,[(.33,1.32,1.49),(.34,1.46,1.44),(.31,1.53,1.39)],
+           [.135,.091,.02],12)
+
+    g.joint("Head",(0,1.09,-.19))
+    # The first five latitude bands form an asymmetric ear/eye marking.
+    # Both colours meet at exactly the same vertices along its wavy border.
+    pole=norm((.72,.31,-.78))
+    tangent=norm(cross(pole,(0,1,0)))
+    tangent2=cross(pole,tangent)
+    def head_vertex(i,j):
+        a=2*pi*i/32
+        lat=pi*j/18
+        lat+=.11*sin(lat)*(sin(a+.3)+.38*sin(3*a-.8))
+        u,v,w=[p*cos(lat)+sin(lat)*(t*cos(a)+q*sin(a))
+               for p,t,q in zip(pole,tangent,tangent2)]
+        return ((.93*u*(1-.095*v),1.59+.79*v,-.46+.73*w),
+                norm((u/.93,(v+.095*u*u)/.79,w/.73)))
+    for j in range(18):
+        for i in range(32):
+            coords=[(i,j),(i+1,j),(i+1,j+1),(i,j+1)]
+            if j==0: coords.pop(1)
+            if j==17: coords.pop(2)
+            positions,normals=zip(*(head_vertex(a,b) for a,b in coords))
+            mat=coat if j<5 else cream
+            if len(coords)==3: g.tri(mat,*positions,*normals)
+            else: g.quad(mat,*positions,vertex_normals=normals)
+
+    for side,suffix in ((-1,"L"),(1,"R")):
+        g.joint("Head",g.joints["Head"][1])
+        x=side*.385
+        y=1.67
+        v=(y-1.59)/.79
+        depth=-.46-.73*sqrt(1-v*v-(x/(.93*(1-.095*v)))**2)
+        g.blob("eye",(x,y,depth-.013),(.092,.109,.06),13,8)
+        g.blob("shine",(x-.026,y+.037,depth-.064),(.023,.028,.018),8,5)
+        g.blob("blush",(side*.62,1.46,-1.002),(.132,.071,.044),11,7)
+        g.joint("Ear"+suffix,(side*.70,1.99,-.35),"Head")
+        rounded_sections(g,"brown",[(side*.94,1.12,-.39,.08,.11),
+                    (side*.99,1.22,-.38,.21,.21),(side*1.03,1.43,-.36,.265,.29),
+                    (side*.99,1.67,-.31,.25,.32),(side*.89,1.91,-.28,.22,.29),
+                    (side*.75,2.06,-.30,.18,.22),(side*.69,2.11,-.30,.08,.10)],18)
+    g.joint("Head",g.joints["Head"][1])
+    g.blob("rose",(0,1.285,-1.162),(.103,.105,.062),12,8)
+    for side in (-1,1):
+        g.blob("cream",(side*.12,1.43,-1.125),(.198,.13,.129),14,8)
+    g.blob("nose",(0,1.504,-1.239),(.113,.075,.064),13,8)
+    # Neck scarf lies against the chest and swings with the body.
+    g.joint("Body",(0,0,0))
+    g.tube("brick",[(-.54,1.08,-.34),(-.34,1.01,-.50),(0,.97,-.57),
+           (.34,1.01,-.50),(.54,1.08,-.34)],[.065,.066,.069,.066,.065],8)
+    hem=[(-.365,1.0,-.53),(0,.96,-.595),(.365,1.0,-.53),
+         (.22,.77,-.627),(.015,.59,-.645),(-.19,.73,-.63)]
+    fold=(.035,.82,-.674)
+    for j,p in enumerate(hem):
+        g.tri("brick",fold,hem[(j+1)%len(hem)],p)
+    g.blob("gold",(.04,.84,-.671),(.037,.039,.019),8,5)

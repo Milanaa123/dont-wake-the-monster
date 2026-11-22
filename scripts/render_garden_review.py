@@ -19,6 +19,10 @@ atlas=out/"atlas.png"
 w,h,rgba=bank["Pigments"]
 atlas.write_bytes(png(w,h,unpack(rgba)))
 for asset, focus, direction, scale in [
+    ("Environment_OrangeTree",(0,0,2.55),(4,-9,2.1),7.55),
+    ("Environment_StonePath",(0,5,.11),(4,-6,8),12.40),
+    ("Pet_Snorf",(0,.10,1.22),(4,-9,3.1),3.85),
+    ("Environment_SleepingMonster",(0,.08,2.06),(3.5,-10,3.15),5.95),
     ("Pet_Floofle",(0,-.1,2.0),(3.5,-9,2.8),5.80),
     ("Pet_Pickle",(0,-.04,1.04),(3.35,-9,3.25),4.22),
     ("Crop_Berry_S3",(0,0,.40),(4,-8,5.2),4.15),
@@ -44,6 +48,9 @@ for asset, focus, direction, scale in [
     img.image=bpy.data.images.load(str(atlas))
     mat.node_tree.links.new(img.outputs["Color"],nodes["Principled BSDF"].inputs["Base Color"])
     for section in bank[asset]["parts"]:
+        # Show the separate closed lids in this bind-pose review.
+        if asset=="Environment_SleepingMonster" and section["name"] in ("EyeL","EyeR"):
+            continue
         raw=unpack(section["data"])
         nv,nf=struct.unpack_from("<II",raw)
         end=8+nv*13
