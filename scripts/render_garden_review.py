@@ -11,7 +11,7 @@ from pathlib import Path
 from mathutils import Vector
 sys.path.insert(0,str(Path(__file__).resolve().parent))
 from package_studio import unpack,png
-path, destination=sys.argv[sys.argv.index("--")+1:]
+path, destination, *assets=sys.argv[sys.argv.index("--")+1:]
 bank={e["name"]:json.loads(e["properties"]["Value"]) for e in json.loads(Path(path).read_text())["children"]}
 out=Path(destination).resolve()
 out.mkdir(exist_ok=True,parents=True)
@@ -19,6 +19,11 @@ atlas=out/"atlas.png"
 w,h,rgba=bank["Pigments"]
 atlas.write_bytes(png(w,h,unpack(rgba)))
 for asset, focus, direction, scale in [
+    ("Pet_Pip",(0,.13,1.53),(4,-9,2.9),4.40),
+    ("Pet_Zuzu",(0,.13,1.53),(-4,-9,2.9),4.40),
+    ("Crop_Tomato_S1",(0,0,1.06),(4,-9,4.6),3.28),
+    ("Crop_Tomato_S2",(0,0,1.06),(4,-9,4.6),3.28),
+    ("Crop_Tomato_S3",(0,0,1.06),(4,-9,4.6),3.28),
     ("Environment_OrangeTree",(0,0,2.55),(4,-9,2.1),7.55),
     ("Environment_StonePath",(0,5,.11),(4,-6,8),12.40),
     ("Pet_Snorf",(0,.10,1.22),(4,-9,3.1),3.85),
@@ -30,6 +35,8 @@ for asset, focus, direction, scale in [
     ("Crop_Berry_S1",(0,0,.40),(4,-8,5.2),4.15),
     ("Crop_Berry_S2",(0,0,.40),(4,-8,5.2),4.15),
     ("Pet_Splat",(0,-.04,1.04),(-4,-9,3.6),4.22)]:
+    if assets and asset not in assets:
+        continue
     bpy.ops.wm.read_factory_settings(use_empty=True)
     scene=bpy.context.scene
     scene.render.engine="CYCLES"

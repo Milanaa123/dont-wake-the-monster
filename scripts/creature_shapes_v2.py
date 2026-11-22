@@ -18,16 +18,19 @@ SPECIES = {
 
 def sculpt_species(name, base, second, S):
     from pet_detail_sculpts import (
-        seated_rabbit, spaniel, sculpt_fluffy_collarette, sculpt_kitten_face,
+        seated_rabbit, pug_puppy, sculpt_fluffy_collarette, kitten,
         sculpt_sticker_personality,
     )
     g=S("Pet_"+name)
     k=SPECIES[name]
+    if k=="kitten":
+        kitten(g,name,base,second)
+        return g
     if k=="bunny":
         seated_rabbit(g,base)
         return g
     if k=="dog":
-        spaniel(g,base,second)
+        pug_puppy(g,base,second)
         return g
     def side_joint(label,side,pivot,parent="Body"):
         g.joint(label+("L" if side<0 else "R"),pivot,parent)
@@ -81,11 +84,10 @@ def sculpt_species(name, base, second, S):
         inset_tip=(tip[0],tip[1]-.10,tip[2]-.05)
         lf("pink",inset_root,inset_tip,length*.54)
     def coat_patch(color,center,radii):ell(color,center,radii,13,8)
-    if k in ("kitten","fox","ferret","bear","lamb","deer","unicorn",
+    if k in ("fox","ferret","bear","lamb","deer","unicorn",
              "salamander","dinosaur","cookie"):
         # Body length, leg length, head placement intentionally differ by family.
         bodyshape = {
-          "kitten":((0,.82,.38),(.85,.60,1.27)),
           "fox":((0,.85,.39),(.73,.56,1.32)),
           "ferret":((0,.72,.69),(.69,.50,1.75)),
           "bear":((0,1.02,.45),(1.11,.87,1.15)),
@@ -119,7 +121,6 @@ def sculpt_species(name, base, second, S):
                     foot(side,z,.64,.20,.83)
         g.joint("Body",(0,0,0))
         headprops = {
-          "kitten":((0,1.74,-.58),1.02,.87,.80,.45),
           "fox":((0,1.78,-.65),.92,.83,.78,.43),
           "ferret":((0,1.49,-.83),.76,.66,.71,.33),
           "bear":((0,1.95,-.44),1.06,.90,.78,.44),
@@ -132,15 +133,11 @@ def sculpt_species(name, base, second, S):
         }
         (hc,rx,ry,rz,es)=headprops[k]
         g.joint("Head",(0,hc[1]-ry*.62,hc[2]+rz*.32))
-        face(*hc,rx,ry,rz,es,smile=k!="kitten",
-            nose=k not in ("salamander","dinosaur","kitten"))
-        if k in ("kitten","fox"):
-            if k=="kitten":
-                sculpt_kitten_face(g, base, second)
+        face(*hc,rx,ry,rz,es,nose=k not in ("salamander","dinosaur"))
+        if k=="fox":
             for side in (-1,1):
-                if k=="fox":
-                    tip=(side*1.11,3.06,-.55)
-                    ear(side,(side*.72,2.29,-.48),tip,.32)
+                tip=(side*1.11,3.06,-.55)
+                ear(side,(side*.72,2.29,-.48),tip,.32)
                 for t in range(3):
                     y=1.58+t*.105
                     # Fine matte whiskers should read as whiskers, not
@@ -149,27 +146,22 @@ def sculpt_species(name, base, second, S):
                         (side*.74,y-.035,-1.49),
                         (side*1.09,y+(t-1)*.07,-1.40)],
                         [.010,.007,.003])
-            # Fox gets a broad white mask; kitten has two individually
-            # sculpted muzzle lobes already and should not get a third
-            # bulbous oval pasted across its nose and mouth.
-            if k=="fox":
-                # Soft white chin and pointed cheek tufts instead of two
-                # overlapping round masks stuck onto a red fox head.
-                ell("ivory",(0,1.40,-1.37),(.37,.18,.18),14,8)
-                for side in (-1,1):
-                    lf("ivory",(side*.37,1.46,-1.26),
-                       (side*.88,1.21,-1.17),.17,.032)
+            # Soft white chin and pointed cheek tufts instead of two
+            # overlapping round masks stuck onto a red fox head.
+            ell("ivory",(0,1.40,-1.37),(.37,.18,.18),14,8)
+            for side in (-1,1):
+                lf("ivory",(side*.37,1.46,-1.26),
+                   (side*.88,1.21,-1.17),.17,.032)
             g.joint("Tail",(0,.85,1.35))
             tube(base,[(.24,.82,1.39),(.58,1.05,1.87),
                 (.87,1.69,2.02),(.76,2.16,2.09)],[.27,.29,.22,.06])
-            if k=="fox":
-                # Cream tip follows the articulated tail, not the head.
-                for j in range(5):
-                    a=j*2*pi/5
-                    lf("ivory",(.76,2.01,2.05),
-                       (.75+sin(a)*.20,2.29+cos(a)*.20,2.16),
-                       .16,.02)
-                g.joint("Head",g.joints["Head"][1])
+            # Cream tip follows the articulated tail, not the head.
+            for j in range(5):
+                a=j*2*pi/5
+                lf("ivory",(.76,2.01,2.05),
+                   (.75+sin(a)*.20,2.29+cos(a)*.20,2.16),
+                   .16,.02)
+            g.joint("Head",g.joints["Head"][1])
         elif k=="ferret":
             for side in (-1,1):
                 ell(second,(side*.63,1.94,-.64),(.32,.38,.31),12,7)
@@ -234,10 +226,7 @@ def sculpt_species(name, base, second, S):
                     ell("gold",(side*.38,1.48,-1.38),(.16,.10,.10))
         g.joint("Head",g.joints["Head"][1])
         # different hats, masks, gradients painted as geometry.
-        if name=="Zuzu":
-            for i in range(3):
-                ell("gold",(-.55+i*.24,2.52,-.49+i*.03),(.14,.24,.16))
-        elif name=="Doodle":
+        if name=="Doodle":
             ell("lilac",(0,2.65,-.49),(.65,.12,.54))
         elif name=="Mallow":
             ell("cream",(0,2.76,-.42),(.79,.24,.73))

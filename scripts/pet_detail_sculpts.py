@@ -7,60 +7,133 @@ MeshPart instances. Coordinates match the existing Y-up / -Z-forward rig.
 from math import cos, pi, sin
 
 
-def sculpt_kitten_face(g, base, second):
-    """Feline ears, muzzle, cheek ruff and facial expression without orb spam."""
-    from orchard_sculpt import loft
+def kitten(g, name, coat, cream):
+    """A round-faced kitten with a shaped bib and an uninterrupted two-tone coat."""
+    from math import exp, sqrt
+    from generate_reference_glb import cross, norm, sub
+    from orchard_sculpt import rounded_sections
+    fire=name=="Zuzu"
+    g.joint("Body",(0,0,0))
+    rounded_sections(g,coat,[(0,.12,.25,.35,.36),(0,.22,.26,.57,.58),
+        (0,.51,.29,.71,.72),(0,.79,.28,.70,.70),(0,1.04,.16,.57,.57),
+        (0,1.28,-.02,.43,.40),(0,1.40,-.10,.29,.24)],22)
+    for side,suffix in ((-1,"L"),(1,"R")):
+        for fore in (True,False):
+            x=side*(.41 if fore else .59)
+            z=-.41 if fore else .42
+            g.joint(("Fore" if fore else "Hind")+suffix,(x,.67,z+.12))
+            rounded_sections(g,(cream,cream,coat,coat,coat),[(x,.05,z-.055,.135,.191),(x,.13,z-.06,.218,.274),
+                (x,.27,z-.035,.23,.27),(x,.43,z+.055,.197,.207),
+                (x*.94,.62,z+.13,.175,.175),(x*.79,.79,z+.15,.093,.083)],16)
 
-    # Proper triangular pinnae: broad at the skull and pointed at their tips.
-    # The interior is a shallow pink leaf surface, not a solid pink cylinder.
-    for side in (-1, 1):
-        loft(g, base, [
-            (side*.70, 2.25, -.51, .33, .28),
-            (side*.87, 2.59, -.51, .36, .21),
-            (side*1.05, 2.97, -.50, .20, .13),
-            (side*1.11, 3.27, -.49, .026, .027),
-        ], sides=12)
-        g.leaf("rose" if base == "pink" else "pink",
-               (side*.83, 2.57, -.76),
-               (side*1.10, 3.15, -.62), .205, .045, 6, 3)
-        # Fine cream ear guard fur points towards the viewer.
-        for j in range(3):
-            start=(side*(.80 + j*.10), 2.51+j*.105, -.76)
-            tip=(side*(1.03+j*.12), 2.64+j*.13, -.78)
-            g.leaf("ivory", start, tip, .062, .021, 3, 2)
+    g.joint("Tail",(0,.54,.79))
+    if fire:
+        path=[(0,.54,.79),(.32,.68,1.01),(.68,.97,1.12),(.91,1.34,1.12),
+              (1.01,1.68,1.07),(.96,1.91,1.01),(.80,2.00,.99),(.70,1.96,.97)]
+    else:
+        path=[(0,.54,.79),(.36,.44,.97),(.76,.35,.98),(1.05,.31,.79),
+              (1.17,.35,.51),(1.14,.42,.27),(1.01,.48,.13),(.89,.47,.10)]
+    rows=[]
+    for i,p in enumerate(path):
+        along=norm(sub(path[min(i+1,len(path)-1)],path[max(i-1,0)]))
+        side_axis=norm(cross(along,(0,1,0)))
+        up=cross(along,side_axis)
+        r=(.18,.205,.194,.165,.147,.133,.105,.040)[i]
+        row=[]
+        for j in range(14):
+            a=2*pi*j/14
+            n=tuple(u*cos(a)+v*sin(a) for u,v in zip(side_axis,up))
+            row.append((tuple(c+r*v for c,v in zip(p,n)),n))
+        rows.append(row)
+    for i,(lo,hi) in enumerate(zip(rows,rows[1:])):
+        mat=cream if i>=5 else ("gold" if fire else "rose") if i==3 else coat
+        for j in range(14):
+            k=(j+1)%14
+            pts,ns=zip(lo[j],lo[k],hi[k],hi[j])
+            g.quad(mat,*pts,vertex_normals=ns)
+    for j in range(14):
+        g.tri(cream,path[-1],rows[-1][j][0],rows[-1][(j+1)%14][0])
 
-    # Two sculpted muzzle lobes instead of a generic big oval balloon.
-    for side in (-1, 1):
-        g.blob("ivory", (side*.19, 1.40, -1.40),
-               (.235, .145, .132), 13, 8)
-        # No black brow ridges: at game-camera scale they looked angry.
-        # Tiny bead eyes already give the soft, friendly sticker expression.
-        # Cheek ruff has pointed individual clumps, not sphere tufts.
-        for j in range(2):
-            y=1.42+j*.13
-            basept=(side*.74, y, -1.16)
-            tip=(side*(.94 + .03*j), y+.035*(j-1), -1.16)
-            g.leaf("ivory", basept, tip, .075, .022, 4, 2)
+    g.joint("Head",(0,1.22,-.15))
+    def surface(a,lat):
+        y=sin(lat)
+        return (1.00*cos(lat)*sin(a)*(1-.14*y),1.79+.77*y,
+                -.25-.755*cos(lat)*cos(a)*(1-.035*y))
+    def surface_normal(a,lat):
+        if abs(lat)>1.5707: return (0,1 if lat>0 else -1,0)
+        tangent=sub(surface(a+.001,lat),surface(a-.001,lat))
+        rise=sub(surface(a,lat+.001),surface(a,lat-.001))
+        return norm(cross(rise,tangent))
+    def corner(i,j):
+        a=2*pi*i/36
+        # Warp a shared latitude to give the nose blaze a clean edge across
+        # the cheeks, even in profile. Zuzu's marking sweeps the other way.
+        shift=-.23 if fire else .15
+        angle=(a-shift+pi)%(2*pi)-pi
+        seam=-.29+.92*exp(-(angle/.43)**2)+.08*sin(3*a)
+        lat=(-pi/2+(seam+pi/2)*j/8 if j<=8 else seam+(pi/2-seam)*(j-8)/10)
+        return surface(a,lat),surface_normal(a,lat)
+    for j in range(18):
+        for i in range(36):
+            indices=[(i,j),(i,j+1),(i+1,j+1),(i+1,j)]
+            if j==0: indices.pop(3)
+            if j==17: indices.pop(2)
+            points,normals=zip(*(corner(k,l) for k,l in indices))
+            mat=cream if j<8 else coat
+            if len(points)==3: g.tri(mat,*points,*normals)
+            else: g.quad(mat,*points,vertex_normals=normals)
 
-    g.blob("rose", (0, 1.49, -1.535), (.083,.058,.052), 11, 7)
-    # Lower central cleft and a small smile follow the two muzzle lobes.
-    g.tube("chocolate", [
-        (0, 1.449, -1.54),
-        (0, 1.390, -1.545),
-        (-.088, 1.362, -1.52),
-    ], [.018,.018,.009], 6)
-    g.tube("chocolate", [
-        (0, 1.390, -1.545),
-        (.088, 1.362, -1.52),
-    ], [.018,.008], 6)
+    # Inset pink bowl and rounded backs share the ear margin. The tip leans
+    # slightly away from the nose, with both bases embedded below the crown.
+    for side,suffix in ((-1,"L"),(1,"R")):
+        g.joint("Ear"+suffix,(side*.64,2.29,-.14),"Head")
+        tip=3.14+(.085 if fire and side==1 else 0)
+        outline=[(.24,2.14),(.34,2.38),(.49,2.58),(.73,2.85),(.94,tip-.045),
+                 (1.015,tip),(1.045,tip-.075),(1.055,2.80),(1.010,2.55),(.96,2.37),
+                 (.81,2.18),(.60,2.10)]
+        center=(.73,2.53)
+        def rim(scale,z):
+            return [(side*(center[0]+scale*(x-center[0])),center[1]+scale*(y-center[1]),
+                     z+.13*(y-2.46)) for x,y in outline]
+        back,edge,lip,bowl=rim(.68,.105),rim(1,-.23),rim(.76,-.34),rim(.52,-.31)
+        def ear_face(mat,vertices):
+            ordered=vertices if side==1 else vertices[::-1]
+            if len(ordered)==3: g.tri(mat,*ordered)
+            else: g.quad(mat,*ordered)
+        for j in range(len(edge)):
+            k=(j+1)%len(edge)
+            ear_face(coat,[(side*center[0],center[1],.18),back[k],back[j]])
+            for row,next_row,mat in ((back,edge,coat),(edge,lip,coat),(lip,bowl,"blush")):
+                ear_face(mat,[row[j],row[k],next_row[k],next_row[j]])
+            ear_face("pink",[(side*center[0],center[1],-.272),bowl[j],bowl[k]])
 
-    # Soft top-of-head tufts emphasize a swept feline fur silhouette.
-    for i in range(5):
-        x=(i-2)*.17
-        g.leaf(second if i%2 else base,
-               (x, 2.49, -.65),
-               (x+(i-2)*.055,2.71+(.065 if i%2 else 0),-.67),
-               .085, .032, 4, 2)
+    g.joint("Head",g.joints["Head"][1])
+    def front(x,y):
+        v=(y-1.79)/.77
+        return -.25-.755*(1-.035*v)*sqrt(max(.001,1-v*v-(x/(1-.14*v))**2))
+    for s in (-1,1):
+        x=s*.40
+        z=front(x,1.78)
+        g.blob("eye",(x,1.78,z-.011),(.085,.102,.052),13,8)
+        g.blob("shine",(x-.024,1.813,z-.055),(.024,.026,.013),8,5)
+        cheek=(s*.64,1.61)
+        g.blob("blush",(*cheek,front(*cheek)-.009),(.122,.066,.035),12,7)
+        for i in range(2):
+            p=(s*.57,1.59+i*.092)
+            g.tube("chocolate",[(*p,front(*p)-.018),
+                   (s*.83,p[1]-.017,-.83),(s*1.075,p[1]+(i-.5)*.084,-.735)],
+                   [.012,.009,.003],6)
+        smile=[(s*x,y,front(s*x,y)-.013) for x,y in
+               ((0,1.594),(.035,1.554),(.086,1.55),(.145,1.59))]
+        g.tube("chocolate",smile,[.014,.017,.014,.006],7)
+    g.blob("rose",(0,1.626,front(0,1.626)-.019),(.068,.043,.035),11,7)
+    g.joint("Body",(0,0,0))
+    collar=[(-.45,1.05,-.34),(-.30,.99,-.49),(0,.956,-.55),
+            (.30,.99,-.49),(.45,1.05,-.34)]
+    g.tube("brick" if fire else "rose",collar,[.045,.055,.065,.055,.045],9)
+    g.blob("gold",(0,.869,-.589),(.12,.124,.09),13,8)
+    g.tube("chocolate",[(-.059,.85,-.667),(0,.838,-.678),(.059,.85,-.667)],
+           [.009,.013,.009],6)
 
 
 def seated_rabbit(g, fur):
@@ -147,18 +220,7 @@ def sculpt_sticker_personality(g, name, species):
     soft cheek shapes and recognizable character details into actual meshes.
     Keep these details tiny so all pets remain under the existing triangle budget.
     """
-    if species=="kitten":
-        # Curved collar, dangling tiny bell and tiny cheek spots.
-        g.joint("Head",g.joints["Head"][1])
-        g.tube("rose",[(-.58,1.24,-1.04),(-.39,1.16,-1.17),
-                        (0,1.12,-1.24),(.39,1.16,-1.17),(.58,1.24,-1.04)],
-               [.062,.069,.074,.069,.062],7)
-        g.blob("gold",(0,1.06,-1.32),(.15,.15,.105),10,6)
-        g.tube("chocolate",[(-.055,1.01,-1.421),(.04,1.01,-1.421)],
-               [.014,.014],5)
-        for side in (-1,1):
-            g.blob("blush",(side*.73,1.43,-1.16),(.15,.075,.039),9,5)
-    elif species=="lamb":
+    if species=="lamb":
         # Pastel bow on the white fluffy collar, not an imported decal.
         g.joint("Body",(0,0,0))
         for side in (-1,1):
@@ -192,8 +254,8 @@ def sculpt_sticker_personality(g, name, species):
             g.blob("blush",(side*.80,1.19,-1.26),(.20,.095,.05),10,6)
 
 
-def spaniel(g, coat, cream):
-    """Small warm spaniel with a continuous piebald head and low, folded ears."""
+def pug_puppy(g, coat, cream):
+    """Compact pug puppy with a continuous piebald head, folded ears and curled tail."""
     from math import sqrt
     from generate_reference_glb import norm,cross
     from orchard_sculpt import rounded_sections
@@ -213,8 +275,8 @@ def spaniel(g, coat, cream):
     g.joint("Tail",(0,.79,1.09))
     g.tube(coat,[(0,.79,1.06),(.12,.87,1.33),(.26,1.10,1.48),
                  (.33,1.32,1.49)],[.18,.19,.17,.135],12)
-    g.tube(cream,[(.33,1.32,1.49),(.34,1.46,1.44),(.31,1.53,1.39)],
-           [.135,.091,.02],12)
+    g.tube(cream,[(.33,1.32,1.49),(.35,1.46,1.39),(.32,1.50,1.24),(.28,1.43,1.13),(.25,1.33,1.15)],
+           [.135,.115,.094,.070,.025],12)
 
     g.joint("Head",(0,1.09,-.19))
     # The first five latitude bands form an asymmetric ear/eye marking.
@@ -250,9 +312,9 @@ def spaniel(g, coat, cream):
         g.blob("shine",(x-.026,y+.037,depth-.064),(.023,.028,.018),8,5)
         g.blob("blush",(side*.62,1.46,-1.002),(.132,.071,.044),11,7)
         g.joint("Ear"+suffix,(side*.70,1.99,-.35),"Head")
-        rounded_sections(g,"brown",[(side*.94,1.12,-.39,.08,.11),
-                    (side*.99,1.22,-.38,.21,.21),(side*1.03,1.43,-.36,.265,.29),
-                    (side*.99,1.67,-.31,.25,.32),(side*.89,1.91,-.28,.22,.29),
+        rounded_sections(g,"brown",[(side*.94,1.34,-.44,.08,.11),
+                    (side*.99,1.43,-.41,.21,.21),(side*1.00,1.59,-.37,.265,.29),
+                    (side*.96,1.76,-.30,.25,.32),(side*.89,1.91,-.28,.22,.29),
                     (side*.75,2.06,-.30,.18,.22),(side*.69,2.11,-.30,.08,.10)],18)
     g.joint("Head",g.joints["Head"][1])
     g.blob("rose",(0,1.285,-1.162),(.103,.105,.062),12,8)

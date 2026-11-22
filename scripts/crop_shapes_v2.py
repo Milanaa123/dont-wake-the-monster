@@ -6,12 +6,9 @@ def sculpt_crop(name, stage, S):
     g=S("Crop_"+name+"_S"+str(stage))
     from orchard_varieties import variety
     if variety(g,name,stage): return g
-    # The authored sweetcorn and bell pepper have unique cob/husk and
-    # hanging four-lobe silhouettes; do not run the generic grain/tomato
-    # branch on top of them.
-    if name in ("Corn","Pepper"):
-        from storybook_vegetables import sweetcorn, bell_pepper
-        (sweetcorn if name=="Corn" else bell_pepper)(g,stage)
+    if name in ("Corn","Pepper","Tomato"):
+        from storybook_vegetables import sweetcorn, bell_pepper, tomato_vine
+        {"Corn":sweetcorn,"Pepper":bell_pepper,"Tomato":tomato_vine}[name](g,stage)
         return g
     if name in ("Carrot","RainbowRadish","MarshmallowRoot"):
         from storybook_root_crops import root_bed
@@ -53,7 +50,6 @@ def sculpt_crop(name, stage, S):
       "melon" if name in ("LavaMelon","AuroraMelon") else
       "root" if name in ("Carrot","RainbowRadish","MarshmallowRoot") else
       "grain" if name in ("Corn","WhisperWheat","StardustRice","CandyCane") else
-      "tomato" if name in ("Tomato","Pepper","GummyGrape","Jellybean") else
       "flower" if name in ("Sunflower","MoonLotus","Starbloom","CloudCotton") else
       "mushroom" if name in ("Moonshroom","NeonMushroom") else "fantasy")
     if typ=="berry":
@@ -191,33 +187,6 @@ def sculpt_crop(name, stage, S):
                         ell("gold",(p[0]+sin(a+j)*.11*h,y,
                              p[2]+cos(a+j)*.10*h),
                             (.13*h,.27*h,.13*h),10,7)
-    elif typ=="tomato":
-        # A branching fruit vine with hanging ripened bunches.
-        n=5 if stage==3 else 3
-        for i in range(n):
-            a=i*2*pi/n
-            root=(sin(a)*.56,.07,cos(a)*.52)
-            top=(sin(a)*.92,1.55*h,cos(a)*.81)
-            stem(root,top,.082)
-            for k in range(3):
-                b=a+k*2*pi/3
-                lf(lit if k==0 else leaf,
-                    (top[0],top[1]-.20*h,top[2]),
-                    (top[0]+sin(b)*.62*h,top[1]+.12*h,
-                     top[2]+cos(b)*.58*h),.27*h)
-            if stage>=2:
-                for k in range(2 if stage==3 else 1):
-                    y=.65*h+k*.44*h
-                    fruit=(top[0]+sin(a+k)*.31,y,
-                            top[2]-.31+cos(a+k)*.12)
-                    # Green immature tomatoes, then soft ripe red fruits,
-                    # so the player's garden visually communicates progress.
-                    col=("leaflight" if stage==2 and name=="Tomato" else
-                         "red" if name=="Tomato" else
-                         "orange" if name=="Pepper" else "lilac")
-                    ell(col,fruit,(.28*h,.30*h if name!="Pepper" else .46*h,.30*h),14,9)
-                    cap(fruit,h*.65)
-            else:flower(top,scale=.48)
     elif typ=="flower":
         n=5 if stage==3 else 3
         col="dandelion" if name=="Sunflower" else "cream" if name=="CloudCotton" else "pink"

@@ -70,7 +70,7 @@ for creature in ("Pickle","Nugget","Swoop","Puffin"):
 # to joint() can leave a face or a toe behind when the character moves.
 from bake_orchard import GameSculpt
 for name,_,base,second in PET_SPECS:
-    if name not in ("Floofle","Snorf","Pickle","Splat"):
+    if name not in ("Floofle","Snorf","Pickle","Splat","Pip","Zuzu"):
         continue
     rig=sculpt_species(name,base,second,GameSculpt)
     assert "eye" in rig.parts["Head"]
@@ -78,6 +78,11 @@ for name,_,base,second in PET_SPECS:
     assert all("eye" not in part for joint,part in rig.parts.items() if joint!="Head")
     if name=="Floofle":
         assert rig.joints["Tail"][0]=="Body" and "white" in rig.parts["Tail"]
+        for ear in ("EarL","EarR"):
+            assert rig.joints[ear][0]=="Head" and "pink" in rig.parts[ear]
+    elif name in ("Pip","Zuzu"):
+        assert "gold" in rig.parts["Body"] and "chocolate" in rig.parts["Head"]
+        assert rig.joints["Tail"][0]=="Body"
         for ear in ("EarL","EarR"):
             assert rig.joints[ear][0]=="Head" and "pink" in rig.parts[ear]
     elif name=="Snorf":
@@ -196,6 +201,14 @@ assert "orange" not in crops["Pepper",2].data
 assert "leaflight" in crops["Pepper",2].data
 assert "orange" in crops["Pepper",3].data
 assert crops["Pepper",3].count()>crops["Pepper",1].count()
+
+# A tomato progresses from cotyledons to tied, flowering trusses to red fruit.
+for stage in (1,2):
+    assert "red" not in crops["Tomato",stage].data
+assert "straw" not in crops["Tomato",1].data
+assert {"straw","dandelion"}.issubset(crops["Tomato",2].data)
+assert "red" in crops["Tomato",3].data
+assert bounds(crops["Tomato",1])[1][1]<bounds(crops["Tomato",2])[1][1]<bounds(crops["Tomato",3])[1][1]
 
 print(
     f"PASS: {len(pets)} original articulated baby-animal meshes and "

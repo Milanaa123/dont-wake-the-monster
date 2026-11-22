@@ -20,6 +20,8 @@ def loft(g, mat, rings, sides=20):
 def rounded_sections(g, pigment, rings, sides=20):
     """Smooth elliptical sections, including the lean of each section centre."""
     from generate_reference_glb import norm, cross, sub
+    bands=[pigment]*(len(rings)-1) if isinstance(pigment,str) else pigment
+    assert len(bands)==len(rings)-1
     def point(ring, angle):
         x,y,z,rx,rz=ring
         return x+rx*cos(angle),y,z+rz*sin(angle)
@@ -34,11 +36,11 @@ def rounded_sections(g, pigment, rings, sides=20):
                        point(rings[max(k-1,0)],angle))
                 tangent=(-ring[3]*sin(angle),0,ring[4]*cos(angle))
                 normals.append(norm(cross(up,tangent)))
-            g.quad(pigment,*positions,vertex_normals=normals)
+            g.quad(bands[j],*positions,vertex_normals=normals)
     for k in (0,-1):
         for i in range(sides):
             a,b=(point(rings[k],c*2*pi/sides) for c in (i,i+1))
-            g.tri(pigment,rings[k][:3],*( (a,b) if k==0 else (b,a) ))
+            g.tri(bands[k],rings[k][:3],*( (a,b) if k==0 else (b,a) ))
 
 
 def monster(S):
