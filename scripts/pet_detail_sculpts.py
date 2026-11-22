@@ -33,12 +33,24 @@ def kitten(g, name, coat, cream):
     else:
         path=[(0,.54,.79),(.36,.44,.97),(.76,.35,.98),(1.05,.31,.79),
               (1.17,.35,.51),(1.14,.42,.27),(1.01,.48,.13),(.89,.47,.10)]
+    # Interpolate the artist's control points and transport the normal frame
+    # through the upward curl. A fixed world-up cross product flips at its tip.
+    radii=(.18,.205,.194,.165,.147,.133,.105,.040)
+    samples=[]
+    for i in range(len(path)-1):
+        a,b,c,d=path[max(0,i-1)],path[i],path[i+1],path[min(i+2,len(path)-1)]
+        for t in (0,1/3,2/3):
+            point=tuple(.5*(2*v+(w-u)*t+(2*u-5*v+4*w-x)*t*t+
+                        (-u+3*v-3*w+x)*t**3) for u,v,w,x in zip(a,b,c,d))
+            samples.append((point,radii[i]*(1-t)+radii[i+1]*t))
+    samples.append((path[-1],radii[-1]))
     rows=[]
-    for i,p in enumerate(path):
-        along=norm(sub(path[min(i+1,len(path)-1)],path[max(i-1,0)]))
-        side_axis=norm(cross(along,(0,1,0)))
+    side_axis=(0,0,1)
+    for i,(p,r) in enumerate(samples):
+        along=norm(sub(samples[min(i+1,len(samples)-1)][0],samples[max(i-1,0)][0]))
+        dot=sum(u*v for u,v in zip(side_axis,along))
+        side_axis=norm(tuple(u-dot*v for u,v in zip(side_axis,along)))
         up=cross(along,side_axis)
-        r=(.18,.205,.194,.165,.147,.133,.105,.040)[i]
         row=[]
         for j in range(14):
             a=2*pi*j/14
@@ -46,7 +58,8 @@ def kitten(g, name, coat, cream):
             row.append((tuple(c+r*v for c,v in zip(p,n)),n))
         rows.append(row)
     for i,(lo,hi) in enumerate(zip(rows,rows[1:])):
-        mat=cream if i>=5 else ("gold" if fire else "rose") if i==3 else coat
+        band=i//3
+        mat=cream if band>=5 else ("gold" if fire else "rose") if band==3 else coat
         for j in range(14):
             k=(j+1)%14
             pts,ns=zip(lo[j],lo[k],hi[k],hi[j])

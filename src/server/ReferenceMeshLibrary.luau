@@ -127,6 +127,34 @@ function Bridge.ground(owner: Instance, key: string, frame: CFrame, span: number
     end)
 end
 
+-- Two stretches of paving lead around the berry border to the cottage steps.
+-- Keep the open spawn and the centre lane free of raised decorations.
+function Bridge.decorateWalkway(scenery: Instance)
+    if scenery:FindFirstChild("OrchardWalkway") then return end
+    local beds=Instance.new("Folder")
+    beds.Name="OrchardWalkway"
+    beds.Parent=scenery
+    for i=1,16 do
+        local side=if i%2==0 then 1 else -1
+        local ground=Vector3.new(side*(15+(i%4)*4.6),7.18,54+math.floor(i/2)*4.8)
+        Bridge.ground(beds,"Environment_MeadowVerge",
+            CFrame.new(ground)*CFrame.Angles(0,i*.82,0),6.2+(i%3)*.7,nil)
+    end
+    for i,point in ipairs({Vector3.new(9,7.16,90),Vector3.new(15,7.16,94.5),
+            Vector3.new(26.4,7.16,89),Vector3.new(33.7,7.16,83.2)}) do
+        Bridge.ground(beds,"Environment_MeadowVerge",CFrame.new(point)*CFrame.Angles(0,i*1.7,0),5.2,nil)
+    end
+    local function pave(a: Vector3, b: Vector3)
+        local delta=b-a
+        local yaw=math.atan2(delta.X,delta.Z)
+        Bridge.ground(beds,"Environment_StonePath",
+            CFrame.new((a+b)*.5)*CFrame.Angles(0,yaw,0),delta.Magnitude,nil)
+    end
+    local bend=Vector3.new(22,7.14,92)
+    pave(Vector3.new(5.4,7.14,86.5),bend)
+    pave(bend,Vector3.new(35.4,7.14,78.4))
+end
+
 function Bridge.water(character: Model)
     local hand=character:FindFirstChild("RightHand")
     local source=findMesh("World","Environment_WateringCan")
@@ -451,9 +479,9 @@ function Bridge.applySetDress(parent: Instance): number
         local fence = findMesh("World", "Environment_WoodFence")
         if citrus and fence then
             local orchard = {
-                Vector3.new(16.5, 7.15, 65),
-                Vector3.new(34, 7.15, 64),
-                Vector3.new(-34, 7.15, 59),
+                Vector3.new(14, 7.15, 68),
+                Vector3.new(44, 7.15, 70),
+                Vector3.new(-36, 7.15, 67.5),
             }
             for index, ground in ipairs(orchard) do
                 local height = 17.2 + index * 0.8

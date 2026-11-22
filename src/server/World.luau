@@ -227,14 +227,7 @@ function World.build()
         end)
     end
     ReferenceGroundLight.build(scenery)
-    for i=1,20 do
-        local side=if i%2==0 then 1 else -1
-        local ground=Vector3.new(side*(15+(i%4)*4.6),7.18,54+math.floor(i/2)*4.8)
-        ReferenceMeshLibrary.ground(scenery,"Environment_MeadowVerge",
-            CFrame.new(ground)*CFrame.Angles(0,i*.82,0),6.2+(i%3)*.7,nil)
-    end
-    ReferenceMeshLibrary.ground(scenery,"Environment_StonePath",
-        CFrame.new(8,7.12,87)*CFrame.Angles(0,.72,0),15,nil)
+    ReferenceMeshLibrary.decorateWalkway(scenery)
 
     lastAwakeState = nil
     monster = Instance.new("Model")

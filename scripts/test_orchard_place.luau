@@ -74,6 +74,12 @@ env.Name="CottageGardenEnvironment"
 env.Parent=island
 assert(bridge.applySetDress(island)==4)
 assert(bridge.decorateEntrance(island)==31)
+bridge.decorateWalkway(island)
+drain()
+assert(#island.OrchardWalkway:GetChildren()==22)
+bridge.decorateWalkway(island)
+drain()
+assert(#island.OrchardWalkway:GetChildren()==22)
 -- Capture the transforms of the actual entrance instances for Blender review.
 -- This runs before the temporary specimens for the crop and pet tests are added.
 if process.args[2] then
@@ -88,7 +94,7 @@ if process.args[2] then
             })
         end
     end
-    assert(#layout==44,"Expected 31 plantings and 13 scenery instances")
+    assert(#layout==66,"Expected 31 plantings, 13 scenery instances and 22 walkway meshes")
     table.sort(layout,function(a,b) return a.name<b.name end)
     fs.writeFile(process.args[2],serde.encode("json",layout,true))
 end
