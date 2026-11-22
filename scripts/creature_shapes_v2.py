@@ -356,8 +356,27 @@ def sculpt_species(name, base, second, S):
                 for side in (-1,1):
                     lf(base,(side*.60,1.94,-.10),(side*.84,2.51,-.11),.22)
             if k=="puffin":
-                ell("ivory",(0,1.01,-.72),(.61,.66,.22))
-                ell("orange",(0,1.08,-1.26),(.34,.23,.34),12,7)
+                # Distinct baby-penguin silhouette: a long soft white bib
+                # and compact orange beak, not a giant orange sphere that
+                # covers the smile and small bead eyes.
+                ell("ivory",(0,1.02,-.70),(.65,.81,.23),16,10)
+                # Tiny, gently tapered bill with a visible upper ridge.
+                g.tri("orange",(-.19,1.21,-.96),(.19,1.21,-.96),
+                      (0,1.08,-1.34))
+                g.tri("ochre",(-.19,1.21,-.96),(0,1.08,-1.34),
+                      (0,1.00,-1.00))
+                g.tri("orange",(.19,1.21,-.96),(0,1.00,-1.00),
+                      (0,1.08,-1.34))
+                for side in (-1,1):
+                    ell("blush",(side*.66,1.21,-.58),
+                        (.14,.08,.036),9,5)
+            if k=="owl":
+                # The owl needs feather tufts and a rounded facial disk;
+                # pale overlapping disks keep its two eyes readable.
+                for side in (-1,1):
+                    lf("cream",(side*.47,2.02,-.65),
+                       (side*.64,2.36,-.62),.18,.045)
+                ell("ivory",(0,.79,-.73),(.53,.45,.16),13,8)
         elif k=="butterfly":
             ell(base,(0,1.43,.17),(.34,.85,.32),18,11)
             for side in (-1,1):
