@@ -48,7 +48,26 @@ def inspect(path: pathlib.Path):
         assert prim["material"]==0
         pos=data["accessors"][prim["attributes"]["POSITION"]]
         indices=data["accessors"][prim["indices"]]
-        assert pos["count"]==indices["count"]
+        assert 0<pos["count"]<=indices["count"]
+        def records(accessor,fmt):
+            view=data["bufferViews"][accessor["bufferView"]]
+            start=bin_start+view.get("byteOffset",0)+accessor.get("byteOffset",0)
+            size=struct.calcsize(fmt)*accessor["count"]
+            assert size<=view["byteLength"]
+            return list(struct.iter_unpack(fmt,raw[start:start+size]))
+        vertices=records(pos,"<3f")
+        normal=data["accessors"][prim["attributes"]["NORMAL"]]
+        uv=data["accessors"][prim["attributes"]["TEXCOORD_0"]]
+        assert pos["count"]==normal["count"]==uv["count"]
+        assert all(.998<sum(k*k for k in n)<1.002 for n in records(normal,"<3f")), name
+        assert all(0<=u<=1 and 0<=v<=1 for u,v in records(uv,"<2f")),name
+        face_indices=[v[0] for v in records(indices,{5123:"<H",5125:"<I"}[indices["componentType"]])]
+        assert set(face_indices)==set(range(len(vertices))),name
+        for i in range(0,len(face_indices),3):
+            a,b,c=(vertices[k] for k in face_indices[i:i+3])
+            ab=[v-u for u,v in zip(a,b)]
+            ac=[v-u for u,v in zip(a,c)]
+            assert any(ab[k]*ac[(k+1)%3]!=ac[k]*ab[(k+1)%3] for k in range(3)),name
         assert indices["count"]%3==0 and indices["count"]>=180
         assert pos["count"]<36000, f"Unexpected high asset complexity: {name}"
         bounds=[hi-lo for lo,hi in zip(pos["min"],pos["max"])]

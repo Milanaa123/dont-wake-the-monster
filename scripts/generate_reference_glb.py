@@ -480,39 +480,64 @@ def glb_write(items,filename):
         if lo is not None:a["min"]=lo;a["max"]=hi
         doc["accessors"].append(a)
         return idx
+    vec3=struct.Struct("<3f")
+    vec2=struct.Struct("<2f")
+    triangles=0
     for asset in items:
-        verts=[];normals=[];uvs=[]
-        all_positions = [p for coordinates, _ in asset.data.values() for p in coordinates]
-        bottom = min(p[1] for p in all_positions)
-        span = max(p[1] for p in all_positions) - bottom
-        for mat,(v,n) in asset.data.items():
-            if not v:continue
+        positions=bytearray()
+        normals=bytearray()
+        texcoords=bytearray()
+        indexes=[]
+        lookup={}
+        points=[p for coordinates,_ in asset.data.values() for p in coordinates]
+        bottom=min(p[1] for p in points)
+        height=max(max(p[1] for p in points)-bottom,.001)
+        lo=[math.inf]*3
+        hi=[-math.inf]*3
+        for mat,(coords,directions) in asset.data.items():
             u=(index_of[mat]*16+8)/tex_width
-            verts.extend(v)
-            normals.extend(n)
-            uvs.extend((u, max(.02,min(.98,(p[1]-bottom)/max(span,.001))))
-                       for p in v)
-        assert verts and len(verts)==len(normals)==len(uvs)
-        flat=[c for p in verts for c in p]
-        normal_flat=[c for p in normals for c in p]
-        uv_flat=[c for p in uvs for c in p]
-        pos=store(struct.pack("<"+"f"*len(flat),*flat),34962)
-        nrm=store(struct.pack("<"+"f"*len(normal_flat),*normal_flat),34962)
-        uvs_buffer=store(struct.pack("<"+"f"*len(uv_flat),*uv_flat),34962)
-        inds=list(range(len(verts)))
-        if len(inds)<=65535:
-            component=5123
-            indexes=struct.pack("<"+"H"*len(inds),*inds)
-        else:
-            component=5125
-            indexes=struct.pack("<"+"I"*len(inds),*inds)
-        indices=store(indexes,34963)
-        mi=[min(flat[i::3]) for i in range(3)]
-        ma=[max(flat[i::3]) for i in range(3)]
-        ap=access(pos,len(verts),"VEC3",5126,mi,ma)
-        an=access(nrm,len(verts),"VEC3",5126)
-        au=access(uvs_buffer,len(verts),"VEC2",5126)
-        ai=access(indices,len(inds),"SCALAR",component)
+            for i in range(0,len(coords),3):
+                # Test the coordinates the importer actually receives. At a pole,
+                # independent double-precision inputs may become the same float32.
+                triangle=[vec3.pack(*p) for p in coords[i:i+3]]
+                a,b,c=[vec3.unpack(p) for p in triangle]
+                ab,ac=sub(b,a),sub(c,a)
+                area=cross(ab,ac)
+                edge_sq=max(sum(n*n for n in ab),sum(n*n for n in ac))
+                if sum(n*n for n in area)<=edge_sq**2*1e-14:
+                    continue
+                for j,pos in enumerate(triangle):
+                    point=vec3.unpack(pos)
+                    normal=directions[i+j]
+                    if not any(normal):
+                        normal=norm(area)
+                    nrm=vec3.pack(*normal)
+                    uv=vec2.pack(u,max(.02,min(.98,(point[1]-bottom)/height)))
+                    key=(pos,nrm,uv)
+                    index=lookup.get(key)
+                    if index is None:
+                        index=lookup[key]=len(lookup)
+                        positions.extend(pos)
+                        normals.extend(nrm)
+                        texcoords.extend(uv)
+                        for axis,v in enumerate(point):
+                            lo[axis]=min(lo[axis],v)
+                            hi[axis]=max(hi[axis],v)
+                    indexes.append(index)
+        count=len(lookup)
+        assert count and indexes
+        # Shared positions can retain different normals or UVs at hard edges and
+        # pigment boundaries. Only complete identical vertex records are welded.
+        pos=store(positions,34962)
+        nrm=store(normals,34962)
+        uvs_buffer=store(texcoords,34962)
+        component,fmt=(5123,"H") if count<=65535 else (5125,"I")
+        indices=store(struct.pack(f"<{len(indexes)}{fmt}",*indexes),34963)
+        ap=access(pos,count,"VEC3",5126,lo,hi)
+        an=access(nrm,count,"VEC3",5126)
+        au=access(uvs_buffer,count,"VEC2",5126)
+        ai=access(indices,len(indexes),"SCALAR",component)
+        triangles+=len(indexes)//3
         doc["meshes"].append({
             "name":asset.name,
             "primitives":[{
@@ -534,7 +559,7 @@ def glb_write(items,filename):
     dest.write_bytes(data)
     assert dest.read_bytes()[:4]==b"glTF"
     return {"file":filename,"bytes":len(data),
-      "meshes":len(items),"triangles":sum(a.count() for a in items),
+      "meshes":len(items),"triangles":triangles,
       "sha256":hashlib.sha256(data).hexdigest()}
 
 def main():
