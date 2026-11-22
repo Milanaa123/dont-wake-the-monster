@@ -34,7 +34,7 @@ A colorful, chaotic multiplayer Roblox prototype: feed your ridiculous pet, trig
 - Responsive touchscreen controls and keyboard support.
 - Automatic Luau compilation, Rojo `.rbxlx` build and source/invariant checks through GitHub Actions.
 
-**Status: v1.0 source-code MVP. GitHub CI compiles, runs pure-Luau garden + personality tests and builds a .rbxlx; actual Roblox Studio runtime, appearance and multiplayer testing have NOT yet been performed.** Procedural art is a placeholder for final optimized meshes and animations. NO real Robux payments or marketplace product IDs are connected. In-game coin prices are not Robux prices. Cross-server persistence needs session-lock hardening before public release.
+**Status: v1.0 source-code MVP. GitHub CI compiles, runs pure-Luau garden + personality tests and builds a .rbxlx; actual Roblox Studio runtime, appearance and multiplayer testing have NOT yet been performed.** The place contains original packed meshes and client-driven joints. The Blender comparisons below use the packed geometry and atlas. NO real Robux payments or marketplace product IDs are connected. In-game coin prices are not Robux prices. Cross-server persistence needs session-lock hardening before public release.
 
 ## Visual reference update — 20 Nov 2026
 
@@ -50,7 +50,10 @@ The checked-in place includes the packed geometry. The GLB archive contains four
 - [Download the playable place](builds/dont-wake-the-monster.rbxlx)
 - [Download the four GLB packs](builds/Original3DArt.zip)
 - [Compare the rabbit, frog, strawberries and cottage before and after in Blender](docs/evidence/garden-mesh-comparison.jpg)
-- [View the three strawberry growth stages at the same scale](docs/evidence/strawberry-growth.jpg)
+- [Compare the two kittens and the tomato vine](docs/evidence/kittens-and-tomatoes.jpg)
+- [Compare Snorf, Giggles, the orange tree and the paving](docs/evidence/orchard-mesh-comparison.jpg)
+- [Strawberry growth stages](docs/evidence/strawberry-growth.jpg) and [tomato growth stages](docs/evidence/tomato-growth.jpg)
+- [Review the entrance placements from the built place](docs/evidence/entrance-layout.jpg). The image shows the 31 crop instances, 13 scenery meshes and 22 walkway meshes on a neutral floor. The Lune test exports their actual sizes and transforms. Reproduce the plate with `blender -b -P scripts/render_garden_review.py -- assets/OrchardGeometry.model.json dist/review --layout docs/evidence/entrance-layout.json`.
 
 
 ## No-computer workflow
@@ -68,7 +71,7 @@ The checked-in place includes the packed geometry. The GLB archive contains four
 - `src/server/ReferenceCropArt.luau`: decorative crop silhouettes per seed family and three growth stages; does not affect farming mechanics.
 - `src/server/StorybookPetArt.luau`: original animal-character details for 17 species using engine-native cosmetic geometry.
 - `src/server/ReferenceMeshLibrary.luau`: auto-stage imported GLB packs and use real MeshPart assets, while preserving the old art as an uninstalled fallback.
-- `scripts/generate_reference_glb.py`: generate original textured mesh library for 30 animals, 90 growing crop instances, 6 world items.
+- `scripts/generate_reference_glb.py`: generate original textured mesh library for 30 animals, 90 crop growth stages, 8 world pieces and 15 avatar parts.
 - `.github/workflows/art-library.yml`: generation, format integrity and downloadable art pack.
 - `src/client/CottageCamera.client.luau`: 3/4 garden view with optional third-person toggle.
 - `src/server/Game.server.luau`: authoritative multiplayer game loop, hearts, boss damage, pet effects and saving.
