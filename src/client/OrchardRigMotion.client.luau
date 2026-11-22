@@ -69,6 +69,14 @@ RunService.PreSimulation:Connect(function()
         r.phase+=dt*(2.2+math.min(speed,17)*.61)
         local beat=math.sin(r.phase)
         local breath=math.sin(now*(if boss then 1.13 else 1.92)+r.seed)
+        local nibble=0
+        local fedAt=model:GetAttribute("FedAt")
+        if type(fedAt)=="number" then
+            local age=workspace:GetServerTimeNow()-fedAt
+            if age>=0 and age<1.2 then
+                nibble=math.sin(math.pi*age/1.2)^2 * (.60+.40*math.sin(age*16))
+            end
+        end
         local attack=0
         if boss then
             local stamp=model:GetAttribute("AttackAt")
@@ -82,18 +90,22 @@ RunService.PreSimulation:Connect(function()
             local side=if name:sub(-1)=="L" then -1 else 1
             local x,y,z=0,0,0
             if name=="Head" then
-                x=.055*breath+.09*r.travel*math.cos(r.phase*2)+.45*r.rest-.17*r.stroke
+                x=.055*breath+.09*r.travel*math.cos(r.phase*2)+.45*r.rest-.17*r.stroke+.22*nibble
                 y=.10*math.sin(now*.94+r.seed)*(1-r.travel)+.28*r.stroke
                 z=.08*r.hold
                 if boss then x=.26*(1-r.wake)+.045*breath-.31*attack end
+            elseif name:match("^Ear") then
+                x=.035*breath+.09*math.cos(r.phase*2-.48)*r.travel+.38*r.rest-.16*r.stroke
+                z=side*(.035*breath+.12*nibble+.09*r.hold)
             elseif name:match("^Fore") or name:match("^Hind") then
                 local pair=if name:match("^Fore") then 1 else -1
                 x=beat*side*pair*r.travel*.67+pair*(r.rest*.60+r.hold*.37)
+                if pair==1 then x-=.17*nibble end
             elseif name=="Tail" then
-                y=math.sin(now*(2.1+1.8*r.stroke)+r.seed)*(.17+.25*r.stroke)+.12*beat*r.travel
+                y=math.sin(now*(2.1+1.8*r.stroke)+r.seed)*(.17+.25*r.stroke)+.12*beat*r.travel+.24*nibble
                 x=.13*r.hold-.25*r.rest
             elseif name:match("^Wing") or name:match("^Gill") or name:match("^Claw") then
-                z=side*(.13*breath+(.22+.38*r.travel)*beat*(1-r.rest)-.28*r.hold)
+                z=side*(.13*breath+(.22+.38*r.travel)*beat*(1-r.rest)-.28*r.hold+.18*nibble)
             elseif name:match("^Tendril") then
                 x=.15*math.sin(r.phase+(tonumber(name:sub(8)) or 0)*.82)
             elseif name:match("^Arm") then

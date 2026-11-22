@@ -152,3 +152,102 @@ def add_family_details(g, name, species, base, secondary):
             blob("ivory",(side*.95,2.11,.22),(.17,.13,.032),10,6)
             blob("gold",(side*1.18,1.91,.24),(.095,.09,.027),8,5)
         body()
+
+
+def pond_frog(g, name, skin):
+    """A seated frog. Its brow lobes, cheeks and chin share one head surface."""
+    from generate_reference_glb import cross, norm, sub
+    from orchard_sculpt import loft
+
+    g.joint("Body", (0, 0, 0))
+    loft(g, skin, [(0,.12,.33,.43,.44), (0,.23,.38,.65,.65),
+                   (0,.54,.34,.78,.72), (0,.88,.26,.69,.60),
+                   (0,1.12,.12,.48,.43)], 20)
+    g.blob("cream", (0,.57,-.20), (.54,.42,.26), 16,9)
+    for side, suffix in ((-1,"L"), (1,"R")):
+        g.joint("Hind"+suffix, (side*.55,.55,.59))
+        loft(g, skin, [(side*.76,.105,.58,.26,.36), (side*.82,.22,.56,.34,.48),
+                       (side*.78,.43,.64,.35,.43), (side*.66,.60,.65,.25,.34),
+                       (side*.58,.70,.58,.09,.13)], 14)
+        g.joint("Fore"+suffix, (side*.54,.71,-.16))
+        g.tube(skin, [(side*.54,.73,-.17), (side*.64,.53,-.26),
+                      (side*.66,.31,-.35), (side*.59,.145,-.51)],
+               [.105,.13,.105,.095], 10)
+        for fore in (False, True):
+            g.joint(("Fore" if fore else "Hind")+suffix,
+                    (side*.54,.71,-.16) if fore else (side*.55,.55,.59))
+            x,z=(.59,-.54) if fore else (.90,.31)
+            g.blob(skin,(side*x,.135,z),(.18,.083,.20),12,7)
+            for digit in (-1,0,1):
+                tip=(side*(x+digit*.145),.083,z-.29+.06*abs(digit))
+                g.tube(skin,[(side*(x+.07*digit),.13,z-.08),tip],[.057,.037],7)
+                g.blob("leaflight",tip,(.061,.036,.070),9,5)
+
+    g.joint("Head",(0,.95,-.11))
+    def surface(a, latitude):
+        from math import exp
+        u,v=cos(latitude)*sin(a),sin(latitude)
+        w=cos(latitude)*cos(a)
+        brow=exp(-((abs(u)-.56)/.26)**2)*max(0,v)**1.4
+        return (1.07*u*(1-.08*v), 1.39+.59*v+.30*brow, -.14-.68*w)
+
+    def normal(a, latitude):
+        step=.001
+        tangent=sub(surface(a+step,latitude),surface(a-step,latitude))
+        rise=sub(surface(a,latitude+step),surface(a,latitude-step))
+        return norm(cross(rise,tangent))
+
+    sides,bands=32,16
+    for j in range(bands):
+        for i in range(sides):
+            coords=[(2*pi*k/sides, -pi/2+pi*l/bands)
+                    for k,l in ((i,j),(i,j+1),(i+1,j+1),(i+1,j))]
+            # Close both poles with a fan, preserving outward smooth normals.
+            if j==0: coords.pop(3)
+            if j==bands-1: coords.pop(2)
+            points=[surface(a,b) for a,b in coords]
+            normals=[(0,-1,0) if b<-1.57 else (0,1,0) if b>1.57 else normal(a,b)
+                     for a,b in coords]
+            if len(points)==3:
+                g.tri(skin,*points,*normals)
+            else:
+                g.quad(skin,*points,vertex_normals=normals)
+
+    def patch(mat,a,b,rx,ry,depth):
+        # An oval cap mapped onto the head surface. Its outer rim touches skin.
+        vertices=[]
+        for ring in (0,.65,1):
+            row=[]
+            for i in range(16):
+                angle=2*pi*i/16
+                aa,bb=a+rx*ring*cos(angle), b+ry*ring*sin(angle)
+                p,n=surface(aa,bb),normal(aa,bb)
+                row.append(tuple(c+t*(.006+depth*(1-ring*ring)) for c,t in zip(p,n)))
+            vertices.append(row)
+        for i in range(16):
+            k=(i+1)%16
+            g.tri(mat,vertices[0][0],vertices[1][k],vertices[1][i])
+            g.quad(mat,vertices[1][i],vertices[1][k],vertices[2][k],vertices[2][i])
+
+    for side in (-1,1):
+        patch("eye",side*.66,.53,.115,.205,.045)
+        x,y,z=surface(side*.66-.03,.60)
+        n=normal(side*.66-.03,.60)
+        g.blob("shine",tuple(c+.053*t for c,t in zip((x,y,z),n)),(.025,.028,.017),9,6)
+        patch("blush",side*.81,-.025,.19,.13,.008)
+    mouth=[]
+    for i in range(13):
+        t=(i-6)/6
+        a,b=.235*t,-.16-.065*sin(pi*abs(t))+.03*abs(t)
+        p,n=surface(a,b),normal(a,b)
+        mouth.append(tuple(c+.012*k for c,k in zip(p,n)))
+    g.tube("chocolate",mouth,[.010+.009*sin(pi*i/12) for i in range(13)],7)
+    if name=="Pickle":
+        g.tube("leafdeep",[(0,1.95,-.06),(.015,2.06,-.04),(.04,2.16,-.01)],
+               [.032,.025,.016],7)
+        g.leaf("leaf",(.027,2.12,-.025),(-.23,2.26,-.035),.085,.05,6,3)
+        g.leaf("leaflight",(.035,2.14,-.02),(.27,2.33,.03),.10,.055,6,3)
+    else:
+        for side in (-1,1):
+            for a,b in ((1.85,.55),(2.18,.48),(2.48,.63)):
+                patch("mint",side*a,b,.13,.095,.006)

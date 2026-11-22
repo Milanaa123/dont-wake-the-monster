@@ -622,6 +622,7 @@ local function feed(player: Player, food: any, craftedId: string?)
         sendGarden(player)
     end
     profile.lastFeed = now
+    profile.pet:SetAttribute("FedAt", workspace:GetServerTimeNow())
     onceMetric(player, profile, "FirstPetFed")
     local activePersonality = profile.personalities[profile.petIndex]
     local reaction = weightedReaction(food, profile.lastFood, profile.petIndex, activePersonality)

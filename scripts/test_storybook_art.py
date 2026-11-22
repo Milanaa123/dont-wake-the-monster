@@ -66,6 +66,24 @@ for creature in ("Pickle","Nugget","Swoop","Puffin"):
         f"{creature}: tiny black pupils missing from chibi face"
     )
 
+# Check the part ownership used by the Roblox bake, where a misplaced call
+# to joint() can leave a face or a toe behind when the character moves.
+from bake_orchard import GameSculpt
+for name,_,base,second in PET_SPECS:
+    if name not in ("Floofle","Pickle","Splat"):
+        continue
+    rig=sculpt_species(name,base,second,GameSculpt)
+    assert "eye" in rig.parts["Head"]
+    assert "blush" in rig.parts["Head"]
+    assert all("eye" not in part for joint,part in rig.parts.items() if joint!="Head")
+    if name=="Floofle":
+        assert rig.joints["Tail"][0]=="Body" and "white" in rig.parts["Tail"]
+        for ear in ("EarL","EarR"):
+            assert rig.joints[ear][0]=="Head" and "pink" in rig.parts[ear]
+    else:
+        for limb in ("ForeL","ForeR","HindL","HindR"):
+            assert rig.joints[limb][0]=="Body" and "leaflight" in rig.parts[limb]
+
 crops={}
 for crop in CROP_NAMES:
     for stage in (1,2,3):

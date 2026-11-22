@@ -18,11 +18,14 @@ SPECIES = {
 
 def sculpt_species(name, base, second, S):
     from pet_detail_sculpts import (
-        sculpt_bunny_ears, sculpt_fluffy_collarette, sculpt_kitten_face,
+        seated_rabbit, sculpt_fluffy_collarette, sculpt_kitten_face,
         sculpt_sticker_personality,
     )
     g=S("Pet_"+name)
     k=SPECIES[name]
+    if k=="bunny":
+        seated_rabbit(g,base)
+        return g
     def side_joint(label,side,pivot,parent="Body"):
         g.joint(label+("L" if side<0 else "R"),pivot,parent)
     def leg(side,z):
@@ -75,14 +78,13 @@ def sculpt_species(name, base, second, S):
         inset_tip=(tip[0],tip[1]-.10,tip[2]-.05)
         lf("pink",inset_root,inset_tip,length*.54)
     def coat_patch(color,center,radii):ell(color,center,radii,13,8)
-    if k in ("kitten","fox","dog","bunny","ferret","bear","lamb","deer","unicorn",
+    if k in ("kitten","fox","dog","ferret","bear","lamb","deer","unicorn",
              "salamander","dinosaur","cookie"):
         # Body length, leg length, head placement intentionally differ by family.
         bodyshape = {
           "kitten":((0,.82,.38),(.85,.60,1.27)),
           "fox":((0,.85,.39),(.73,.56,1.32)),
           "dog":((0,.88,.36),(.93,.67,1.25)),
-          "bunny":((0,.73,.45),(.83,.70,.95)),
           "ferret":((0,.72,.69),(.69,.50,1.75)),
           "bear":((0,1.02,.45),(1.11,.87,1.15)),
           "lamb":((0,1.01,.48),(1.12,.81,1.22)),
@@ -108,7 +110,7 @@ def sculpt_species(name, base, second, S):
                     leg(side,z)
                     ell(base,(side*(.56 if k=="ferret" else .68),.38,z),
                         (.26,.38,.33),12,7)
-                    foot(side,z-.14,.66,.18,.99,"ivory" if k in ("lamb","bunny") else second)
+                    foot(side,z-.14,.66,.18,.99,"ivory" if k=="lamb" else second)
             else:
                 for z in (-.39,1.48):
                     leg(side,z)
@@ -118,7 +120,6 @@ def sculpt_species(name, base, second, S):
           "kitten":((0,1.74,-.58),1.02,.87,.80,.45),
           "fox":((0,1.78,-.65),.92,.83,.78,.43),
           "dog":((0,1.77,-.61),1.04,.87,.83,.43),
-          "bunny":((0,1.72,-.57),.91,.83,.77,.40),
           "ferret":((0,1.49,-.83),.76,.66,.71,.33),
           "bear":((0,1.95,-.44),1.06,.90,.78,.44),
           "lamb":((0,1.91,-.56),.93,.83,.72,.38),
@@ -184,13 +185,6 @@ def sculpt_species(name, base, second, S):
                 # A tiny tongue below the nose gives the dog a unique
                 # playful smile without a flat facial expression decal.
                 ell("rose",(0,1.29,-1.78),(.10,.13,.045),10,6)
-        elif k=="bunny":
-            sculpt_bunny_ears(g, base)
-            ell("white",(0,.96,1.46),(.38,.39,.40))
-            # The rabbit's face stays a single soft plush surface; the
-            # original giant cheek balls hid the small sticker-style mouth.
-            for side in (-1,1):
-                ell("blush",(side*.57,1.34,-1.20),(.17,.085,.032),9,6)
         elif k=="ferret":
             for side in (-1,1):
                 ell(second,(side*.63,1.94,-.64),(.32,.38,.31),12,7)
@@ -270,26 +264,8 @@ def sculpt_species(name, base, second, S):
     elif k in ("frog","axolotl","turtle","chick","owl","puffin","butterfly",
                "crab","octopus","bat","sprite"):
         if k=="frog":
-            ell(base,(0,.78,.21),(1.20,.70,1.08),20,13)
-            ell("ivory",(0,.42,-.48),(.80,.29,.56),17,10)
-            for side in (-1,1):
-                g.joint("Body",(0,0,0))
-                # Raised round frog eye sockets are a species feature.
-                # The pupils themselves must be small storybook beads.
-                ell(base,(side*.62,1.36,-.56),(.44,.42,.44),14,9)
-                ell("eye",(side*.65,1.42,-.94),(.135,.155,.064),12,8)
-                ell("shine",(side*.60,1.48,-1.001),(.036,.039,.016),8,5)
-                for z in (-.4,.81):
-                    leg(side,z)
-                    ell(base,(side*1.02,.26,z),(.55,.24,.44),14,8)
-                    for j in range(3):
-                        ell("leaflight",(side*(1.24+j*.18),.12,z-.3+j*.16),
-                            (.22,.10,.24),10,6)
-            g.joint("Body",(0,0,0))
-            # Short smile centred on the snout, not a heavy black stripe
-            # stretching from one side of the body to the other.
-            tube("chocolate",[(-.23,.62,-.98),(0,.575,-1.095),(.23,.62,-.98)],
-                 [.019,.020,.019])
+            from storybook_family_sculpts import pond_frog
+            pond_frog(g, name, base)
         elif k=="axolotl":
             ell(base,(0,.71,.50),(.73,.51,1.54),18,12)
             face(0,1.36,-.73,1.14,.62,.70,.47,nose=False)

@@ -63,25 +63,92 @@ def sculpt_kitten_face(g, base, second):
                .085, .032, 4, 2)
 
 
-def sculpt_bunny_ears(g, base):
-    """Tapered rabbit ears with shaped inner membranes and natural asymmetry."""
-    from orchard_sculpt import loft
-    for side in (-1, 1):
-        x=.49*side
-        lean=.21 if side<0 else -.07
-        loft(g, base, [
-            (x, 2.25, -.40, .30, .24),
-            (x+side*.10, 2.87, -.39, .34, .18),
-            (x+side*.14+lean, 3.61, -.43, .28, .14),
-            (x+side*.16+lean, 4.18, -.47, .11, .065),
-            (x+side*.17+lean, 4.36, -.47, .013, .014),
-        ], sides=11)
-        g.leaf("pink",
-               (x+side*.06, 2.84, -.635),
-               (x+side*.16+lean, 4.13, -.59),
-               .19, .045, 7, 3)
-        # Smaller three-dimensional cream lobe on the head attachment.
-        g.blob("cream", (x,2.39,-.39),(.30,.16,.27),10,6)
+def _rounded_sections(g, pigment, rings, sides=20):
+    """Smooth elliptical sections, including the lean of each section centre."""
+    from generate_reference_glb import norm, cross, sub
+    def point(ring, angle):
+        x,y,z,rx,rz=ring
+        return x+rx*cos(angle),y,z+rz*sin(angle)
+    for j in range(len(rings)-1):
+        for i in range(sides):
+            positions,normals=[],[]
+            for k,col in ((j,i),(j+1,i),(j+1,i+1),(j,i+1)):
+                ring=rings[k]
+                angle=col*2*pi/sides
+                positions.append(point(ring,angle))
+                up=sub(point(rings[min(k+1,len(rings)-1)],angle),
+                       point(rings[max(k-1,0)],angle))
+                tangent=(-ring[3]*sin(angle),0,ring[4]*cos(angle))
+                normals.append(norm(cross(up,tangent)))
+            g.quad(pigment,*positions,vertex_normals=normals)
+    for k in (0,-1):
+        for i in range(sides):
+            a,b=(point(rings[k],c*2*pi/sides) for c in (i,i+1))
+            g.tri(pigment,rings[k][:3],*( (a,b) if k==0 else (b,a) ))
+
+
+def seated_rabbit(g, fur):
+    """A compact pear-shaped lap rabbit, with paws wrapped around its carrot."""
+    g.joint("Body",(0,0,0))
+    _rounded_sections(g,fur,[(0,.10,.19,.39,.37),(0,.25,.22,.65,.55),
+                       (0,.58,.22,.78,.65),(0,.95,.14,.68,.54),
+                       (0,1.28,-.02,.49,.40),(0,1.49,-.10,.33,.26)])
+    g.joint("Tail",(0,.58,.69))
+    _rounded_sections(g,"white",[(0,.42,.74,.13,.12),(.02,.55,.86,.25,.24),
+                      (.03,.75,.91,.30,.27),(.04,.94,.89,.22,.19),
+                      (.02,1.05,.84,.06,.06)],14)
+    for side,suffix in ((-1,"L"),(1,"R")):
+        g.joint("Hind"+suffix, (side*.46,.47,.19))
+        _rounded_sections(g,fur,[(side*.58,.065,-.08,.20,.31),
+                          (side*.60,.14,-.07,.27,.40),(side*.62,.29,.02,.30,.41),
+                          (side*.57,.48,.14,.26,.32),(side*.49,.59,.19,.12,.19)],16)
+        g.joint("Fore"+suffix,(side*.48,1.14,-.15))
+        _rounded_sections(g,fur,[(side*.23,.63,-.62,.09,.09),(side*.26,.71,-.64,.15,.15),
+                          (side*.36,.85,-.55,.18,.17),(side*.47,1.03,-.34,.17,.16),
+                          (side*.46,1.17,-.20,.12,.13)],14)
+    g.joint("Head",(0,1.36,-.10))
+    _rounded_sections(g,fur,[(0,1.22,-.27,.35,.31),(0,1.35,-.29,.70,.51),
+                    (0,1.57,-.30,.95,.68),(0,1.84,-.28,1.00,.73),
+                    (0,2.11,-.23,.93,.68),(0,2.35,-.19,.75,.53),
+                    (0,2.51,-.15,.46,.34),(0,2.56,-.14,.15,.13)],28)
+    for side in (-1,1):
+        g.blob("eye",(side*.37,1.84,-.951),(.092,.115,.065),13,8)
+        g.blob("shine",(side*.37-.025,1.877,-1.004),(.024,.027,.018),8,5)
+        g.blob("blush",(side*.66,1.64,-.815),(.134,.069,.055),12,7)
+        g.tube("chocolate",[(0,1.669,-.998),(side*.046,1.62,-.981),
+               (side*.097,1.622,-.976),(side*.139,1.66,-.979)],
+               [.012,.014,.013,.007],7)
+    g.blob("rose",(0,1.70,-.992),(.073,.05,.035),11,7)
+    for side,suffix in ((-1,"L"),(1,"R")):
+        root=side*.45
+        g.joint("Ear"+suffix,(root,2.34,-.17),"Head")
+        heights=(2.28,2.49,2.76,3.11,3.50,3.83,4.08,4.22,4.27)
+        widths=(.14,.21,.248,.267,.25,.22,.17,.10,.024)
+        rings=[]
+        for i,(height,width) in enumerate(zip(heights,widths)):
+            t=(height-2.28)/1.99
+            lean=(.46 if side<0 else .28)*t+.06*sin(pi*t)
+            rings.append((root+side*lean,height-.16*t*(side<0),-.16+.09*t-.105*t*t,
+                          width,.09+.055*sin(pi*t) if i<len(widths)-1 else .025))
+        _rounded_sections(g,fur,rings,18)
+        # Inset follows the forward arc of the same elliptical sections.
+        rows=[]
+        for i in range(1,len(rings)-1):
+            x,y,z,rx,rz=rings[i]
+            spread=.86*sin(pi*(i-.8)/(len(rings)-2.5))**.55
+            rows.append([(x+rx*sin(a*spread),y,z-rz*cos(a*spread)-.009)
+                         for a in (-1,-.5,0,.5,1)])
+        for a,b in zip(rows,rows[1:]):
+            for j in range(4):
+                g.quad("pink",a[j],b[j],b[j+1],a[j+1])
+    g.joint("Body",(0,0,0))
+    _rounded_sections(g,"orange",[(.07,.40,-.76,.019,.018),(.035,.57,-.74,.093,.09),
+                      (0,.83,-.73,.164,.15),(-.02,.99,-.71,.17,.155),
+                      (-.03,1.08,-.69,.10,.095)],14)
+    for i in range(4):
+        a=i*2*pi/4+.3
+        g.leaf("leaf" if i%2 else "leaflight",(-.03,1.06,-.69),
+               (-.03+.20*cos(a),1.23+.06*(i%2),-.67+.14*sin(a)),.07,.05,5,2)
 
 
 def sculpt_fluffy_collarette(g, root_y, root_z, tone, count=11):
@@ -114,23 +181,6 @@ def sculpt_sticker_personality(g, name, species):
                [.014,.014],5)
         for side in (-1,1):
             g.blob("blush",(side*.73,1.43,-1.16),(.15,.075,.039),9,5)
-    elif name=="Floofle":
-        # A small tapered carrot between the rabbit's front paws.
-        g.joint("Body",(0,0,0))
-        from orchard_sculpt import loft
-        # The carrot must sit IN FRONT of the head and paws, otherwise its
-        # orange mesh disappears inside the face from the game camera.
-        loft(g,"orange",[(0,.60,-1.50,.013,.014),
-                         (0,.73,-1.52,.095,.09),
-                         (0,.96,-1.54,.13,.12),
-                         (0,1.15,-1.55,.105,.10),
-                         (0,1.19,-1.55,.025,.02)],12)
-        for i in range(3):
-            a=2*pi*i/3
-            g.leaf("leaflight",(0,1.18,-1.55),
-                   (sin(a)*.23,1.43,-1.53+cos(a)*.13),.085,.045,5,2)
-        for side in (-1,1):
-            g.blob("ivory",(side*.22,.76,-1.63),(.17,.16,.14),11,7)
     elif species=="lamb":
         # Pastel bow on the white fluffy collar, not an imported decal.
         g.joint("Body",(0,0,0))
@@ -140,14 +190,6 @@ def sculpt_sticker_personality(g, name, species):
         for side in (-1,1):
             g.leaf("pink",(side*.07,1.42,-1.28),
                    (side*.18,1.13,-1.27),.09,.025,4,2)
-    elif species=="frog":
-        g.joint("Body",(0,0,0))
-        for side in (-1,1):
-            g.blob("blush",(side*.71,.77,-.72),(.195,.115,.068),11,7)
-            # Three shallow toe nubs instead of cartoon paddle spheres.
-            for toe in range(3):
-                g.blob("leaflight",(side*(1.19+toe*.15),.11,
-                       -.60+toe*.17),(.13,.082,.12),8,5)
     elif species=="dog":
         g.joint("Head",g.joints["Head"][1])
         # Triangular kerchief follows the throat down under the muzzle.
