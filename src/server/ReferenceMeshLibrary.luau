@@ -439,7 +439,7 @@ function Bridge.applySetDress(parent: Instance): number
 
     local placement = {
         {"GardenCottage", "CozyOrchardCottage", Vector3.new(37, 13.5, 88), 13},
-        {"WaterPond", "ShadedOrchardPond", Vector3.new(54, 7.25, 91), 14},
+        {"WaterPond", "ShadedOrchardPond", Vector3.new(54, 6.98, 91), 14},
         {"GardenerToucan", "OriginalGardenHelper", Vector3.new(-16.5, 9.6, 71), 5.2},
         {"BloomingHedge", "OriginalFlowerHedge", Vector3.new(49, 9.0, 80), 4.0},
     }
@@ -450,8 +450,12 @@ function Bridge.applySetDress(parent: Instance): number
             if done then applied += 1 continue end
             local previous = environment:FindFirstChild(record[2])
             if previous then previous:Destroy() end
-            local mesh = makeVisual(source, environment, "Imported" .. record[1],
-                CFrame.new(record[3]), record[4])
+            local frame = CFrame.new(record[3])
+            if record[1] == "WaterPond" then
+                local size = source:GetAttribute("ArtSize") or source.Size
+                frame *= CFrame.new(0, size.Y * .5 * record[4] / math.max(size.X,size.Z), 0)
+            end
+            local mesh = makeVisual(source, environment, "Imported" .. record[1], frame, record[4])
             if mesh then
                 applied += 1
                 if record[1] == "GardenCottage" then

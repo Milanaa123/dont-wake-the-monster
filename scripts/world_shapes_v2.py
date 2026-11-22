@@ -281,18 +281,8 @@ def sculpt_world(name,S):
                     lf("leaflight" if k%2 else "leaf",tuft,
                        (tuft[0]+.22*cos(a),.23+.10*sin(k),tuft[2]+.24*sin(a)),.058,.075)
     elif name=="WaterPond":
-        b("stone",(0,0,0),(3.19,.16,2.48),28,7)
-        b("water",(0,.11,0),(2.82,.08,2.14),26,6)
-        for i in range(12):
-            a=i*2*pi/12
-            b("stone",(sin(a)*2.96,.18,cos(a)*2.20),
-              (.38,.24,.40),11,7)
-        for i in range(4):
-            a=i*2*pi/4
-            p=(sin(a)*1.32,.22,cos(a)*.93)
-            b("leafdeep",p,(.47,.044,.43),14,6)
-            if i%2==0:
-                blossom((p[0]+.11,.30,p[2]-.27),pink=True,scale=.73)
+        from pond_sculpt import garden_pond
+        garden_pond(g)
     elif name=="SleepingMonster":
         from orchard_sculpt import monster
         return monster(S)

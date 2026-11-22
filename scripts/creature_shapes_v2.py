@@ -18,11 +18,21 @@ SPECIES = {
 
 def sculpt_species(name, base, second, S):
     from pet_detail_sculpts import (
-        seated_rabbit, pug_puppy, sculpt_fluffy_collarette, kitten,
+        seated_rabbit, pug_puppy, kitten,
         sculpt_sticker_personality,
     )
     g=S("Pet_"+name)
     k=SPECIES[name]
+    from woodland_companions import lamb, owlet, turtle
+    if k=="owl":
+        owlet(g)
+        return g
+    if k=="lamb":
+        lamb(g,name,base)
+        return g
+    if k=="turtle":
+        turtle(g)
+        return g
     if k=="kitten":
         kitten(g,name,base,second)
         return g
@@ -84,14 +94,13 @@ def sculpt_species(name, base, second, S):
         inset_tip=(tip[0],tip[1]-.10,tip[2]-.05)
         lf("pink",inset_root,inset_tip,length*.54)
     def coat_patch(color,center,radii):ell(color,center,radii,13,8)
-    if k in ("fox","ferret","bear","lamb","deer","unicorn",
+    if k in ("fox","ferret","bear","deer","unicorn",
              "salamander","dinosaur","cookie"):
         # Body length, leg length, head placement intentionally differ by family.
         bodyshape = {
           "fox":((0,.85,.39),(.73,.56,1.32)),
           "ferret":((0,.72,.69),(.69,.50,1.75)),
           "bear":((0,1.02,.45),(1.11,.87,1.15)),
-          "lamb":((0,1.01,.48),(1.12,.81,1.22)),
           "deer":((0,1.40,.55),(.64,.60,1.19)),
           "unicorn":((0,1.36,.52),(.79,.68,1.36)),
           "salamander":((0,.66,.62),(.65,.41,1.55)),
@@ -114,7 +123,7 @@ def sculpt_species(name, base, second, S):
                     leg(side,z)
                     ell(base,(side*(.56 if k=="ferret" else .68),.38,z),
                         (.26,.38,.33),12,7)
-                    foot(side,z-.14,.66,.18,.99,"ivory" if k=="lamb" else second)
+                    foot(side,z-.14,.66,.18,.99,second)
             else:
                 for z in (-.39,1.48):
                     leg(side,z)
@@ -124,7 +133,6 @@ def sculpt_species(name, base, second, S):
           "fox":((0,1.78,-.65),.92,.83,.78,.43),
           "ferret":((0,1.49,-.83),.76,.66,.71,.33),
           "bear":((0,1.95,-.44),1.06,.90,.78,.44),
-          "lamb":((0,1.91,-.56),.93,.83,.72,.38),
           "deer":((0,2.26,-.61),.72,.75,.77,.33),
           "unicorn":((0,2.25,-.70),.84,.83,.88,.35),
           "salamander":((0,1.20,-.82),1.01,.55,.69,.43),
@@ -168,22 +176,13 @@ def sculpt_species(name, base, second, S):
                 ell("ivory",(side*.26,1.23,-1.48),(.31,.21,.29))
             g.joint("Tail",(0,.85,1.35))
             tube(base,[(0,.71,2.06),(.22,.78,2.58),(.62,1.11,2.71)],[.22,.21,.10])
-        elif k in ("lamb","bear","cookie"):
+        elif k in ("bear","cookie"):
             for side in (-1,1):
                 if k=="bear":
                     ell(base,(side*.75,2.54,-.39),(.39,.38,.31),15,9)
                     ell("blush",(side*.82,2.59,-.66),(.22,.18,.10))
                 else:
                     ell(second,(side*.96,2.28,-.27),(.38,.37,.41))
-            if k=="lamb":
-                sculpt_fluffy_collarette(g, 1.50, -.95, "ivory", 11)
-                for i in range(9):
-                    a=i*2*pi/9
-                    ell("cream",(sin(a)*.77,2.55+cos(a)*.17,-.31+cos(a)*.27),
-                        (.37,.35,.36),11,7)
-                for z in (-.08,.37,.85,1.24):
-                    for side in (-1,1):
-                        ell("cream",(side*.77,1.58,z),(.35,.33,.39),11,7)
             if k=="cookie":
                 for i in range(8):
                     a=i*2*pi/8
@@ -230,12 +229,10 @@ def sculpt_species(name, base, second, S):
             ell("lilac",(0,2.65,-.49),(.65,.12,.54))
         elif name=="Mallow":
             ell("cream",(0,2.76,-.42),(.79,.24,.73))
-        elif name=="Luma":
-            ell("gold",(0,2.69,-.48),(.18,.16,.19))
         elif name=="Crumble":
             for i in range(3):
                 ell("brown",(-.45+i*.45,2.36,-.85),(.13,.14,.08))
-    elif k in ("frog","axolotl","turtle","chick","owl","puffin","butterfly",
+    elif k in ("frog","axolotl","chick","puffin","butterfly",
                "crab","octopus","bat","sprite"):
         if k=="frog":
             from storybook_family_sculpts import pond_frog
@@ -257,31 +254,9 @@ def sculpt_species(name, base, second, S):
                     foot(side,z,.60,.20,.63)
             g.joint("Tail",(0,.88,1.69))
             lf("pink",(0,.88,1.69),(0,1.04,2.75),.44)
-        elif k=="turtle":
-            ell(base,(0,.46,.68),(.84,.36,1.02),19,12)
-            # Lower, more compact carapace: the baby turtle's little face
-            # should lead the silhouette rather than vanish under a giant
-            # dark green ball. Pattern is bound to the same original body rig.
-            ell("leafdeep",(0,.95,.78),(1.13,.70,1.18),23,14)
-            ell(second,(0,1.52,.78),(.82,.15,.88),16,9)
-            for i in range(8):
-                a=i*2*pi/8
-                ell("leaflight",(sin(a)*.70,1.53,.78+cos(a)*.74),
-                    (.25,.065,.27),11,7)
-            g.joint("Head",(0,.84,-.64))
-            face(0,.95,-1.10,.64,.55,.65,.29)
-            for side in (-1,1):
-                for z in (-.22,1.10):
-                    leg(side,z)
-                    ell(base,(side*1.05,.24,z),(.47,.24,.37),14,8)
-            g.joint("Body",(0,0,0))
-            ell("ivory",(0,.55,1.90),(.25,.25,.38))
-        elif k in ("chick","owl","puffin"):
-            palette = "cream" if k=="owl" else base
+        elif k in ("chick","puffin"):
             ell(base,(0,1.07,.28),(.99,1.14,.92),21,14)
             for side in (-1,1):
-                if k=="owl":
-                    ell("cream",(side*.47,1.48,-.74),(.48,.62,.23),15,10)
                 side_joint("Wing",side,(side*.78,1.49,.24))
                 ell(second,(side*.91,1.11,.24),(.39,.66,.58),15,10)
                 g.joint("Body",(0,0,0))
@@ -302,9 +277,6 @@ def sculpt_species(name, base, second, S):
             if k=="chick":
                 for i in range(3):
                     lf("straw",(-.20+i*.20,2.14,.16),(-.32+i*.29,2.67,.12),.17)
-            if k=="owl":
-                for side in (-1,1):
-                    lf(base,(side*.60,1.94,-.10),(side*.84,2.51,-.11),.22)
             if k=="puffin":
                 # Distinct baby-penguin silhouette: a long soft white bib
                 # and compact orange beak, not a giant orange sphere that
@@ -320,13 +292,6 @@ def sculpt_species(name, base, second, S):
                 for side in (-1,1):
                     ell("blush",(side*.66,1.21,-.58),
                         (.14,.08,.036),9,5)
-            if k=="owl":
-                # The owl needs feather tufts and a rounded facial disk;
-                # pale overlapping disks keep its two eyes readable.
-                for side in (-1,1):
-                    lf("cream",(side*.47,2.02,-.65),
-                       (side*.64,2.36,-.62),.18,.045)
-                ell("ivory",(0,.79,-.73),(.53,.45,.16),13,8)
         elif k=="butterfly":
             ell(base,(0,1.43,.17),(.34,.85,.32),18,11)
             for side in (-1,1):

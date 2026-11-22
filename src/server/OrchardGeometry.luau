@@ -178,6 +178,7 @@ function Art.mount(mesh: MeshPart, frame: CFrame, scale: number)
         if child:IsA("MeshPart") and child:GetAttribute("JointParent") then
             members[child.Name] = child
             child.Size *= scale
+            if child.Name == "Blink" then child:SetAttribute("OpenEyeSize",child.Size) end
             child.CFrame = frame * CFrame.new(child:GetAttribute("PieceCenter")*scale)
         end
     end

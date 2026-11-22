@@ -20,6 +20,12 @@ sys.path.insert(0,str(Path(__file__).resolve().parent))
 from package_studio import png, unpack
 
 SHOTS = [
+    ("Pet_Swoop",(0,.05,1.27),(3,-9,2.8),3.65),
+    ("Pet_Mochi",(0,.07,1.42),(4,-9,3.1),4.25),
+    ("Pet_Tofu",(0,.07,1.42),(4,-9,3.1),4.25),
+    ("Pet_Luma",(0,.07,1.42),(4,-9,3.1),4.25),
+    ("Pet_Pebble",(0,.15,.92),(5,-8,4.8),4.36),
+    ("Environment_WaterPond",(0,0,.19),(4,-7,6.7),7.9),
     ("Pet_Pip",(0,.13,1.53),(4,-9,2.9),4.40),
     ("Pet_Zuzu",(0,.13,1.53),(-4,-9,2.9),4.40),
     ("Crop_Tomato_S1",(0,0,1.06),(4,-9,4.6),3.28),

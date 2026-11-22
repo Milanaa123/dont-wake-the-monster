@@ -70,6 +70,17 @@ for creature in ("Pickle","Nugget","Swoop","Puffin"):
 # to joint() can leave a face or a toe behind when the character moves.
 from bake_orchard import GameSculpt
 for name,_,base,second in PET_SPECS:
+    if name in ("Swoop","Mochi","Tofu","Luma","Pebble"):
+        rig=sculpt_species(name,base,second,GameSculpt)
+        assert rig.joints["Blink"][0]=="Head" and set(rig.parts["Blink"])=={"eye","shine"}
+        assert "blush" in rig.parts["Head"]
+        if name=="Swoop":
+            assert {"WingL","WingR","HindL","HindR"} <= rig.parts.keys()
+        elif name=="Pebble":
+            assert {"leafdeep","sage","moss","straw"} <= rig.parts["Body"].keys()
+        else:
+            assert all(rig.joints[j][0]=="Head" for j in ("EarL","EarR"))
+            assert "brown" in rig.parts["ForeR"] and "cream" in rig.parts["Body"]
     if name not in ("Floofle","Snorf","Pickle","Splat","Pip","Zuzu"):
         continue
     rig=sculpt_species(name,base,second,GameSculpt)

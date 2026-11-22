@@ -73,6 +73,9 @@ local env=r.Instance.new("Folder")
 env.Name="CottageGardenEnvironment"
 env.Parent=island
 assert(bridge.applySetDress(island)==4)
+local pond=env.ImportedWaterPond
+assert(math.abs(pond.Position.Y-pond.Size.Y*.5-6.98)<.002 and not pond.CanCollide,
+    "Pond bank should meet the island, even when reeds grow taller")
 assert(bridge.decorateEntrance(island)==31)
 bridge.decorateWalkway(island)
 drain()
@@ -175,6 +178,9 @@ end
 local _,idleBody=fixture("Pet_Floofle","Floofle")
 local responding,activeBody=fixture("Pet_Floofle","Floofle")
 local bossModel,bossBody=fixture("Environment_SleepingMonster","GigglesTheGiant")
+local owlet,owlBody=fixture("Pet_Swoop","Swoop")
+local openEyes=owlBody.Blink.Size
+assert(owlBody.Blink.Blink.Part0==owlBody.Head)
 local frameEvent=signal()
 local tags={
     GetTagged=function(_,tag) return if tag=="OrchardRig" then roots else {} end,
@@ -191,7 +197,7 @@ local env={
     os={clock=function() return clock end},
     workspace={CurrentCamera={CFrame=r.CFrame.new(0,1,5)},GetServerTimeNow=function() return clock end},
     UserSettings=function() return {GetService=function() return {SavedQualityLevel={Value=3}} end} end,
-    Vector2=r.Vector2,CFrame=r.CFrame,
+    Vector2=r.Vector2,Vector3=r.Vector3,CFrame=r.CFrame,
 }
 luau.load(rigScript.Source,{environment=env,injectGlobals=true,debugName=rigScript.Name})()
 local function step(frames)
@@ -224,3 +230,18 @@ bossModel:SetAttribute("Awake",true)
 step(23)
 assert(bossBody.EyeL.LocalTransparencyModifier<.01 and bossBody.LidL.LocalTransparencyModifier>.99)
 print("PASS: shipped client drives feed, recovery, petting, nap and boss eyelids on mounted joints at low quality")
+
+owlet:SetAttribute("MotionMode","Nap")
+step(20)
+assert(owlBody.Blink.Size.Y<openEyes.Y*.16,"Sleep should close both eyes")
+assert(owlBody.Blink.Size.X==openEyes.X and owlBody.Blink.Size.Z==openEyes.Z)
+owlet:SetAttribute("MotionMode","Follow")
+step(20)
+local minHeight,maxHeight=math.huge,0
+for _=1,90 do
+    step(1)
+    minHeight=math.min(minHeight,owlBody.Blink.Size.Y)
+    maxHeight=math.max(maxHeight,owlBody.Blink.Size.Y)
+end
+assert(minHeight<openEyes.Y*.35 and maxHeight>openEyes.Y*.99,"Awake owlet must reopen and blink")
+print("PASS: owlet sleeps, wakes and blinks on its mounted face")

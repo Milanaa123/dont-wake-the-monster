@@ -114,6 +114,17 @@ RunService.PreSimulation:Connect(function()
             elseif name:match("^Leg") then
                 x=-.18*(1-r.wake)+side*.15*attack
                 if model:GetAttribute("Walking") then x+=side*.26*math.sin(now*3.4) end
+            elseif name=="Blink" then
+                local eyes=joint.Part1
+                local openSize=eyes:GetAttribute("OpenEyeSize")
+                if openSize then
+                    local cycle=(now+r.seed*.013)%(3.7+(r.seed%7)*.19)
+                    local sweep=if cycle<.24 then math.sin(math.pi*cycle/.24)^2 else 0
+                    local height=openSize.Y*(1-.89*math.max(sweep,r.rest,.26*r.stroke))
+                    if math.abs(height-eyes.Size.Y)>.0005 then
+                        eyes.Size=Vector3.new(openSize.X,height,openSize.Z)
+                    end
+                end
             elseif name:match("^Eye") then
                 joint.Part1.LocalTransparencyModifier=1-r.wake
             elseif name:match("^Lid") then
