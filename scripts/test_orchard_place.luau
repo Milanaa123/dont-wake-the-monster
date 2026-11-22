@@ -74,6 +74,24 @@ env.Name="CottageGardenEnvironment"
 env.Parent=island
 assert(bridge.applySetDress(island)==4)
 assert(bridge.decorateEntrance(island)==31)
+-- Capture the transforms of the actual entrance instances for Blender review.
+-- This runs before the temporary specimens for the crop and pet tests are added.
+if process.args[2] then
+    local layout={}
+    for _,mesh in island:GetDescendants() do
+        if mesh:IsA("MeshPart") then
+            local key=assert(mesh.MeshContent.Uri:match("/([^/]+)_Body%.mesh$"),mesh.Name)
+            assert(storage.OrchardGeometry:FindFirstChild(key),key)
+            table.insert(layout,{
+                name=mesh.Name,asset=key,size={mesh.Size.X,mesh.Size.Y,mesh.Size.Z},
+                cframe={mesh.CFrame:GetComponents()},
+            })
+        end
+    end
+    assert(#layout==44,"Expected 31 plantings and 13 scenery instances")
+    table.sort(layout,function(a,b) return a.name<b.name end)
+    fs.writeFile(process.args[2],serde.encode("json",layout,true))
+end
 local count=0
 for _,record in storage.OrchardGeometry:GetChildren() do
     local seed,stage=record.Name:match("^Crop_(.+)_S(%d)$")
