@@ -74,7 +74,7 @@ env.Name="CottageGardenEnvironment"
 env.Parent=island
 assert(bridge.applySetDress(island)==4)
 local pond=env.ImportedWaterPond
-assert(math.abs(pond.Position.Y-pond.Size.Y*.5-6.98)<.002 and not pond.CanCollide,
+assert(math.abs(pond.CFrame.Position.Y-pond.Size.Y*.5-6.98)<.002 and not pond.CanCollide,
     "Pond bank should meet the island, even when reeds grow taller")
 assert(bridge.decorateEntrance(island)==31)
 bridge.decorateWalkway(island)

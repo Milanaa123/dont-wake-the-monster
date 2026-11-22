@@ -56,7 +56,14 @@ def garden_pond(g):
         return (3.05*r*cos(a)+.13*f*sin(a),y,2.22*r*sin(a))
     rows=[]
     for f,y in ((.55,.111),(.78,.111),(.879,.113),(.932,.138),(.979,.207),(1,.176),(1.025,-.03)):
-        rows.append([shore(i*2*pi/sides,f,y) for i in range(sides)])
+        row=[]
+        for i in range(sides):
+            a=i*2*pi/sides
+            bank=max(0,(f-.88)/.145)
+            spread=f+bank*(.032*sin(7*a)+.023*cos(11*a+.72))
+            rise=bank*(.043*sin(5*a)+.029*sin(9*a+.6)) if f<1.025 else 0
+            row.append(shore(a,spread,y+rise))
+        rows.append(row)
     for i in range(sides):
         k=(i+1)%sides
         g.tri("water",(0,.111,0),rows[0][k],rows[0][i])
@@ -68,7 +75,7 @@ def garden_pond(g):
             (1.65,.34,.23),(1.87,.46,.29),(2.15,.28,.18),(2.69,.23,.14),
             (3.45,.38,.23),(3.71,.26,.15),(4.92,.29,.17),(5.15,.20,.13))):
         x,_,z=shore(angle,.95,.12)
-        cuts=10
+        cuts=12
         rings=[]
         for f,h in ((.78,-.03),(1,.04),(.94,.50),(.59,.88),(.24,1)):
             row=[]
@@ -82,7 +89,10 @@ def garden_pond(g):
         for row,upper in zip(rings,rings[1:]):
             for i in range(cuts):
                 k=(i+1)%cuts
-                g.quad("stone" if j%4 else "slate",row[i],upper[i],upper[k],row[k])
+                points=(row[i],upper[i],upper[k],row[k])
+                normals=[norm(((p[0]-x)/width**2,(p[1]-.155)/height**2,(p[2]-z)/width**2))
+                         for p in points]
+                g.quad("stone" if j%4 else "slate",*points,vertex_normals=normals)
         for i in range(cuts):
             g.tri("stone" if j%4 else "slate",(x,.146+height,z),rings[-1][(i+1)%cuts],rings[-1][i])
 
@@ -92,6 +102,35 @@ def garden_pond(g):
         lily_pad(g,x,z,r,a,mat)
     water_lily(g,-1.28,-.29,.89,.27)
     water_lily(g,.81,.39,.62,1.78)
+    # Short, tapering arcs accent the open water between the pads.
+    for x,z,r,a,span in ((-.59,-1.12,.60,3.75,1.38),(.82,.55,.73,.61,1.40),
+                         (-1.71,.42,.45,.41,1.65)):
+        previous=None
+        for i in range(13):
+            t=i/12
+            h=a+span*t
+            half=.003+.012*sin(pi*t)
+            row=[(x+(r+d)*cos(h),.118,z+.64*(r+d)*sin(h)) for d in (-half,half)]
+            if previous: g.quad("sky",previous[0],row[0],row[1],previous[1],vertex_normals=((0,1,0),)*4)
+            previous=row
+
+    for j,a in enumerate((2.16,2.42,4.23,4.42,5.83,6.02)):
+        x,_,z=shore(a,.984,.16)
+        for i in range(7):
+            ang=i*2.4+j
+            tip=(x+.33*cos(ang),.26+.13*(i%3),z+.31*sin(ang))
+            g.leaf(("moss","leaf","sage")[i%3],(x,.17,z),tip,.077,.103,5,3)
+        for i in range(2):
+            ang=j*2.26+i
+            flower=(x+.13*cos(ang),.42+.092*i,z+.14*sin(ang))
+            g.tube("moss",[(x,.17,z),flower],[.015,.009],5)
+            for petal in range(5):
+                turn=2*pi*petal/5+ang
+                xx,yy,zz=flower
+                tip=(xx+.092*cos(turn),yy+.037,zz+.092*sin(turn))
+                g.leaf("ivory" if j%3 else "lilac",flower,tip,.039,.020,4,2)
+            g.blob("gold",flower,(.031,.028,.031),7,4)
+
     for j,a in enumerate((.92,1.16,2.82,3.04)):
         x,_,z=shore(a,.938,.14)
         for i in range(7):

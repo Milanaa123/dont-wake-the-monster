@@ -214,18 +214,6 @@ def seated_rabbit(g, fur):
                (-.03+.20*cos(a),1.23+.06*(i%2),-.67+.14*sin(a)),.07,.05,5,2)
 
 
-def sculpt_fluffy_collarette(g, root_y, root_z, tone, count=11):
-    """Low triangle-count tapered fur/feather silhouette below the chin."""
-    for i in range(count):
-        angle = 2*pi*i/count
-        x=cos(angle)*.57
-        z=root_z+sin(angle)*.15
-        g.leaf(tone,
-               (x,root_y,z),
-               (x*1.18,root_y-.32-(i%3)*.07,z-.14),
-               .12+(i%3)*.019,.055,4,2)
-
-
 def sculpt_sticker_personality(g, name, species):
     """Original miniature *3-D* props that make pet silhouettes read at mobile size.
 
@@ -233,16 +221,7 @@ def sculpt_sticker_personality(g, name, species):
     soft cheek shapes and recognizable character details into actual meshes.
     Keep these details tiny so all pets remain under the existing triangle budget.
     """
-    if species=="lamb":
-        # Pastel bow on the white fluffy collar, not an imported decal.
-        g.joint("Body",(0,0,0))
-        for side in (-1,1):
-            g.blob("rose",(side*.23,1.47,-1.28),(.27,.18,.10),11,7)
-        g.blob("gold",(0,1.47,-1.36),(.105,.10,.085),10,6)
-        for side in (-1,1):
-            g.leaf("pink",(side*.07,1.42,-1.28),
-                   (side*.18,1.13,-1.27),.09,.025,4,2)
-    elif species=="fox":
+    if species=="fox":
         g.joint("Head",g.joints["Head"][1])
         g.tube("leafdeep",[(-.48,1.25,-1.0),(0,1.14,-1.12),(.49,1.24,-1.0)],
                [.085,.093,.085],7)

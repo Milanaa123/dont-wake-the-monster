@@ -104,6 +104,20 @@ for name,_,base,second in PET_SPECS:
         for limb in ("ForeL","ForeR","HindL","HindR"):
             assert rig.joints[limb][0]=="Body" and "leaflight" in rig.parts[limb]
 
+# Shoreline width sets the island placement scale. Keep a flat water surface
+# below the floating leaves, stones around the margin and reeds above it.
+from world_shapes_v2 import sculpt_world
+pond=sculpt_world("WaterPond",GameSculpt)
+finite_mesh(pond)
+assert {"water","turquoise","moss","pink","leafvein","stone","slate"} <= pond.data.keys()
+waterline=max(v[1] for v in pond.data["water"][0] if v[0]**2+v[2]**2<1.0)
+assert waterline<.15 and max(v[1] for v in pond.data["brown"][0])>.90
+assert all(v[1]>.11 for v in pond.data["leafvein"][0])
+for name,_,base,second in PET_SPECS:
+    if SPECIES[name]=="lamb":
+        rig=sculpt_species(name,base,second,GameSculpt)
+        assert sum(len(buf[0])//3 for part in rig.parts.values() for buf in part.values())<5400
+
 crops={}
 for crop in CROP_NAMES:
     for stage in (1,2,3):

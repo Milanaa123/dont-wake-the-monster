@@ -138,7 +138,7 @@ def lamb(g, name, skin):
         width=(.94+.117*curl)*ring
         return (width*cos(a),.87+.69*v+.028*ring*cos(6*a+phase),
                 .32+(1.055+.115*curl)*ring*sin(a))
-    turned_skin(g,fleece,lambda i,j:"ivory" if j<4 else "cream",(0,.87,.32),48,18)
+    turned_skin(g,fleece,lambda i,j:"ivory" if j<4 else "cream",(0,.87,.32),40,14)
     for side,suffix in ((-1,"L"),(1,"R")):
         for fore in (True,False):
             x,z=side*(.43 if fore else .53),(-.31 if fore else .88)
@@ -156,7 +156,7 @@ def lamb(g, name, skin):
         lat=(t-.5)*pi
         v=sin(lat)
         return (.85*(1-.10*v)*cos(lat)*cos(a),cy+.67*v,cz+.66*cos(lat)*sin(a))
-    turned_skin(g,head,lambda i,j:skin,(0,cy,cz),32,15)
+    turned_skin(g,head,lambda i,j:skin,(0,cy,cz),28,12)
     def front(x,y):
         v=(y-cy)/.67
         return cz-.66*sqrt(max(.001,1-v*v-(x/(.85*(1-.10*v)))**2))
@@ -190,7 +190,7 @@ def lamb(g, name, skin):
         breadth=ring*(1+.108*wave*(1-v*v))
         return (.879*breadth*cos(a),2.16+.358*v+
                 (-.119*wave-.080*max(0,-sin(a)))*ring, -.56+.73*breadth*sin(a))
-    turned_skin(g,bonnet,lambda i,j:"ivory" if j<3 else "cream",(0,2.16,-.56),48,15)
+    turned_skin(g,bonnet,lambda i,j:"ivory" if j<3 else "cream",(0,2.16,-.56),42,12)
     if name in ("Mochi","Luma"):
         # A small golden blossom for Mochi, a raised five-point star for Luma.
         x=.39 if name=="Mochi" else -.37

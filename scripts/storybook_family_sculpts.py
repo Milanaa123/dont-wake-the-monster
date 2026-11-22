@@ -49,42 +49,11 @@ def add_family_details(g, name, species, base, secondary):
             for side in (-1,1):
                 blob(base, (side*.34,.69,-1.20), (.17,.23,.17), 10,6)
 
-    elif species == "turtle":
-        body()
-        # A woven shell lip and softly engraved scute curves. Not separate
-        # floating green bumps, and the dark rim gives mobile-scale contrast.
-        rim=[]
-        for i in range(25):
-            a=2*pi*i/24
-            rim.append((1.04*sin(a), .90+.055*cos(a*2),
-                        .78+1.08*cos(a)))
-        vine("leafdeep", rim, [.038]*len(rim))
-        for j in range(6):
-            a=2*pi*j/6
-            bx=.64*sin(a)
-            bz=.78+.71*cos(a)
-            # Patterns lie on the newly compact 1.13x.70x1.18 shell,
-            # rather than floating above its former oversized volume.
-            outline=[]
-            for i in range(7):
-                b=2*pi*i/6
-                xx=bx+.17*sin(b)
-                zz=bz+.18*cos(b)
-                yy=.95+.70*(max(.05,1-(xx/1.13)**2-
-                                 ((zz-.78)/1.18)**2))**.5+.022
-                outline.append((xx,yy,zz))
-            vine("leafdeep",outline,[.018]*7)
-        blob("cream",(0,.94,-1.61),(.32,.19,.15),12,6)
-
-    elif species in ("chick", "owl", "puffin"):
+    elif species in ("chick", "puffin"):
         body()
         # Round, wing-sized bibs and visibly padded toes for the baby birds.
         if species=="puffin":
             blob("ivory",(0,1.10,-.69),(.56,.65,.16),16,9)
-        elif species=="owl":
-            for side in (-1,1):
-                leaf("cream",(side*.12,1.92,-.57),
-                     (side*.66,2.27,-.55),.17)
         for side in (-1,1):
             for toe in range(3):
                 x=side*.43+(toe-1)*.12
