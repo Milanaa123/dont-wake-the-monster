@@ -92,7 +92,10 @@ local function refresh()
         return
     end
     local nextStage, titleText, message
-    if feedCount == 0 then
+    if phase=="COOLDOWN" and survivalCount==0 then
+        nextStage,titleText="recover","Giggles is heading back to bed"
+        message="In the next round, stay outside the marked rings and hold SAVE ME beside a lost pet."
+    elseif feedCount == 0 then
         nextStage, titleText = "feed", "Meet your pet. Giggles is sleeping nearby."
         message = "Tap a snack below and watch your companion."
     elseif survivalCount==0 then

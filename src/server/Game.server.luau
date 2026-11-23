@@ -358,13 +358,14 @@ local function onPlayerAdded(player: Player)
     else
         warn("DWTM: data load unavailable for " .. player.UserId .. ". Progress is session-only.")
     end
-    loading[player] = nil
     if shuttingDown or player.Parent ~= Players then
         if ok then persistence:release(player.UserId, profile) end
+        loading[player]=nil
         return
     end
     -- Publish only fully loaded state. Remotes/timers cannot mutate a temporary
     -- starter garden while GetAsync yields and then overwrite or lose progress.
+    loading[player]=nil
     profiles[player] = profile
     if not ok then
         -- Make it unmistakable that session-only progress is not permanent.
@@ -378,6 +379,7 @@ local function onPlayerAdded(player: Player)
         })
     end
     if ok then
+        profile.firstObservedVisit=not profile.metricFlags.FirstVisit
         onceMetric(player,profile,if profile.metricFlags.FirstVisit then "FirstReturn" else "FirstVisit")
     else
         metric(player,"ProfileLoadFailed")
@@ -1345,7 +1347,14 @@ local function startWake()
                 if RescueObjective.participated(other) then table.insert(contributors,other) end
             end
             if #contributors>=2 then
-                for _,other in ipairs(contributors) do onceMetric(other,profiles[other],"FirstCoopRescue") end
+                for _,other in ipairs(contributors) do
+                    local teammate=profiles[other]
+                    onceMetric(other,teammate,"FirstCoopRescue")
+                    if not teammate.coopThisVisit then
+                        teammate.coopThisVisit=true
+                        metric(other,"VisitWithCoopRescue")
+                    end
+                end
             end
         end
         addCoins(player, reward)
@@ -1377,6 +1386,10 @@ local function endWake()
         local profile = profiles[player]
         if profile and WakeRound.takeResult(profile,wakeCount,RescueObjective.participated(player)) then
             onceMetric(player,profile,"FirstRoundFinished")
+            if profile.firstObservedVisit and not profile.firstVisitFinished then
+                profile.firstVisitFinished=true
+                metric(player,"FirstVisitRoundFinished")
+            end
             if rootFor(player) and not profile.knockedOut then
                 local bonus = Progression.recordSurvival(profile)
                 local rescueBonus = if teamCompleted and RescueObjective.participated(player) then RescueObjective.status().bonus else 0
@@ -1759,7 +1772,7 @@ game:BindToClose(function()
     end
     -- Save different players concurrently within Roblox's shutdown window.
     local deadline = os.clock() + 25
-    while (next(profiles) or next(closingProfiles)) and os.clock() < deadline do
+    while (next(profiles) or next(closingProfiles) or next(loading)) and os.clock() < deadline do
         task.wait(0.05)
     end
 end)

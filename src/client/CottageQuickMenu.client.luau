@@ -113,7 +113,7 @@ local function refresh()
                 control.AnchorPoint = original.anchor
                 control.Position = original.pos
                 control.Size = original.size
-                control.Visible = true
+                control.Visible = not chasing
             end
         end
     end

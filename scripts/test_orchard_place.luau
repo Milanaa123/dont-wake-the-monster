@@ -18,7 +18,7 @@ local function drain()
     while #tasks>0 do table.remove(tasks,1)() end
 end
 local services={
-    ServerStorage=storage, ReplicatedStorage=replicated, AssetService={}, EncodingService={},
+    ServerStorage=storage, ReplicatedStorage=replicated, Lighting=place:GetService("Lighting"), AssetService={}, EncodingService={},
     HttpService={JSONDecode=function(_,v) return serde.decode("json",v) end},
     RunService={IsStudio=function() return true end},
 }
