@@ -51,9 +51,9 @@ G.Fertilizers = {
 -- The ID fields must be populated from Creator Dashboard later. No real-money
 -- purchase prompts or receipts are active in this codebase.
 G.PremiumProducts = {
-    StarbloomSeeds = {productId = 0, item = "Starbloom", itemType = "seed", amount = 3, suggestedRobux = 49},
-    AuroraMelonSeeds = {productId = 0, item = "AuroraMelon", itemType = "seed", amount = 3, suggestedRobux = 79},
-    AuroraDust = {productId = 0, item = "AuroraDust", itemType = "fertilizer", amount = 5, suggestedRobux = 69},
+    StarbloomSeeds = {productId = 0, item = "Starbloom", itemType = "seed", amount = 3},
+    AuroraMelonSeeds = {productId = 0, item = "AuroraMelon", itemType = "seed", amount = 3},
+    AuroraDust = {productId = 0, item = "AuroraDust", itemType = "fertilizer", amount = 5},
 }
 -- Secret ingredients and recipes are kept in ServerScriptService/RecipeCatalog.luau.
 -- Only discovered recipe entries are sent to individual players.

@@ -19,6 +19,8 @@ local NativeAvatar = require(script.Parent:WaitForChild("NativeGardenerAvatar"))
 local Progression = require(script.Parent:WaitForChild("Progression"))
 local ProfileStore = require(script.Parent:WaitForChild("ProfileStore"))
 local Garden = require(script.Parent:WaitForChild("Garden"))
+local Cosmetic = require(script.Parent:WaitForChild("GardenCosmetic"))
+local MarketplaceService = game:GetService("MarketplaceService")
 local GardenActionVFX = require(script.Parent:WaitForChild("GardenActionVFX"))
 local RecipeCatalog = require(script.Parent:WaitForChild("RecipeCatalog"))
 local RescueObjective = require(script.Parent:WaitForChild("RescueObjective"))
@@ -295,6 +297,23 @@ local function toggleCarry(player: Player)
     careUpdate(player)
 end
 
+local function refreshGarland(player: Player, profile: any)
+    if not Cosmetic.Enabled or Cosmetic.PassId<=0 then return end
+    task.spawn(function()
+        local owned=Cosmetic.owns(MarketplaceService,player.UserId,Cosmetic.Enabled,Cosmetic.PassId)
+        if profiles[player]==profile and owned then
+            World.showGarland(player.UserId)
+        end
+    end)
+end
+
+if Cosmetic.Enabled and Cosmetic.PassId>0 then
+    MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player,passId,purchased)
+        local profile=profiles[player]
+        if profile and purchased and passId==Cosmetic.PassId then refreshGarland(player,profile) end
+    end)
+end
+
 local function onPlayerAdded(player: Player)
     if shuttingDown or loading[player] or profiles[player] then return end
     loading[player] = true
@@ -384,6 +403,7 @@ local function onPlayerAdded(player: Player)
             farmSlots[slot] = player
             farmOfPlayer[player] = slot
             World.createGarden(player.UserId, player.DisplayName, slot)
+            refreshGarland(player,profile)
             World.updateGarden(player.UserId, profile.garden, GardenConfig)
             break
         end
@@ -1330,6 +1350,7 @@ local function startWake()
         end
         addCoins(player, reward)
         sendCollection(player)
+        remote:FireClient(player,{type="rescueMoment",round=wakeCount})
         if justCompleted then
             notice("TEAM CHALLENGE COMPLETE! ALL LOST PETS ARE SAFE!", Color3.fromRGB(160, 255, 203))
             World.burst(Vector3.new(0, 52, 0), Color3.fromRGB(255, 232, 122), 30, 32)

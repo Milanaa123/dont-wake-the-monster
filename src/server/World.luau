@@ -730,6 +730,18 @@ function World.createGarden(userId: number, ownerName: string, slot: number): bo
     return true
 end
 
+function World.showGarland(userId: number)
+    local farm=farmModels[userId]
+    if not farm or farm:FindFirstChild("MoonflowerGarland") then return end
+    local garland=Instance.new("Folder")
+    garland.Name="MoonflowerGarland"
+    garland.Parent=farm
+    local frame=farmCenters[userId]
+    for _,side in {-1,1} do
+        ReferenceMeshLibrary.ground(garland,"Crop_MoonLotus_S3",frame*CFrame.new(side*8,.77,-13.6),2.5,nil)
+    end
+end
+
 function World.removeGarden(userId: number)
     if farmModels[userId] then farmModels[userId]:Destroy() end
     farmModels[userId] = nil

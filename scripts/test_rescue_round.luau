@@ -75,11 +75,13 @@ print("PASS: built-place two-player rescue, distance, health, duplicate, stale p
 local config={Pets={{name="Pip",price=0},{name="Mochi",price=90}}, Reactions={{id="Spin"}},
     QUEST_GOALS={feeds=5,discoveries=4,survivals=2},QUEST_REWARDS={feeds=45,discoveries=70,survivals=80},
     DISCOVERY_REWARD=8,DAILY_REWARD=60}
+local identity=luau.load(place:GetService("ReplicatedStorage").PetPersonality.Source)()
 local progressEnv={game={GetService=function() return folder end},script={Parent=folder},
     require=function(key)
         if key=="Config" then return config end
         if key=="Garden" then return {new=function() return {} end,serialize=table.clone,load=table.clone} end
-        return {}
+        assert(key=="PetPersonality")
+        return identity
     end}
 local progression=luau.load(server.Progression.Source,{environment=progressEnv,injectGlobals=true})()
 local profile=progression.new()
@@ -97,3 +99,19 @@ progression.load(restored,data)
 assert(restored.coins==10 and restored.owned[2] and restored.metricFlags.FirstWakeSeen)
 assert(not restored.metricFlags.unrecognized and not progression.claimDaily(restored))
 print("PASS: built-place coin purchase, repeat rejection, daily eligibility, unique discovery, saved milestone allowlist")
+
+local cosmetic=luau.load(server.GardenCosmetic.Source)()
+assert(not cosmetic.Enabled and cosmetic.PassId==0)
+local queries=0
+local market={UserOwnsGamePassAsync=function(_,user,id)
+    queries+=1
+    assert(user==8 and id==12)
+    return true
+end}
+assert(not cosmetic.owns(market,8,false,12) and not cosmetic.owns(market,8,true,0) and queries==0)
+assert(cosmetic.owns(market,8,true,12) and cosmetic.owns(market,8,true,12))
+market.UserOwnsGamePassAsync=function() return false end
+assert(cosmetic.owns(market,8,true,12)==false)
+market.UserOwnsGamePassAsync=function() error("service unavailable") end
+assert(cosmetic.owns(market,8,true,12)==nil)
+print("PASS: unconfigured cosmetic makes no ownership calls, owned, declined, repeated and unavailable decisions")

@@ -245,3 +245,23 @@ for _=1,90 do
 end
 assert(minHeight<openEyes.Y*.35 and maxHeight>openEyes.Y*.99,"Awake owlet must reopen and blink")
 print("PASS: owlet sleeps, wakes and blinks on its mounted face")
+
+local cottage=load(scripts.CottageGardenStyle)
+local farm=r.Instance.new("Model")
+farm.Parent=island
+local bed=r.Instance.new("Model")
+bed.Name="Plot_1"
+bed.Parent=farm
+cottage.styleEntrance(farm,r.CFrame.new(),"Cottage")
+drain()
+local shelter=farm.EntranceDecor.Environment_GardenCottage
+assert(not shelter.CanCollide and not shelter.CanQuery)
+cottage.styleEntrance(farm,r.CFrame.new(),"Cottage")
+drain()
+assert(farm.EntranceDecor.Environment_GardenCottage==shelter)
+cottage.styleEntrance(farm,r.CFrame.new(),"Blossom")
+drain()
+assert(#farm.EntranceDecor:GetChildren()==2 and shelter.Parent==nil)
+cottage.styleEntrance(farm,r.CFrame.new(),"Meadow")
+assert(not farm:FindFirstChild("EntranceDecor") and farm.Plot_1==bed)
+print("PASS: live garden style swap reuses original mesh templates, preserves beds and removes stale decorations")

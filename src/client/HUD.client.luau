@@ -295,6 +295,41 @@ local function countdown(seconds: number): string
     return string.format("%02d:%02d", math.floor(value / 60), value % 60)
 end
 
+local capture=Instance.new("TextButton")
+capture.Name="RescueCapture"
+capture.Text="📷 Save a rescue photo"
+capture.Size=UDim2.fromOffset(174,38)
+capture.Position=UDim2.new(.5,0,0,130)
+capture.AnchorPoint=Vector2.new(.5,0)
+capture.BackgroundColor3=CREAM
+capture.TextColor3=DARK
+capture.Font=Enum.Font.GothamBold
+capture.Visible=false
+capture.Parent=gui
+round(capture,12)
+local captureRound=0
+local function offerPhoto(roundId: number)
+    if roundId<=captureRound then return end
+    captureRound=roundId
+    capture.Visible=true
+    task.delay(8,function()
+        if captureRound==roundId then capture.Visible=false end
+    end)
+end
+capture.Activated:Connect(function()
+    capture.Visible=false
+    local ok=pcall(function()
+        local service=game:GetService("CaptureService")
+        service:CaptureScreenshot(function(id)
+            local prompted=pcall(function()
+                service:PromptSaveCapturesToGallery({id},function() end)
+            end)
+            if not prompted then showNotice("Photo saving is unavailable on this device.",CREAM) end
+        end)
+    end)
+    if not ok then showNotice("Photo capture is unavailable on this device.",CREAM) end
+end)
+
 remote.OnClientEvent:Connect(function(event: any)
     if type(event) ~= "table" then return end
     if event.type == "state" then
@@ -343,6 +378,8 @@ remote.OnClientEvent:Connect(function(event: any)
             title.TextColor3 = DARK
             prompt.Text = "FEED YOUR PET... IF YOU DARE 👀"
         end
+    elseif event.type=="rescueMoment" then
+        offerPhoto(event.round)
     elseif event.type == "stats" then
         statsLabel.Text = string.format("🪙 %d   •   PET: %s", event.coins or 0, event.pet or "???")
         local count = math.clamp(event.hearts or 3, 0, 3)
