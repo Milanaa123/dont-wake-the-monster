@@ -227,18 +227,6 @@ def sculpt_sticker_personality(g, name, species):
                [.085,.093,.085],7)
         g.leaf("leaflight",(.15,1.19,-1.1),(.38,.77,-1.08),.18,.05,5,2)
         g.leaf("ivory",(.73,1.34,-1.15),(1.02,1.41,-1.13),.16,.06,4,2)
-    elif species=="chick":
-        g.joint("Body",(0,0,0))
-        for side in (-1,1):
-            g.blob("blush",(side*.56,1.29,-.59),(.16,.10,.045),9,6)
-        # Small flower pin on the head, with a matte golden centre.
-        pos=(.30,2.18,-.39)
-        for i in range(5):
-            a=2*pi*i/5
-            g.leaf("ivory",pos,
-                   (pos[0]+.17*cos(a),pos[1]+.18*sin(a),pos[2]-.035),
-                   .08,.025,4,2)
-        g.blob("gold",(pos[0],pos[1],pos[2]-.06),(.065,.06,.04),8,5)
     elif species=="axolotl":
         # The axolotl uses a single body mesh and gill joints, not a Head joint.
         g.joint("Body",(0,0,0))

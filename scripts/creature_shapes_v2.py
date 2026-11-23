@@ -23,7 +23,10 @@ def sculpt_species(name, base, second, S):
     )
     g=S("Pet_"+name)
     k=SPECIES[name]
-    from woodland_companions import lamb, owlet, turtle
+    from woodland_companions import lamb, owlet, turtle, garden_bird
+    if k in ('puffin','chick'):
+        garden_bird(g,k)
+        return g
     if k=="owl":
         owlet(g)
         return g
@@ -254,44 +257,6 @@ def sculpt_species(name, base, second, S):
                     foot(side,z,.60,.20,.63)
             g.joint("Tail",(0,.88,1.69))
             lf("pink",(0,.88,1.69),(0,1.04,2.75),.44)
-        elif k in ("chick","puffin"):
-            ell(base,(0,1.07,.28),(.99,1.14,.92),21,14)
-            for side in (-1,1):
-                side_joint("Wing",side,(side*.78,1.49,.24))
-                ell(second,(side*.91,1.11,.24),(.39,.66,.58),15,10)
-                g.joint("Body",(0,0,0))
-                ell("eye",(side*.37,1.46,-.936),(.126,.154,.070),12,8)
-                ell("shine",(side*.325,1.515,-1.003),(.031,.036,.015),8,5)
-                tube("orange",[(side*.45,.24,.14),(side*.45,.04,-.11)],
-                     [.12,.08])
-            # A tiny triangulated beak has a recognizable chick silhouette
-            # without the oversized carrot-like tube from the old model.
-            beak_top=(0,1.20,-.95)
-            beak_left=(-.16,1.095,-1.02)
-            beak_right=(.16,1.095,-1.02)
-            beak_tip=(0,1.015,-1.26)
-            g.tri("orange",beak_top,beak_left,beak_tip)
-            g.tri("orange",beak_top,beak_tip,beak_right)
-            g.tri("ochre",beak_left,beak_right,beak_tip)
-            g.tri("ochre",beak_top,beak_right,beak_left)
-            if k=="chick":
-                for i in range(3):
-                    lf("straw",(-.20+i*.20,2.14,.16),(-.32+i*.29,2.67,.12),.17)
-            if k=="puffin":
-                # Distinct baby-penguin silhouette: a long soft white bib
-                # and compact orange beak, not a giant orange sphere that
-                # covers the smile and small bead eyes.
-                ell("ivory",(0,1.02,-.70),(.65,.81,.23),16,10)
-                # Tiny, gently tapered bill with a visible upper ridge.
-                g.tri("orange",(-.19,1.21,-.96),(.19,1.21,-.96),
-                      (0,1.08,-1.34))
-                g.tri("ochre",(-.19,1.21,-.96),(0,1.08,-1.34),
-                      (0,1.00,-1.00))
-                g.tri("orange",(.19,1.21,-.96),(0,1.00,-1.00),
-                      (0,1.08,-1.34))
-                for side in (-1,1):
-                    ell("blush",(side*.66,1.21,-.58),
-                        (.14,.08,.036),9,5)
         elif k=="butterfly":
             ell(base,(0,1.43,.17),(.34,.85,.32),18,11)
             for side in (-1,1):

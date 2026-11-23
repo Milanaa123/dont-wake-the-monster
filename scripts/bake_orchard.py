@@ -12,7 +12,7 @@ import zlib
 from creature_shapes_v2 import sculpt_species
 from crop_shapes_v2 import sculpt_crop
 from gardener_avatar_v1 import create_gardener_pack
-from generate_reference_glb import Sculpt, MAT, PET_SPECS, CROP_NAMES, _palette_png
+from generate_reference_glb import Sculpt, MAT, PET_SPECS, CROP_NAMES, _palette_png, pond_texcoord
 from world_shapes_v2 import ASSET_NAMES, sculpt_world
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -70,6 +70,9 @@ def encode_part(materials, full_center, full_size):
                 # Planar swatch coordinates retain pigment grain across each piece.
                 u=(KEYS.index(mat)+.50+.34*math.sin(p[0]*2.7+p[2]*1.2))/len(KEYS)
                 v=.94-.88*t
+                if mat=="water":
+                    cell_u,v=pond_texcoord(p)
+                    u=(KEYS.index(mat)+cell_u)/len(KEYS)
                 vertex=(*xyz,*normal,round(u*65535),round(v*65535))
                 if vertex not in lookup:
                     lookup[vertex]=len(vertices)
@@ -149,9 +152,9 @@ def bake(studio=None):
     if studio:
         directory=studio/'content'/'dwtm_orchard'
         directory.mkdir(parents=True,exist_ok=True)
-        (directory/'pigments.png').write_bytes(_palette_png(KEYS))
+        (directory/'pigments.png').write_bytes(_palette_png(KEYS, pond=True))
     # Reuse exactly the GLB pigment atlas in both runtime and local file mode.
-    atlas=_palette_png(KEYS)
+    atlas=_palette_png(KEYS, pond=True)
     width,height=struct.unpack_from('>II',atlas,16)
     assert atlas[37:41]==b'IDAT'
     rgb=zlib.decompress(atlas[41:41+struct.unpack_from('>I',atlas,33)[0]])

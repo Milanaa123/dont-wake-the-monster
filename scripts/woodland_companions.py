@@ -287,3 +287,102 @@ def turtle(g):
         smile=[(s*x,y,front(s*x,y)-.019) for x,y in
                ((0,.866),(.062,.850),(.121,.870),(.148,.897))]
         g.tube("chocolate",smile,[.012,.015,.014,.007],7)
+
+
+def garden_bird(g, species):
+    puffin = species == "puffin"
+    mantle = "slate" if puffin else "gold"
+    g.joint("Body",(0,0,0))
+
+    # Centre the radial fan on the breast. Its outermost ivory ring follows
+    # the lower belly and meets the coloured back without a second shell.
+    def breast(a,t):
+        seam = 1.18-.16*sin(a)
+        r = seam*2*t if t < .5 else seam+(pi-seam)*(2*t-1)
+        v = sin(a)*sin(r)
+        width = (.79 if puffin else .77)*(1-.13*v)
+        return (width*cos(a)*sin(r),.87+.71*v,.18-.74*cos(r)-.12*v)
+    turned_skin(g,breast,lambda i,j: ("ivory" if puffin else "cream") if j<7 else mantle,
+                (0,.87,.18),32,14)
+
+    for side,suffix in ((-1,"L"),(1,"R")):
+        x = side*.32
+        g.joint("Hind"+suffix,(x,.34,.07))
+        g.tube("ochre",[(x,.36,.07),(x,.15,.035)], [.083,.076],10)
+        if puffin:
+            def paddle(a,t):
+                r=sin(pi*t)
+                # Three toe crests stretch the front edge of one webbed foot.
+                forward=max(0,-sin(a))
+                lobes=.088*cos(8*(a+pi/2))*forward**3
+                return (x+.236*r*cos(a),.132-.089*cos(pi*t),
+                        -.048+(.265+lobes)*r*sin(a))
+            turned_skin(g,paddle,lambda i,j:"orange",(x,.132,-.048),32,8)
+        else:
+            for toe in (-1,0,1):
+                g.tube("ochre",[(x,.15,.04),(x+toe*.081,.096,-.12),
+                       (x+toe*.16,.071,-.27+.06*abs(toe))],[.057,.051,.023],9)
+
+        g.joint("Wing"+suffix,(side*.635,1.19,.10))
+        def wing(a,t):
+            arch=sin(pi*t)
+            span=arch*(1.27-.52*t)
+            x=side*(.60+.19*arch+(.15 if puffin else .23)*t)
+            y=1.26-(.73 if puffin else .56)*t
+            z=.05+(.66 if puffin else .38)*t
+            return (x+side*.19*span*cos(a),y+.09*span*sin(a),z+.34*span*sin(a))
+        turned_skin(g,wing,lambda i,j:("ink" if puffin else "straw") if j>=9 else mantle,
+                    (side*.80,.96,.25),18,12)
+
+    g.joint("Tail",(0,.71,.69))
+    rounded_sections(g,mantle,[(0,.57,.73,.093,.08),(0,.73,.79,.21,.23),
+        (.032,.88,.95,.19,.225),(.063,.99,1.10,.136,.16),
+        (.082,1.075,1.20,.023,.031)],16)
+
+    cy,cz=(1.63,-.17) if puffin else (1.54,-.21)
+    w,h,d=(.879,.704,.67) if puffin else (.84,.69,.647)
+    g.joint("Head",(0,1.22,-.105))
+    def hood(a,t):
+        # Broad side cheeks with a widow's peak above the beak.
+        seam=1.18+.11*cos(2*a)-.50*max(0,sin(a))**3*exp(-(cos(a)/.38)**2)
+        r=seam*2*t if t<.5 else seam+(pi-seam)*(2*t-1)
+        v=sin(a)*sin(r)
+        return (w*(1-.079*v)*cos(a)*sin(r),cy+h*v,cz-d*cos(r))
+    def front(x,y):
+        v=(y-cy)/h
+        return cz-d*sqrt(max(.001,1-v*v-(x/(w*(1-.079*v)))**2))
+    turned_skin(g,hood,lambda i,j:("cream" if j<9 else "slate") if puffin else "gold",
+                (0,cy,cz),40,18)
+    bead_eyes(g,front,.33,cy+.045,.104 if puffin else .087,.127 if puffin else .102)
+    for s in (-1,1):
+        face_patch(g,"blush",front,s*.485,cy-.10,.113,.051)
+
+    # Each cross-section is perpendicular to the length of the bill. A curved
+    # orange culmen and thinner lower mandible meet at a narrow warm gape.
+    def bill(a,t):
+        width=(.214 if puffin else .151)*sin(pi*t)**.75
+        height=(.167 if puffin else .096)*sin(pi*t)
+        return (width*cos(a),cy-.065-.078*t+height*sin(a)*(1 if sin(a)>0 else .55),
+                cz-d+.066-(.406 if puffin else .30)*t)
+    def bill_tone(i,j):
+        if i in (0,9): return "ochre"
+        if puffin and j in (3,4): return "gold"
+        return "orange"
+    turned_skin(g,bill,bill_tone,(0,cy-.10,cz-d-.09),20,13)
+
+    if not puffin:
+        for i in range(2):
+            x=.036-.14*i
+            rounded_sections(g,"gold",[(x,2.09,.003,.128,.134),
+                (x+.012,2.20+.035*i,.003,.135,.143),
+                (x+.052,2.32+.072*i,.023,.086,.09),
+                (x+.122,2.39+.069*i,.075,.018,.022)],14)
+        # Nugget's daisy pin follows her head during nods and feeding.
+        x,y=-.40,1.92
+        z=front(x,y)-.014
+        for i in range(5):
+            a=2*pi*i/5
+            px,py=x+.085*cos(a),y+.082*sin(a)
+            g.blob("ivory",(px,py,front(px,py)-.019),
+                   (.067,.067,.035),10,6)
+        g.blob("orange",(x,y,z-.037),(.052,.052,.035),10,6)

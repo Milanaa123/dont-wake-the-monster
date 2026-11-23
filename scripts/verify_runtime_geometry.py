@@ -10,7 +10,7 @@ import json
 import math
 import struct
 from pathlib import Path
-from bake_orchard import VERTEX
+from bake_orchard import KEYS, VERTEX
 from package_studio import unpack
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -39,6 +39,11 @@ for record in assets:
         vertex_end=8+nv*VERTEX.size
         assert len(raw)==vertex_end+nf*6, f"Truncated runtime mesh: {section}"
         vertices=list(VERTEX.iter_unpack(raw[8:vertex_end]))
+        if name=="Environment_WaterPond":
+            # Read depth from the actual Roblox vertex stream, including quantization.
+            water_index=KEYS.index("water")
+            depths=[v[-1]/65535 for v in vertices if int(v[-2]/65535*len(KEYS))==water_index]
+            assert min(depths)<.22 and max(depths)>.90, "Pond lost its shallow or deep texels"
         referenced=bytearray(nv)
         for idx,(a,b,c) in enumerate(struct.iter_unpack("<3H",raw[vertex_end:])):
             assert a<nv and b<nv and c<nv, f"Invalid triangle index: {section}/{idx}"

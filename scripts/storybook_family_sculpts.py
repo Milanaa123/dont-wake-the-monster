@@ -49,17 +49,6 @@ def add_family_details(g, name, species, base, secondary):
             for side in (-1,1):
                 blob(base, (side*.34,.69,-1.20), (.17,.23,.17), 10,6)
 
-    elif species in ("chick", "puffin"):
-        body()
-        # Round, wing-sized bibs and visibly padded toes for the baby birds.
-        if species=="puffin":
-            blob("ivory",(0,1.10,-.69),(.56,.65,.16),16,9)
-        for side in (-1,1):
-            for toe in range(3):
-                x=side*.43+(toe-1)*.12
-                blob("gold" if species=="chick" else "orange",
-                     (x,.075,-.19),(.087,.069,.16),8,5)
-
     elif species == "deer":
         body()
         # High-contrast fawn freckles along both flanks, intentionally

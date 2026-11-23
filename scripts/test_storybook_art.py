@@ -70,12 +70,15 @@ for creature in ("Pickle","Nugget","Swoop","Puffin"):
 # to joint() can leave a face or a toe behind when the character moves.
 from bake_orchard import GameSculpt
 for name,_,base,second in PET_SPECS:
-    if name in ("Swoop","Mochi","Tofu","Luma","Pebble"):
+    if name in ("Swoop","Mochi","Tofu","Luma","Pebble","Puffin","Nugget"):
         rig=sculpt_species(name,base,second,GameSculpt)
         assert rig.joints["Blink"][0]=="Head" and set(rig.parts["Blink"])=={"eye","shine"}
         assert "blush" in rig.parts["Head"]
-        if name=="Swoop":
+        if name in ("Swoop","Puffin","Nugget"):
             assert {"WingL","WingR","HindL","HindR"} <= rig.parts.keys()
+            if name in ("Puffin","Nugget"):
+                assert {"orange","ochre"} <= rig.parts["Head"].keys()
+                assert rig.joints["Tail"][0]=="Body" and "blush" not in rig.parts["Body"]
         elif name=="Pebble":
             assert {"leafdeep","sage","moss","straw"} <= rig.parts["Body"].keys()
         else:
@@ -113,6 +116,10 @@ assert {"water","turquoise","moss","pink","leafvein","stone","slate"} <= pond.da
 waterline=max(v[1] for v in pond.data["water"][0] if v[0]**2+v[2]**2<1.0)
 assert waterline<.15 and max(v[1] for v in pond.data["brown"][0])>.90
 assert all(v[1]>.11 for v in pond.data["leafvein"][0])
+# The water sheet descends from the rock lip into the same horizontal basin.
+sheet=pond.data["turquoise"][0]
+assert max(v[1] for v in sheet)>.59 and min(v[1] for v in sheet)<.14
+assert any(.32<v[1]<.54 for v in sheet)
 for name,_,base,second in PET_SPECS:
     if SPECIES[name]=="lamb":
         rig=sculpt_species(name,base,second,GameSculpt)
