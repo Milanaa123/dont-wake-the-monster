@@ -375,7 +375,11 @@ remote.OnClientEvent:Connect(function(event: any)
                 rescueLabel.Text = "🎉 ALL SAVED! +30 COINS FOR SURVIVING HEROES"
                 rescueCard.BackgroundColor3 = Color3.fromRGB(181, 245, 188)
             else
-                rescueLabel.Text = string.format("🐾 RESCUE THE LOST PETS!  %d / %d  •  +%d BONUS", rescue.rescued or 0, rescue.goal or 3, rescue.bonus or 30)
+                local ribbon=if event.wakeMode=="Garden" then "Garden Keeper • help finish the rescue"
+                    elseif event.wakeMode=="Listen" then "Quiet Steps • rescue without a bonk"
+                    else "Trail Runner • draw Giggles away for 3 seconds"
+                rescueLabel.Text = string.format("🐾 SAVE THE LOST PETS   %d / %d   •   +%d BONUS\n%s",
+                    rescue.rescued or 0,rescue.goal or 2,rescue.bonus or 30,ribbon)
                 rescueCard.BackgroundColor3 = Color3.fromRGB(232, 250, 216)
             end
         end
@@ -389,7 +393,7 @@ remote.OnClientEvent:Connect(function(event: any)
                 elseif event.wakeMode=="Garden" then "JELLY SHOWER • DODGE THE GOLD RINGS"
                 else "CHASE • RUN OUTSIDE THE STRIKE MARKS"
             title.TextColor3 = Color3.fromRGB(243, 70, 107)
-            prompt.Text = "SURVIVE! THE PETS NEED YOU!"
+            prompt.Text = "SAVE THE LOST PETS!"
         elseif event.phase == "COOLDOWN" then
             title.Text = "💤 PHEW... NAP TIME!"
             phaseText.Text = "YOUR COINS ARE ON THE WAY"

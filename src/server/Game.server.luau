@@ -786,7 +786,8 @@ local function interactWithPet(player: Player, rawAction: any)
     local profile = profiles[player]
     if not profile or phase == "AWAKE" then return end
     local now = os.clock()
-    if now - profile.lastPetInteraction < 3.5 then return end
+    local answeringCall=rawAction=="Comfort" and profile.callPending==true
+    if not answeringCall and now - profile.lastPetInteraction < 3.5 then return end
     local root = rootFor(player)
     if not root or not profile.pet or not profile.pet.PrimaryPart then return end
     if (root.Position - profile.pet.PrimaryPart.Position).Magnitude > Config.FEED_DISTANCE then
@@ -812,6 +813,7 @@ local function interactWithPet(player: Player, rawAction: any)
             profile.callPending=false
             local before = noise
             noise = WakeRound.comfort(before,p.traits.sensitivity,p.bond)
+            if p.ribbons.QuietSteps then noise=math.max(0,noise-1) end
             if before > noise then
                 message ..= "  Quieted the garden by " .. (before-noise) .. "."
                 sendState()
@@ -1211,13 +1213,8 @@ remote.OnServerEvent:Connect(function(player: Player, command: any, arg: any)
         end
         if os.clock() - profile.lastGardenVisit < 2 then return end
         profile.lastGardenVisit = os.clock()
-        local owner=player
-        if arg~=nil then
-            if type(arg)~="number" or arg~=math.floor(arg) or arg<=0 or arg>9007199254740991 then return end
-            local host=Players:GetPlayerByUserId(arg)
-            if not host or not farmOfPlayer[host] or host:GetAttribute("GardenOpen")~=true then return end
-            owner=host
-        end
+        local owner=Garden.visitOwner(player,arg,Players,farmOfPlayer)
+        if not owner then return end
         local spot = World.gardenSpawn(owner.UserId)
         local root = rootFor(player)
         if spot and root then
@@ -1355,6 +1352,8 @@ local function startWake()
     wakeCount += 1
     wakeMode = WakeRound.mode(wakeCount)
     for player, profile in pairs(profiles) do
+        profile.trackedSeconds=0
+        profile.roundPet=profile.petIndex
         if rootFor(player) then profile.enteredWake = wakeCount end
         onceMetric(player,profile,"FirstWakeSeen")
         stopPetting(player, profile)
@@ -1435,6 +1434,13 @@ local function endWake()
                 metric(player,"FirstVisitRoundFinished")
             end
             if rootFor(player) and not profile.knockedOut then
+                local ribbon=WakeRound.ribbon(wakeMode,profile.hearts,RescueObjective.participated(player),
+                    profile.trackedSeconds or 0,teamCompleted)
+                local companion=profile.personalities[profile.roundPet or profile.petIndex]
+                if ribbon and companion and not companion.ribbons[ribbon] then
+                    companion.ribbons[ribbon]=true
+                    remote:FireClient(player,{type="questToast",text="New rescue ribbon in your pet diary!"})
+                end
                 local bonus = Progression.recordSurvival(profile)
                 local rescueBonus = if teamCompleted and RescueObjective.participated(player) then RescueObjective.status().bonus else 0
                 addCoins(player, Config.SURVIVAL_REWARD + bonus + rescueBonus)
@@ -1481,6 +1487,7 @@ RunService.Heartbeat:Connect(function(dt: number)
     local interval=lastHeartbeat
     lastHeartbeat = 0
     local nearest: Vector3? = nil
+    local nearestPlayer: Player?=nil
     local nearestDistance=math.huge
     local bossPosition=World.monsterPosition()
     local t = os.clock()
@@ -1499,7 +1506,7 @@ RunService.Heartbeat:Connect(function(dt: number)
         end
         if phase=="AWAKE" and root and not profile.knockedOut then
             local distance=(root.Position-bossPosition).Magnitude
-            if distance<nearestDistance then nearest,nearestDistance=root.Position,distance end
+            if distance<nearestDistance then nearest,nearestDistance,nearestPlayer=root.Position,distance,player end
         end
         if root and pet and pet.Parent and pet.PrimaryPart then
             local mode=if profile.carrying then "Carry" elseif profile.petting then "Pet"
@@ -1563,6 +1570,13 @@ RunService.Heartbeat:Connect(function(dt: number)
     if phase=="AWAKE" and wakeMode=="Listen" then destination=noiseSpot end
     if wakeMode=="Garden" then destination=nil end
     if phase=="AWAKE" and t<decoy.untilTime then destination=decoy.position end
+    if phase=="AWAKE" and wakeMode=="Chase" and nearestPlayer and nearest and t>=decoy.untilTime then
+        local delta=nearest-bossPosition
+        if delta.X*delta.X+delta.Z*delta.Z<=40*40 then
+            local tracked=profiles[nearestPlayer]
+            if tracked then tracked.trackedSeconds=(tracked.trackedSeconds or 0)+math.min(interval,.2) end
+        end
+    end
     World.followMonster(destination,interval)
 end)
 

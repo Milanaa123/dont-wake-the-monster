@@ -136,3 +136,8 @@ assert(Round.alarm("Snorf",shy,.2)=="PuppyYip")
 assert(Round.alarm("Snorf",{courage=100,sociability=80},.2)==nil)
 assert(Round.alarm("Swoop",shy,.2)=="BirdEcho" and Round.alarm("Swoop",shy,.9)==nil)
 assert(Round.alarm("Pip",shy,0)==nil)
+
+assert(Round.ribbon("Listen",3,true,0,false)=="QuietSteps" and Round.ribbon("Listen",2,true,0,true)==nil)
+assert(Round.ribbon("Chase",1,false,3,false)=="TrailRunner" and Round.ribbon("Chase",3,false,2.99,true)==nil)
+assert(Round.ribbon("Garden",1,true,0,true)=="GardenKeeper" and Round.ribbon("Garden",1,false,0,true)==nil)
+assert(Round.ribbon("Chase",0,false,8,true)==nil)

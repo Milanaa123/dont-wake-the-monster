@@ -15,6 +15,14 @@ function Round.takeResult(profile: any, round: number, helped: boolean): boolean
     return true
 end
 
+function Round.ribbon(mode: string, hearts: number, helped: boolean, tracked: number, teamSafe: boolean): string?
+    if hearts<=0 then return nil end
+    if mode=="Listen" and helped and hearts==3 then return "QuietSteps" end
+    if mode=="Chase" and tracked>=3 then return "TrailRunner" end
+    if mode=="Garden" and helped and teamSafe then return "GardenKeeper" end
+    return nil
+end
+
 function Round.comfort(noise: number, sensitivity: number, bond: number): number
     local relief = 2 + math.floor((100-sensitivity)/35) + math.floor(bond/40)
     return math.max(0, noise-relief)

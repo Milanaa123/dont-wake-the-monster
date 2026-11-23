@@ -196,6 +196,7 @@ function Progression.catalog(profile: any)
                 dislikedFood = if p.bond >= 25 then p.dislikedFood else "???",
                 bondStage = Personality.bondStage(p),
                 rescues = p.rescues,
+                ribbons = table.clone(p.ribbons),
                 traits = table.clone(p.traits),
                 happiness = p.happiness,
                 energy = p.energy,

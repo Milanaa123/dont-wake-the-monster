@@ -200,6 +200,13 @@ local function render()
     addInfoRow("🍬 SECRET FOOD TASTES", "Loves " .. profile.favoriteFood .. "   •   Dislikes " .. profile.dislikedFood, PINK)
     addInfoRow("💞 " .. (profile.bondStage or "FRIENDSHIP"), "Loves: " .. profile.affection .. "   •   Mood: " .. profile.mood, MINT)
     addInfoRow("RESCUE MEMORIES",string.format("You and %s saved %d runaway pets together.",pet.name,profile.rescues or 0),MINT)
+    local ribbons=profile.ribbons or {}
+    local earned={}
+    for _,entry in {{"QuietSteps","Quiet Steps"},{"TrailRunner","Trail Runner"},{"GardenKeeper","Garden Keeper"}} do
+        if ribbons[entry[1]] then table.insert(earned,entry[2]) end
+    end
+    addInfoRow("RESCUE RIBBONS",if #earned>0 then table.concat(earned,"  •  ")
+        else "Rescue without a bonk during Listening to learn Quiet Steps.",LILAC)
     local meter = panelRow(156, Color3.fromRGB(250, 237, 230))
     indicator(meter, 0, "💖 FRIENDSHIP", profile.bond, Color3.fromRGB(255, 110, 149))
     indicator(meter, 1, "😊 HAPPINESS", profile.happiness, Color3.fromRGB(244, 191, 88))

@@ -165,6 +165,17 @@ function Garden.serialize(g: any)
     }
 end
 
+-- Only existing, publicly welcoming hosts in this server can be destinations.
+-- Ordinary visits use the caller's own garden. A client never supplies a CFrame.
+function Garden.visitOwner(visitor: any, requested: any, players: any, slots: any): any?
+    if requested==nil then return if slots[visitor] then visitor else nil end
+    if type(requested)~="number" or requested~=math.floor(requested)
+        or requested<=0 or requested>9007199254740991 then return nil end
+    local host=players:GetPlayerByUserId(requested)
+    if not host or not slots[host] or host:GetAttribute("GardenOpen")~=true then return nil end
+    return host
+end
+
 function Garden.setStyle(g: any, style: any): (boolean,string)
     if type(style)~="string" or not table.find(G.GardenStyles,style) then return false,"Unknown garden style" end
     if g.style==style then return false,"Already using "..style end
