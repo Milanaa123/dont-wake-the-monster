@@ -89,6 +89,7 @@ end
 
 local function makeVisual(source: MeshPart, parent: Instance, name: string,
     pivot: CFrame, height: number): MeshPart?
+    if not source.Archivable then return nil end
     local mesh = source:Clone()
     mesh.Name = name
     mesh.Anchored = true
@@ -449,7 +450,6 @@ function Bridge.applySetDress(parent: Instance): number
             local done = environment:FindFirstChild("Imported" .. record[1])
             if done then applied += 1 continue end
             local previous = environment:FindFirstChild(record[2])
-            if previous then previous:Destroy() end
             local frame = CFrame.new(record[3])
             if record[1] == "WaterPond" then
                 local size = source:GetAttribute("ArtSize") or source.Size
@@ -457,6 +457,8 @@ function Bridge.applySetDress(parent: Instance): number
             end
             local mesh = makeVisual(source, environment, "Imported" .. record[1], frame, record[4])
             if mesh then
+                if previous then previous:Destroy() end
+                if record[1] == "WaterPond" then workspace:SetAttribute("GardenPondCenter",mesh.CFrame.Position) end
                 applied += 1
                 if record[1] == "GardenCottage" then
                     -- Decorative cottage is closed: players should not walk
@@ -489,13 +491,19 @@ function Bridge.applySetDress(parent: Instance): number
             }
             for index, ground in ipairs(orchard) do
                 local height = 17.2 + index * 0.8
-                makeVisual(citrus, environment, "ImportedHeroCitrus_" .. index,
+                local name = "ImportedHeroCitrus_" .. index
+                if environment:FindFirstChild(name) then continue end
+                local tree = makeVisual(citrus, environment, name,
                     CFrame.new(ground + Vector3.new(0, height / 2, 0))
                         * CFrame.Angles(0, math.rad(index * 59), 0), height)
+                if not tree then applied = 3 end
             end
             for _, x in ipairs({-33, -26, -19, 21, 28, 35}) do
-                makeVisual(fence, environment, "ImportedGardenFence_" .. tostring(x),
+                local name = "ImportedGardenFence_" .. tostring(x)
+                if environment:FindFirstChild(name) then continue end
+                local rail = makeVisual(fence, environment, name,
                     CFrame.new(x, 8.55, 62), 2.6)
+                if not rail then applied = 3 end
             end
         else
             -- Keep the native citrus/fence backdrop if the owner's

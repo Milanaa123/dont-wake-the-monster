@@ -11,9 +11,15 @@ local remote = ReplicatedStorage:WaitForChild("MonsterRemote") :: RemoteEvent
 local preferredGarden = true
 local lastPhase = "SLEEP"
 local appliedGarden = false
-local viewFov = 48
+local Frame = require(ReplicatedStorage:WaitForChild("GardenCameraFrame"))
 local normalFov = 70
-local cameraOffset = Vector3.new(16, 22, 23)
+local pondPosition: Vector3? = nil
+local function updatePond()
+    local center = workspace:GetAttribute("GardenPondCenter")
+    pondPosition = if typeof(center)=="Vector3" then center else nil
+end
+workspace:GetAttributeChangedSignal("GardenPondCenter"):Connect(updatePond)
+updatePond()
 local currentFocus: Vector3? = nil
 
 local gui = Instance.new("ScreenGui")
@@ -60,7 +66,6 @@ local function applyMode()
         end
         currentFocus = nil
         camera.CameraType = Enum.CameraType.Scriptable
-        camera.FieldOfView = viewFov
     else
         currentFocus = nil
         camera.CameraType = Enum.CameraType.Custom
@@ -101,19 +106,16 @@ local function render(delta: number)
     local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
     if not camera or not root or not root:IsA("BasePart") then return end
     local humanoid = character:FindFirstChildOfClass("Humanoid")
-    local lookAhead = if humanoid then humanoid.MoveDirection * 3.4 else Vector3.zero
-    -- Frame the garden left of the player, not an empty centered island.
-    local target = root.Position + Vector3.new(-5.7, 3.3, -5.2) + lookAhead
+    local move = if humanoid then humanoid.MoveDirection else Vector3.zero
+    local aspect = camera.ViewportSize.X / math.max(camera.ViewportSize.Y, 1)
+    local target, offset, fov = Frame.at(root.Position,move,aspect,pondPosition)
     local smoothing = math.clamp(1 - math.exp(-delta * 7.2), 0, 1)
     local snap = not currentFocus or ((currentFocus :: Vector3)-target).Magnitude>28
     currentFocus = if snap then target else (currentFocus :: Vector3):Lerp(target,smoothing)
     local focus = currentFocus :: Vector3
-    -- Portrait devices need additional horizontal room for beds and thumb controls.
-    local aspect = camera.ViewportSize.X / math.max(camera.ViewportSize.Y, 1)
-    local distanceMultiplier = if aspect < 0.8 then 1.28 elseif aspect < 1.15 then 1.09 else 1
-    local desired = CFrame.lookAt(focus + cameraOffset * distanceMultiplier, focus)
+    local desired = CFrame.lookAt(focus + offset, focus)
     camera.CameraType = Enum.CameraType.Scriptable
-    camera.FieldOfView = if aspect < 0.8 then 52 else viewFov
+    camera.FieldOfView = fov
     camera.CFrame = if snap then desired else camera.CFrame:Lerp(desired,smoothing)
     camera.Focus = CFrame.new(focus)
 end

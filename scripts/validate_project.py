@@ -343,7 +343,7 @@ for marker in ("ChibiFace","HairDaisyPetal","BlueOverallsBib",
                "ChibiR15Weld"):
     assert marker in native_avatar, f"Missing actual R15 character visual: {marker}"
 assert "NativeAvatar.apply(character)" in server, "No native avatar when mesh pack absent"
-assert 'local viewFov = 48' in camera_source and 'Vector3.new(-5.7, 3.3, -5.2)' in camera_source, "Reference garden camera regressed"
+assert "Frame.at(root.Position" in camera_source and 'WaitForChild("GardenCameraFrame")' in camera_source, "Garden camera framing module disconnected"
 assert 'OpenSeedExplorer' in read("src/client/SeedExplorer.client.luau")
 assert 'CottageQuickMenu' in quick_menu and 'control.Activated:Connect' in quick_menu
 assert project["tree"]["Workspace"]["$properties"]["StreamingEnabled"] is True, "Mobile island streaming disabled"

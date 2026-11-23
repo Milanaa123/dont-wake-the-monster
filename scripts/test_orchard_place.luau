@@ -72,10 +72,51 @@ island.Parent=world
 local env=r.Instance.new("Folder")
 env.Name="CottageGardenEnvironment"
 env.Parent=island
-assert(bridge.applySetDress(island)==4)
+local nativePond=r.Instance.new("Model")
+nativePond.Name="ShadedOrchardPond"
+nativePond.Parent=env
+local pondTemplate=geometry.cached("Environment_WaterPond")
+pondTemplate.Archivable=false
+assert(bridge.applySetDress(island)==3 and nativePond.Parent==env)
+pondTemplate.Archivable=true
+assert(bridge.applySetDress(island)==4 and nativePond.Parent==nil)
+local childCount=#env:GetChildren()
+assert(bridge.applySetDress(island)==4 and #env:GetChildren()==childCount,"Duplicated orchard scenery on retry")
 local pond=env.ImportedWaterPond
 assert(math.abs(pond.CFrame.Position.Y-pond.Size.Y*.5-6.98)<.002 and not pond.CanCollide,
     "Pond bank should meet the island, even when reeds grow taller")
+local frame=load(replicated.GardenCameraFrame)
+local origin=r.Vector3.new(48,10,91)
+local center=world:GetAttribute("GardenPondCenter")
+assert(center==pond.CFrame.Position)
+local frames={}
+local function xyz(v) return {v.X,v.Y,v.Z} end
+for name,viewport in {portrait={480,854},landscape={854,480}} do
+    local aspect=viewport[1]/viewport[2]
+    local focus,offset,fov=frame.at(origin,r.Vector3.zero,aspect,center)
+    local oldFocus,oldOffset,oldFov=frame.at(origin,r.Vector3.zero,aspect,nil)
+    local walking=frame.at(origin,r.Vector3.new(1,0,0),aspect,center)
+    assert(offset==oldOffset and fov==oldFov and fov==(if name=="portrait" then 52 else 48))
+    assert((focus-oldFocus).Magnitude<=8.001 and walking.Y==focus.Y)
+    local far=r.Vector3.new(0,10,85)
+    assert(frame.at(far,r.Vector3.zero,aspect,center)==frame.at(far,r.Vector3.zero,aspect,nil))
+    local cam=r.CFrame.lookAt(focus+offset,focus)
+    local function inside(worldPoint)
+        local p=cam:PointToObjectSpace(worldPoint)
+        local halfHeight=-p.Z*math.tan(math.rad(fov/2))
+        return math.abs(p.Y)<halfHeight and math.abs(p.X)<halfHeight*aspect
+    end
+    assert(inside(origin),"Player left the pond view")
+    for _,sx in {-1,1} do
+        for _,sz in {-1,1} do
+            local corner=pond.CFrame.Position+r.Vector3.new(sx*pond.Size.X*.5,-pond.Size.Y*.4,sz*pond.Size.Z*.5)
+            assert(inside(corner),"Pond bank cropped in "..name)
+        end
+    end
+    frames[name]={resolution=viewport,focus=xyz(focus),offset=xyz(offset),verticalFov=fov}
+end
+if process.args[3] then fs.writeFile(process.args[3],serde.encode("json",frames,true)) end
+print("PASS: pond survives failed replacement, retries keep one orchard, and both garden camera frames include the bank")
 assert(bridge.decorateEntrance(island)==31)
 bridge.decorateWalkway(island)
 drain()

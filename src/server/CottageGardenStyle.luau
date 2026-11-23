@@ -270,6 +270,7 @@ local function orchardPond(parent: Instance)
     water.Material = Enum.Material.Glass
     water.Transparency = 0.20
     water.CastShadow = false
+    workspace:SetAttribute("GardenPondCenter",center)
     for i = 1, 9 do
         local a = i * 2 * math.pi / 9
         local pos = center + Vector3.new(math.cos(a) * 6.9, 0.12, math.sin(a) * 5.0)
