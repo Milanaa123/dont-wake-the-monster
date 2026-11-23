@@ -18,7 +18,8 @@ local prompts={}
 local root={Position=r.Vector3.zero,IsA=function(_,class) return class=="BasePart" end}
 local hum={Health=100}
 local character={FindFirstChild=function() return root end,FindFirstChildOfClass=function() return hum end}
-local a,b={Character=character},{Character=character}
+local a,b={Character=character,UserId=11},{Character=character,UserId=22}
+local now=100
 local players={GetPlayers=function() return {a,b} end}
 local requires={Config={Pets={{name="Pip",ear="pointy",color=r.Color3.new()}}}, World={
     burst=function() end,
@@ -28,7 +29,7 @@ local requires={Config={Pets={{name="Pip",ear="pointy",color=r.Color3.new()}}}, 
     end,
 }}
 local folder={WaitForChild=function(_,name) return name end}
-local env={game={GetService=function(_,name) return if name=="Players" then players else folder end},
+local env={os={clock=function() return now end},game={GetService=function(_,name) return if name=="Players" then players else folder end},
     require=function(key) return requires[key] end,script={Parent=folder},Vector3=r.Vector3,CFrame=r.CFrame,
     Enum=r.Enum,Random={new=function() return {NextInteger=function(_,n) return n end,
         NextNumber=function(_,x,y) return (x+y)/2 end} end},
@@ -45,6 +46,34 @@ local function grant(who,done,reward)
 end
 rescue.start(grant,function() return true end)
 assert(rescue.status().goal==2 and #prompts==2)
+local route=luau.load(place:GetService("ReplicatedStorage").RescueRoute.Source)()
+local status=rescue.status()
+local round=status.round
+assert(#status.targets==2 and status.targets[1].name=="Pip")
+assert(not rescue.signal(a,round-1,1) and not rescue.signal(a,round,1.5) and not rescue.signal(a,round,9))
+assert(rescue.signal(a,round,1) and not rescue.signal(a,round,2) and not rescue.signal(b,round,1))
+assert(not rescue.participated(a) and not coins[a])
+local targets=rescue.status().targets
+assert(route.choose(targets,a.UserId,root.Position).id==1)
+assert(route.choose(targets,b.UserId,root.Position).id==2)
+assert(rescue.signal(b,round,2))
+assert(route.choose(rescue.status().targets,33,root.Position)~=nil)
+rescue.release(a)
+assert(rescue.status().targets[1].helper==0 and rescue.status().targets[2].helper==b.UserId)
+hum.Health=0
+assert(not rescue.signal(a,round,1))
+hum.Health=100
+now+=9
+assert(rescue.status().targets[2].helper==0 and rescue.signal(b,round,1))
+local right=r.Vector3.new(1,0,0)
+local ahead=r.Vector3.new(0,0,-1)
+assert(route.arrow(ahead,right)=="↑" and route.arrow(right,right)=="→")
+assert(route.arrow(-ahead,right)=="↓" and route.arrow(-right,right)=="←")
+assert(route.arrow(ahead+right,right)=="↗" and route.arrow(right,-ahead)=="↑")
+local far={id=1,name="Pip",position=right*90,helper=0}
+local near={id=2,name="Mochi",position=right*10,helper=0}
+assert(route.choose({far,near},11,root.Position)==near)
+assert(route.choose({},11,root.Position)==nil)
 local first,second=prompts[1],prompts[2]
 root.Position=r.Vector3.new(50,0,0)
 first(a)
@@ -56,6 +85,8 @@ hum.Health=100
 first(a)
 first(b)
 assert(coins[a]==8 and not coins[b] and rescue.participated(a))
+assert(#rescue.status().targets==1 and rescue.status().targets[1].id==2)
+assert(not rescue.signal(a,round,1))
 second(b)
 second(a)
 assert(coins[b]==8 and completion==1 and rescue.completed() and rescue.status().rescued==2)
@@ -63,10 +94,11 @@ rescue.finish()
 rescue.start(grant,function(who) return who==b end)
 second(a)
 prompts[3](a)
-assert(rescue.status().rescued==0)
+assert(rescue.status().rescued==0 and not rescue.signal(a,round,2))
 prompts[3](b)
 local stale=prompts[4]
 rescue.finish()
+assert(#rescue.status().targets==0 and not rescue.signal(b,rescue.status().round,2))
 rescue.start(grant,function() return true end)
 stale(a)
 assert(rescue.status().rescued==0 and not rescue.participated(b) and coins[b]==16)

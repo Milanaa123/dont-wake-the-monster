@@ -18,9 +18,48 @@ local participants: {[Player]: number} = {}
 local RESCUE_COINS = 8
 local TEAM_BONUS = 30
 local generation = 0
+local targets: {[number]: {name: string, position: Vector3, helper: number, expires: number}} = {}
+local SIGNAL_SECONDS = 8
+
+function Rescue.release(player: Player)
+    for _, target in pairs(targets) do
+        if target.helper == player.UserId then
+            target.helper = 0
+            target.expires = 0
+        end
+    end
+end
+
+function Rescue.signal(player: Player, round: any, id: any): boolean
+    if not active or completed or round ~= generation or typeof(id) ~= "number"
+        or not (id >= 1 and id <= goal and id % 1 == 0) then return false end
+    local target = targets[id]
+    local now = os.clock()
+    if not target or target.expires > now then return false end
+    local character = player.Character
+    local humanoid = if character then character:FindFirstChildOfClass("Humanoid") else nil
+    if not humanoid or humanoid.Health <= 0 then return false end
+    for _, other in pairs(targets) do
+        if other.helper == player.UserId and other.expires > now then return false end
+    end
+    target.helper = player.UserId
+    target.expires = now + SIGNAL_SECONDS
+    return true
+end
 
 function Rescue.status()
+    local remaining = {}
+    local now = os.clock()
+    for id = 1, goal do
+        local target = targets[id]
+        if target then
+            table.insert(remaining, {id = id, name = target.name, position = target.position,
+                helper = if target.expires > now then target.helper else 0})
+        end
+    end
     return {
+        round = generation,
+        targets = remaining,
         active = active,
         rescued = rescued,
         goal = goal,
@@ -42,6 +81,7 @@ function Rescue.start(onRescue: (Player, boolean, number) -> (), allowed: (Playe
         if model.Parent then model:Destroy() end
     end
     table.clear(models)
+    table.clear(targets)
     table.clear(participants)
     generation += 1
     local round = generation
@@ -66,6 +106,7 @@ function Rescue.start(onRescue: (Player, boolean, number) -> (), allowed: (Playe
 
         local primary = pet.PrimaryPart
         if primary then
+            targets[i] = {name = variant.name, position = primary.Position, helper = 0, expires = 0}
             local prompt = Instance.new("ProximityPrompt")
             prompt.Name = "Rescue"
             prompt.ActionText = "SAVE ME!"
@@ -87,6 +128,7 @@ function Rescue.start(onRescue: (Player, boolean, number) -> (), allowed: (Playe
                 if not humanoid or humanoid.Health <= 0 then return end
 
                 used = true
+                targets[i] = nil
                 prompt.Enabled = false
                 participants[player] = (participants[player] or 0) + 1
                 rescued += 1
@@ -106,6 +148,7 @@ function Rescue.finish()
         if model.Parent then model:Destroy() end
     end
     table.clear(models)
+    table.clear(targets)
     -- Keep participants until the next Rescue.start so reward resolution can run first.
 end
 

@@ -158,7 +158,10 @@ local function monsterStrike(center: Vector3, radius: number, strength: number, 
             profile.hearts = math.max(0, profile.hearts - 1)
             knock(root, center, strength)
             remote:FireClient(player, {type = "shake", amount = 1})
-            if profile.hearts <= 0 then profile.knockedOut=true end
+            if profile.hearts <= 0 then
+                profile.knockedOut=true
+                RescueObjective.release(player)
+            end
             sendStats(player)
             if profile.hearts <= 0 then
                 remote:FireClient(player, {type = "notice", text = "OOPS! YOU GOT BONKED! Watch until next round.", color = Color3.fromRGB(255, 150, 158)})
@@ -424,6 +427,7 @@ local function onPlayerAdded(player: Player)
                 careUpdate(player)
                 if phase == "AWAKE" and profiles[player] == profile and player.Character == character then
                     profile.knockedOut = true
+                    RescueObjective.release(player)
                     profile.hearts = 0
                     sendStats(player)
                     remote:FireClient(player, {type = "notice", text = "OH NO! YOU'RE OUT UNTIL THE NEXT ROUND!", color = Color3.fromRGB(255, 161, 170)})
@@ -464,6 +468,7 @@ local function onPlayerAdded(player: Player)
 end
 
 local function onPlayerRemoving(player: Player)
+    RescueObjective.release(player)
     local started=arrival[player]
     if started then
         arrival[player]=nil
@@ -1198,6 +1203,11 @@ remote.OnServerEvent:Connect(function(player: Player, command: any, arg: any)
        or command == "GardenFertilize" or command == "GardenCraft" or command == "GardenExperiment"
        or command == "GardenAssist" or command=="GardenStyle" then
         gardenAction(player, command, arg)
+    elseif command == "RescueSignal" then
+        if phase == "AWAKE" and not profile.knockedOut and typeof(arg) == "table"
+            and RescueObjective.signal(player, arg.round, arg.id) then
+            sendState()
+        end
     elseif command == "GardenLure" then
         useLure(player, arg)
     elseif command=="GardenWelcome" then
@@ -1497,6 +1507,7 @@ RunService.Heartbeat:Connect(function(dt: number)
         if root and root.Position.Y < -18 then
             if phase == "AWAKE" and not profile.knockedOut then
                 profile.knockedOut = true
+                RescueObjective.release(player)
                 profile.hearts = 0
                 sendStats(player)
                 remote:FireClient(player, {type = "notice", text = "SPLASH! OUT FOR THIS ROUND!", color = Color3.fromRGB(152, 230, 255)})
