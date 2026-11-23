@@ -115,6 +115,7 @@ jobs:
           unzip -oq /tmp/lune.zip -d /tmp/lune
           chmod +x /tmp/lune/lune
           /tmp/lune/lune run scripts/test_orchard_place.luau dist/StudioKit/DontWakeTheMonster-Studio.rbxlx dist/entrance-layout.json
+          /tmp/lune/lune run scripts/test_rescue_round.luau dist/StudioKit/DontWakeTheMonster-Studio.rbxlx
 
       - name: Upload placed entrance mesh transforms for offline art review
         uses: actions/upload-artifact@v4

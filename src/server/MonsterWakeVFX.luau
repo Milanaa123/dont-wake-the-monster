@@ -157,6 +157,21 @@ function VFX.groundPulse(parent: Instance, center: Vector3, radius: number)
     end
 end
 
+function VFX.markDanger(parent: Instance, center: Vector3, radius: number, tint: Color3, seconds: number)
+    for i=1,12 do
+        local angle=i*TAU/12
+        local offset=Vector3.new(math.cos(angle)*radius,0,math.sin(angle)*radius)
+        local petal=hiddenAnchor(parent,Vector3.new(center.X,8.2,center.Z)+offset)
+        petal.Name="StrikeBoundary"
+        petal.Size=Vector3.new(.65,.20,math.min(5,radius*.36))
+        petal.Color=tint
+        petal.Material=Enum.Material.Neon
+        petal.Transparency=.15
+        petal.CFrame *= CFrame.Angles(0,-angle,0)
+        Debris:AddItem(petal,seconds+.12)
+    end
+end
+
 function VFX.wake(parent: Instance, center: Vector3)
     motes(parent, center + Vector3.new(0, 20, 0), 84, BLUSH, true)
     lightBloom(parent, center + Vector3.new(0, 29, 0), LILAC)

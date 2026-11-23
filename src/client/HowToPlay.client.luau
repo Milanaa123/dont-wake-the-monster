@@ -136,7 +136,7 @@ remote.OnClientEvent:Connect(function(event: any)
     tutorialSeen = event.tutorialSeen == true or tutorialSeen
     if not resolvedFirstJoin then
         resolvedFirstJoin = true
-        if not tutorialSeen then setOpen(true) end
+        -- The contextual objective teaches in the world. Help opens on demand.
     end
 end)
 

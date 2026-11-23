@@ -17,7 +17,7 @@ local participants: {[Player]: number} = {}
 
 local RESCUE_COINS = 8
 local TEAM_BONUS = 30
-local TOTAL_RUNAWAYS = 7
+local generation = 0
 
 function Rescue.status()
     return {
@@ -43,6 +43,8 @@ function Rescue.start(onRescue: (Player, boolean, number) -> (), allowed: (Playe
     end
     table.clear(models)
     table.clear(participants)
+    generation += 1
+    local round = generation
     rescued = 0
     active = true
     completed = false
@@ -51,9 +53,9 @@ function Rescue.start(onRescue: (Player, boolean, number) -> (), allowed: (Playe
     goal = math.clamp(2 + math.floor(currentPlayers / 3), 2, 5)
     local phaseOffset = random:NextNumber(0, math.pi * 2)
 
-    for i = 1, TOTAL_RUNAWAYS do
+    for i = 1, goal do
         local variant = Config.Pets[random:NextInteger(1, #Config.Pets)]
-        local angle = phaseOffset + (i - 1) * math.pi * 2 / TOTAL_RUNAWAYS
+        local angle = phaseOffset + (i - 1) * math.pi * 2 / goal
         local radius = random:NextNumber(31, 62)
         -- Top of main island is approximately 7 studs; keep prompts reachable.
         local position = Vector3.new(math.cos(angle) * radius, 12.5, math.sin(angle) * radius)
@@ -76,7 +78,7 @@ function Rescue.start(onRescue: (Player, boolean, number) -> (), allowed: (Playe
 
             local used = false
             prompt.Triggered:Connect(function(player: Player)
-                if not active or used or not allowed(player) then return end
+                if not active or round ~= generation or completed or used or not allowed(player) then return end
                 local character = player.Character
                 local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
                 if not root or not root:IsA("BasePart") then return end
@@ -88,9 +90,9 @@ function Rescue.start(onRescue: (Player, boolean, number) -> (), allowed: (Playe
                 prompt.Enabled = false
                 participants[player] = (participants[player] or 0) + 1
                 rescued += 1
-                World.burst(primary.Position, variant.color, 14, 11)
                 local justCompleted = rescued >= goal and not completed
                 if justCompleted then completed = true end
+                World.burst(primary.Position, variant.color, 14, 11)
                 if pet.Parent then pet:Destroy() end
                 onRescue(player, justCompleted, RESCUE_COINS)
             end)

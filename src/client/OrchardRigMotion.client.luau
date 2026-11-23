@@ -93,7 +93,16 @@ RunService.PreSimulation:Connect(function()
                 x=.055*breath+.09*r.travel*math.cos(r.phase*2)+.45*r.rest-.17*r.stroke+.22*nibble
                 y=.10*math.sin(now*.94+r.seed)*(1-r.travel)+.28*r.stroke
                 z=.08*r.hold
-                if boss then x=.26*(1-r.wake)+.045*breath-.31*attack end
+                if boss then
+                    x=.26*(1-r.wake)+.045*breath-.31*attack
+                    local scenario=model:GetAttribute("WakeMode")
+                    if scenario=="Listen" then
+                        y=.31*math.sin(now*1.45)*r.wake
+                        z=.11*math.cos(now*1.45)*r.wake
+                    elseif scenario=="Garden" then
+                        x+=.12*math.sin(now*2.4)*r.wake
+                    end
+                end
             elseif name:match("^Ear") then
                 x=.035*breath+.09*math.cos(r.phase*2-.48)*r.travel+.38*r.rest-.16*r.stroke
                 z=side*(.035*breath+.12*nibble+.09*r.hold)

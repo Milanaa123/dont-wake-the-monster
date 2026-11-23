@@ -315,6 +315,10 @@ function World.followMonster(target: Vector3?, dt: number)
     if monster:GetAttribute("Walking")~=walking then monster:SetAttribute("Walking",walking) end
 end
 
+function World.setWakeMode(mode: string)
+    monster:SetAttribute("WakeMode",mode)
+end
+
 function World.monsterGesture()
     monster:SetAttribute("AttackAt",workspace:GetServerTimeNow())
 end
@@ -610,6 +614,10 @@ function World.burst(position: Vector3, color: Color3, count: number, reach: num
         }):Play()
         Debris:AddItem(leaf, 1.3)
     end
+end
+
+function World.markDanger(center: Vector3, radius: number, tint: Color3, seconds: number)
+    MonsterWakeVFX.markDanger(scenery,center,radius,tint,seconds)
 end
 
 function World.wave(position: Vector3, radius: number, _color: Color3)

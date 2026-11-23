@@ -86,6 +86,7 @@ function Personality.generate(seed: number, species: string?)
         hunger = 27 + roll(25),
         bond = 5 + roll(15),
         interactions = 0,
+        rescues = 0,
         species = if type(species) == "string" then string.sub(species, 1, 35) else "",
     }
 end
@@ -100,6 +101,9 @@ function Personality.restore(raw: any, species: string?): any?
     p.energy = sane(raw.energy, p.energy)
     p.hunger = sane(raw.hunger, p.hunger)
     p.bond = sane(raw.bond, p.bond)
+    if type(raw.rescues)=="number" and raw.rescues==math.floor(raw.rescues) then
+        p.rescues=math.clamp(raw.rescues,0,1000000)
+    end
     if type(raw.interactions) == "number" and raw.interactions == math.floor(raw.interactions) then
         p.interactions = math.clamp(raw.interactions, 0, 1000000)
     end
@@ -109,6 +113,7 @@ end
 function Personality.pack(p: any)
     return {
         seed = p.seed,
+        rescues = p.rescues or 0,
         happiness = sane(p.happiness, 60),
         energy = sane(p.energy, 60),
         hunger = sane(p.hunger, 40),

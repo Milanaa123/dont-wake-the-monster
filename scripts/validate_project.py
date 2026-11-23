@@ -520,7 +520,7 @@ first_guide = read("src/client/FirstMinuteGuide.client.luau")
 for marker in ('event.type == "collection"', 'event.type == "garden"',
                'event.type == "state"', 'feedCount == 0',
                'elseif not planted and not harvested', 'elseif not harvested',
-               'phase == "AWAKE"', 'tutorialSeen', 'finished = true'):
+               'phase == "AWAKE"', 'lastReaction', 'finished = true'):
     assert marker in first_guide, f"Introductory playable objectives missing: {marker}"
 assert 'remote:FireServer(' not in first_guide, "Client onboarding must not award itself prizes"
 print("OK: unobtrusive mobile-first onboarding based on real game progress")

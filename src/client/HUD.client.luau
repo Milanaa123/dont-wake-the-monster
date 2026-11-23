@@ -327,7 +327,9 @@ remote.OnClientEvent:Connect(function(event: any)
         end
         if event.phase == "AWAKE" then
             title.Text = "🚨 GIGGLES IS AWAKE! RUN!"
-            phaseText.Text = "DODGE THE SHOCKWAVES!"
+            phaseText.Text = if event.wakeMode=="Listen" then "LISTENING • LEAVE THE BLUE RING"
+                elseif event.wakeMode=="Garden" then "JELLY SHOWER • DODGE THE GOLD RINGS"
+                else "CHASE • RUN OUTSIDE THE STRIKE MARKS"
             title.TextColor3 = Color3.fromRGB(243, 70, 107)
             prompt.Text = "SURVIVE! THE PETS NEED YOU!"
         elseif event.phase == "COOLDOWN" then
