@@ -535,7 +535,7 @@ for marker in ('function ProfileStore.load(', 'function ProfileStore.save(',
 assert 'HttpService:GenerateGUID(false)' in server, "Every server must use a unique lease token"
 assert 'profile.dataSessionId = result._dwtmLease.token' in server, "Per-visit lease must be bound to active profile"
 assert 'persistence:release(player.UserId, profile)' in server
-assert 'if persistence:save(player.UserId, profile) then' in server
+assert 'persistence:finish(player.UserId, profile)' in server
 print("OK: atomic DataStore session lease and safe final-release integration")
 
 # Celebrations must not flood mobile scenes with large replicated neon spheres.

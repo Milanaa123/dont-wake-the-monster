@@ -42,6 +42,12 @@ rules = rules.removesuffix("return Garden\n")
 
 suite = r"""
 local g = Garden.new()
+assert(g.style=="Meadow" and Garden.load({style="unknown"}).style=="Meadow")
+assert(not Garden.setStyle(g,{}))
+assert(Garden.setStyle(g,"Cottage") and not Garden.setStyle(g,"Cottage"))
+local styled=Garden.load(Garden.serialize(g))
+assert(styled.style=="Cottage" and Garden.snapshot(styled).style=="Cottage")
+assert(styled.seeds.Berry==g.seeds.Berry and not styled.plots[1])
 assert(g.seeds.Berry == 5 and g.seeds.Carrot == 3, "starter seeds")
 assert(G.PLOT_COUNT == 9, "nine beds")
 assert(#G.Order == 30 and #Catalog.Order == 26, "expanded catalogs")

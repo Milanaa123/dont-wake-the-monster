@@ -44,6 +44,7 @@ local phase = "SLEEP"
 local secondsLeft = Config.SLEEP_MAX_SECONDS
 local profiles: {[Player]: any} = {}
 local loading: {[Player]: boolean} = {}
+local arrival: {[Player]: number} = {}
 local closingProfiles: {[Player]: any} = {}
 local shuttingDown = false
 local totalActions = 0
@@ -70,6 +71,7 @@ end
 local function onceMetric(player: Player, profile: any, eventName: string)
     if profile.metricFlags[eventName] then return end
     profile.metricFlags[eventName] = true
+    if profile.loaded then profile.dirty=true profile.revision+=1 end
     metric(player, eventName)
 end
 
@@ -183,7 +185,13 @@ end
 
 local function save(player: Player)
     local profile = profiles[player]
-    if profile then persistence:save(player.UserId, profile) end
+    if profile and not persistence:save(player.UserId,profile) then
+        metric(player,"ProfileSaveFailed")
+        if not profile.loaded then
+            remote:FireClient(player,{type="notice",text="Saving stopped. Rejoin before making more progress."})
+            sendGarden(player)
+        end
+    end
 end
 
 local function movePetNearPlayer(player: Player)
@@ -290,8 +298,9 @@ end
 local function onPlayerAdded(player: Player)
     if shuttingDown or loading[player] or profiles[player] then return end
     loading[player] = true
+    arrival[player]=os.clock()
+    metric(player,"VisitStarted")
     local profile = Progression.new()
-    profile.metricFlags = {}
     profile.lastFeed = -100
     profile.lastSync = -100
     profile.lastShopAction = -100
@@ -349,7 +358,12 @@ local function onPlayerAdded(player: Player)
             color = Color3.fromRGB(255, 164, 148),
         })
     end
-    onceMetric(player, profile, "JoinedGame")
+    if ok then
+        onceMetric(player,profile,if profile.metricFlags.FirstVisit then "FirstReturn" else "FirstVisit")
+    else
+        metric(player,"ProfileLoadFailed")
+    end
+    if phase=="AWAKE" then onceMetric(player,profile,"FirstWakeSeen") end
     task.delay(600, function()
         if profiles[player] == profile then metric(player, "StayedTenMinutes") end
     end)
@@ -427,6 +441,14 @@ local function onPlayerAdded(player: Player)
 end
 
 local function onPlayerRemoving(player: Player)
+    local started=arrival[player]
+    if started then
+        arrival[player]=nil
+        local seconds=math.floor(os.clock()-started)
+        metric(player,"VisitSeconds",seconds)
+        if seconds<60 then metric(player,"LeftBefore60") end
+        if seconds<180 then metric(player,"LeftBefore180") end
+    end
     local profile = profiles[player]
     if not profile then return end
     closingProfiles[player] = profile
@@ -437,11 +459,10 @@ local function onPlayerRemoving(player: Player)
     local slot = farmOfPlayer[player]
     if slot then farmSlots[slot] = nil end
     farmOfPlayer[player] = nil
-    if persistence:save(player.UserId, profile) then
-        persistence:release(player.UserId, profile)
-    else
+    if not persistence:finish(player.UserId, profile) then
         -- Retain the lease until expiry rather than allowing a second server
         -- to join while an unsaved snapshot may still exist in memory.
+        metric(player,"ProfileSaveFailed")
         warn("DWTM: final save failed; lease will expire for " .. player.UserId)
     end
     closingProfiles[player] = nil
@@ -652,6 +673,7 @@ local function feed(player: Player, food: any, craftedId: string?)
     local bonus, discoveries = Progression.recordFeed(profile, reaction.id)
     addCoins(player, Config.FEED_REWARD + (if combo then 3 else 0) + bonus)
     sendCollection(player)
+    onceMetric(player,profile,"FirstReaction")
     remote:FireClient(player,{type="feedNoise", amount=earnedNoise, reaction=reaction.title})
     local text = player.DisplayName .. "'s " .. Config.Pets[profile.petIndex].name .. ": " .. reaction.title
     if combo then
@@ -682,7 +704,9 @@ local function switchPet(player: Player, rawId: any, isPurchase: boolean)
     end
     local ok, message
     if isPurchase then
+        metric(player,"PetCoinPurchaseAttempt")
         ok, message = Progression.buy(profile, rawId)
+        if ok then metric(player,"PetCoinPurchaseSuccess") end
     else
         ok, message = Progression.equip(profile, rawId)
     end
@@ -776,7 +800,11 @@ local function gardenAction(player: Player, command: string, arg: any)
         harvestedMutation = plot and plot.mutation ~= nil or false
         harvestedSeed = if plot then plot.seed else nil
     end
-    if command == "GardenMerchantBuy" then
+    if command=="GardenStyle" then
+        if now-(profile.lastDecorChange or -100)<2 then return end
+        profile.lastDecorChange=now
+        ok,message=Garden.setStyle(g,arg)
+    elseif command == "GardenMerchantBuy" then
         if not profile.loaded then
             remote:FireClient(player, {type = "notice", text = "Saving is offline. Merchant purchases are paused."})
             return
@@ -833,6 +861,7 @@ local function gardenAction(player: Player, command: string, arg: any)
             player.Character:SetAttribute("GestureAt",workspace:GetServerTimeNow())
         end
         if command == "GardenPlant" then onceMetric(player, profile, "FirstSeedPlanted") end
+        if command=="GardenHarvest" then onceMetric(player,profile,"FirstHarvest") end
         if newlyDiscovered then metric(player, "SecretRecipeFound") end
         if profile.loaded then profile.dirty = true end
         profile.revision += 1
@@ -1100,10 +1129,16 @@ remote.OnServerEvent:Connect(function(player: Player, command: any, arg: any)
         end
     elseif command == "GardenMerchantBuy" or command == "GardenBuySeed" or command == "GardenPlant" or command == "GardenHarvest"
        or command == "GardenFertilize" or command == "GardenCraft" or command == "GardenExperiment"
-       or command == "GardenAssist" then
+       or command == "GardenAssist" or command=="GardenStyle" then
         gardenAction(player, command, arg)
     elseif command == "GardenLure" then
         useLure(player, arg)
+    elseif command=="GardenWelcome" then
+        if typeof(arg)~="boolean" or not farmOfPlayer[player] or phase=="AWAKE" then return end
+        if os.clock()-profile.lastGardenAction<.5 then return end
+        profile.lastGardenAction=os.clock()
+        player:SetAttribute("GardenOpen",arg)
+        sendGarden(player)
     elseif command == "GardenVisit" then
         if phase == "AWAKE" then
             remote:FireClient(player, {type = "notice", text = "No teleporting away from Giggles! SURVIVE!", color = Color3.fromRGB(255, 178, 135)})
@@ -1111,7 +1146,14 @@ remote.OnServerEvent:Connect(function(player: Player, command: any, arg: any)
         end
         if os.clock() - profile.lastGardenVisit < 2 then return end
         profile.lastGardenVisit = os.clock()
-        local spot = World.gardenSpawn(player.UserId)
+        local owner=player
+        if arg~=nil then
+            if type(arg)~="number" or arg~=math.floor(arg) or arg<=0 or arg>9007199254740991 then return end
+            local host=Players:GetPlayerByUserId(arg)
+            if not host or not farmOfPlayer[host] or host:GetAttribute("GardenOpen")~=true then return end
+            owner=host
+        end
+        local spot = World.gardenSpawn(owner.UserId)
         local root = rootFor(player)
         if spot and root then
             root.CFrame = CFrame.new(spot)
@@ -1277,6 +1319,15 @@ local function startWake()
         local companion=profile.personalities[profile.petIndex]
         if companion then companion.rescues=math.min(1000000,companion.rescues+1) end
         onceMetric(player,profile,"FirstPetRescued")
+        if justCompleted then
+            local contributors={}
+            for other in pairs(profiles) do
+                if RescueObjective.participated(other) then table.insert(contributors,other) end
+            end
+            if #contributors>=2 then
+                for _,other in ipairs(contributors) do onceMetric(other,profiles[other],"FirstCoopRescue") end
+            end
+        end
         addCoins(player, reward)
         sendCollection(player)
         if justCompleted then
@@ -1310,6 +1361,7 @@ local function endWake()
                 local rescueBonus = if teamCompleted and RescueObjective.participated(player) then RescueObjective.status().bonus else 0
                 addCoins(player, Config.SURVIVAL_REWARD + bonus + rescueBonus)
                 onceMetric(player, profile, "FirstBossSurvived")
+                if profile.feedCount>0 then onceMetric(player,profile,"IntroComplete") end
                 if rescueBonus > 0 then
                     remote:FireClient(player, {type = "questToast", text = "CO-OP HERO! +" .. rescueBonus .. " BONUS COINS!"})
                 end

@@ -4,6 +4,7 @@
 local G = {}
 G.PLOT_COUNT = 9
 G.SLOT_COUNT = 12
+G.GardenStyles = {"Meadow","Cottage","Blossom"}
 G.SEED_PACK_SIZE = 3
 G.MAX_STACK = 500
 G.DEFAULT_SEEDS = {Berry = 5, Carrot = 3, Corn = 2, Tomato = 2}

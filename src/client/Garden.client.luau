@@ -233,6 +233,30 @@ local function drawPlots()
         open.Visible = true
     end)
 
+    local decor=row(92,CREAM)
+    local nextStyle=((table.find(G.GardenStyles,state.style) or 1)%#G.GardenStyles)+1
+    local style=button(decor,(state.style or "Meadow").." → "..G.GardenStyles[nextStyle],MINT)
+    style.Size=UDim2.new(.5,-12,0,48)
+    style.Position=UDim2.fromOffset(8,30)
+    style.Activated:Connect(function() remote:FireServer("GardenStyle",G.GardenStyles[nextStyle]) end)
+    local welcome=player:GetAttribute("GardenOpen")==true
+    local invite=button(decor,if welcome then "Close guest list" else "Welcome visitors",LILAC)
+    invite.Size=UDim2.new(.5,-12,0,48)
+    invite.Position=UDim2.new(.5,4,0,30)
+    invite.Activated:Connect(function() remote:FireServer("GardenWelcome",not welcome) end)
+    local decorTitle=text(decor,"ENTRANCE STYLE & VISITORS",12,MUTED,true)
+    decorTitle.Position=UDim2.fromOffset(8,2)
+    decorTitle.Size=UDim2.new(1,-16,0,24)
+    for _,host in Players:GetPlayers() do
+        if host~=player and host:GetAttribute("GardenOpen")==true then
+            local entry=row(46,CREAM)
+            local guest=button(entry,"Visit "..host.DisplayName.."'s garden",MINT)
+            guest.Position=UDim2.fromOffset(6,4)
+            guest.Size=UDim2.new(1,-12,0,38)
+            guest.Activated:Connect(function() remote:FireServer("GardenVisit",host.UserId) end)
+        end
+    end
+
     local fertilizer = row(69, Color3.fromRGB(241, 235, 251))
     local available = productInventory(fertilizerKey, true)
     local selectorFert = button(fertilizer, "FERTILIZER: " .. fertilizerKey .. "  ×" .. available .. "  ↻", Color3.fromRGB(213, 191, 249))

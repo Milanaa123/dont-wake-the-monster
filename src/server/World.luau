@@ -745,6 +745,7 @@ end
 function World.updateGarden(userId: number, garden: any, cropConfig: any)
     local model = farmModels[userId]
     if not model then return end
+    CottageStyle.styleEntrance(model,farmCenters[userId],garden.style)
     local now = os.time()
     for index = 1, cropConfig.PLOT_COUNT do
         local plot = model:FindFirstChild("Plot_" .. index)

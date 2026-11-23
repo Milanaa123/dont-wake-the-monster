@@ -379,6 +379,32 @@ function Cottage.decorateWorld(world: Instance)
     end
 end
 
+function Cottage.styleEntrance(farm: Model, center: CFrame, style: string)
+    if farm:GetAttribute("GardenStyle")==style then return end
+    farm:SetAttribute("GardenStyle",style)
+    local previous=farm:FindFirstChild("EntranceDecor")
+    if previous then previous:Destroy() end
+    local paint=if style=="Blossom" then Color3.fromRGB(181,138,158)
+        elseif style=="Cottage" then Color3.fromRGB(136,157,132) else WOOD
+    for _,piece in farm:GetChildren() do
+        if piece:IsA("BasePart") and (piece.Name=="WarmWoodFence" or piece.Name=="BackFence" or piece.Name=="FencePost") then
+            piece.Color=paint
+        end
+    end
+    if style=="Meadow" then return end
+    local decor=Instance.new("Folder")
+    decor.Name="EntranceDecor"
+    decor.Parent=farm
+    if style=="Cottage" then
+        Art.ground(decor,"Environment_GardenCottage",center*CFrame.new(-5,.72,13.8),4.0,nil)
+        Art.ground(decor,"Environment_StonePath",center*CFrame.new(3.9,.73,13.8)*CFrame.Angles(0,math.pi/2,0),4.5,nil)
+    else
+        for _,side in {-1,1} do
+            Art.ground(decor,"Environment_BloomingHedge",center*CFrame.new(side*5,.72,13.8),4.0,nil)
+        end
+    end
+end
+
 function Cottage.decorateFarm(parent: Instance, center: CFrame)
     -- Natural wood fence on sides/back, open entrance for easy traversal.
     for _, x in ipairs({-13.4, 13.4}) do

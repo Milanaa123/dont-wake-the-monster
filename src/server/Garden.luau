@@ -67,6 +67,7 @@ function Garden.new()
     local seeds = {}
     for key, count in pairs(G.DEFAULT_SEEDS) do seeds[key] = count end
     return {
+        style = "Meadow",
         plots = plots,
         seeds = seeds,
         crops = {},
@@ -83,6 +84,7 @@ end
 function Garden.load(raw: any)
     local g = Garden.new()
     if type(raw) ~= "table" then return g end
+    if table.find(G.GardenStyles,raw.style) then g.style=raw.style end
     for _, field in ipairs({"seeds", "crops", "crafted", "fertilizer"}) do
         if type(raw[field]) == "table" then
             if field == "seeds" then g.seeds = {} end
@@ -149,6 +151,7 @@ function Garden.serialize(g: any)
         if g.known[id] then table.insert(knownRecipes, id) end
     end
     return {
+        style = g.style,
         plots = plots,
         seeds = table.clone(g.seeds),
         crops = table.clone(g.crops),
@@ -160,6 +163,13 @@ function Garden.serialize(g: any)
         hunt = Hunt.snapshot(g.hunt),
         merchant = {rotation = g.merchant.rotation, slots = table.clone(g.merchant.slots)},
     }
+end
+
+function Garden.setStyle(g: any, style: any): (boolean,string)
+    if type(style)~="string" or not table.find(G.GardenStyles,style) then return false,"Unknown garden style" end
+    if g.style==style then return false,"Already using "..style end
+    g.style=style
+    return true,style.." garden ready"
 end
 
 function Garden.snapshot(g: any)

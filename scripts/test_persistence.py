@@ -137,6 +137,22 @@ claimed, restored = first:load(7)
 assert(claimed and restored.coins == 208)
 assert(first:release(7, {loaded = true, revision = 1,
     dataSessionId = restored._dwtmLease.token}))
+local retries=0
+local transient=ProfileStore.new(service,"test",serialize,"server-D")
+local claimedD,dataD=transient:load(7)
+assert(claimedD)
+local last={loaded=true,dirty=true,revision=2,coins=301,dataSessionId=dataD._dwtmLease.token}
+local realUpdate=concurrentStore.UpdateAsync
+concurrentStore.UpdateAsync=function(...)
+    retries+=1
+    if retries==1 then error("temporary shutdown throttle") end
+    return realUpdate(...)
+end
+local finish=coroutine.create(function() assert(transient:finish(7,last)) end)
+local started,yielded=coroutine.resume(finish)
+assert(started and yielded=="waiting" and records.player_7.coins==208)
+assert(coroutine.resume(finish) and coroutine.status(finish)=="dead")
+assert(records.player_7.coins==301 and not records.player_7._dwtmLease)
 print("PASS: cross-server acquisition, conflict rejection, lease renewal, release, stale-write protection and timeout recovery")
 print("PASS: unavailable/new/failed loads, no writes from unloaded profiles, save retry, autosave/leave ordering, dirty revisions and serializer recovery")
 '''.replace("MODULE", module)

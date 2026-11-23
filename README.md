@@ -50,6 +50,8 @@ The checked-in place includes the packed geometry. The GLB archive contains four
 - [Download the playable place](builds/dont-wake-the-monster.rbxlx)
 - [Download the four GLB packs](builds/Original3DArt.zip)
 - [Compare the rabbit, frog, strawberries and cottage before and after in Blender](docs/evidence/garden-mesh-comparison.jpg)
+- [Compare Swoop, Pebble and the lily pond](docs/evidence/woodland-and-pond.jpg)
+- [Compare the fleece, ears and faces of Mochi, Tofu and Luma](docs/evidence/lamb-fleece.jpg)
 - [Compare the two kittens and the tomato vine](docs/evidence/kittens-and-tomatoes.jpg)
 - [Compare Snorf, Giggles, the orange tree and the paving](docs/evidence/orchard-mesh-comparison.jpg)
 - [Strawberry growth stages](docs/evidence/strawberry-growth.jpg) and [tomato growth stages](docs/evidence/tomato-growth.jpg)

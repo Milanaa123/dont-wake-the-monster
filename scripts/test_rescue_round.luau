@@ -71,3 +71,29 @@ rescue.start(grant,function() return true end)
 stale(a)
 assert(rescue.status().rescued==0 and not rescue.participated(b) and coins[b]==16)
 print("PASS: built-place two-player rescue, distance, health, duplicate, stale prompt, admission, settlement, comfort, scenario order")
+
+local config={Pets={{name="Pip",price=0},{name="Mochi",price=90}}, Reactions={{id="Spin"}},
+    QUEST_GOALS={feeds=5,discoveries=4,survivals=2},QUEST_REWARDS={feeds=45,discoveries=70,survivals=80},
+    DISCOVERY_REWARD=8,DAILY_REWARD=60}
+local progressEnv={game={GetService=function() return folder end},script={Parent=folder},
+    require=function(key)
+        if key=="Config" then return config end
+        if key=="Garden" then return {new=function() return {} end,serialize=table.clone,load=table.clone} end
+        return {}
+    end}
+local progression=luau.load(server.Progression.Source,{environment=progressEnv,injectGlobals=true})()
+local profile=progression.new()
+assert(not progression.buy(profile,2))
+profile.coins=100
+assert(progression.buy(profile,2) and profile.coins==10)
+assert(not progression.buy(profile,2) and profile.coins==10)
+assert(progression.claimDaily(profile) and not progression.claimDaily(profile))
+assert(progression.recordFeed(profile,"Spin")==8 and progression.recordFeed(profile,"Spin")==0)
+profile.metricFlags.FirstWakeSeen=true
+local data=progression.serialize(profile)
+data.metricFlags.unrecognized=true
+local restored=progression.new()
+progression.load(restored,data)
+assert(restored.coins==10 and restored.owned[2] and restored.metricFlags.FirstWakeSeen)
+assert(not restored.metricFlags.unrecognized and not progression.claimDaily(restored))
+print("PASS: built-place coin purchase, repeat rejection, daily eligibility, unique discovery, saved milestone allowlist")

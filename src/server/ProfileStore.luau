@@ -147,4 +147,15 @@ function ProfileStore.release(self: any, userId: number, profile: any): boolean
     return ok and owned
 end
 
+-- A transient failure during PlayerRemoving has no later autosave to retry it.
+function ProfileStore.finish(self: any, userId: number, profile: any): boolean
+    if not profile.loaded then return true end
+    for attempt=1,3 do
+        if self:save(userId,profile) then return self:release(userId,profile) end
+        if not profile.loaded then return false end
+        if attempt<3 then task.wait(attempt) end
+    end
+    return false
+end
+
 return ProfileStore
