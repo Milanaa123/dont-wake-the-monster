@@ -115,3 +115,24 @@ assert(cosmetic.owns(market,8,true,12)==false)
 market.UserOwnsGamePassAsync=function() error("service unavailable") end
 assert(cosmetic.owns(market,8,true,12)==nil)
 print("PASS: unconfigured cosmetic makes no ownership calls, owned, declined, repeated and unavailable decisions")
+
+local decoy={readyAt=0,untilTime=0}
+local stock={SillyLure=2,GlowLure=0}
+local function consume(bag,id,kind)
+    assert(kind=="lure")
+    if (bag[id] or 0)<=0 then return false end
+    bag[id]-=1
+    return true
+end
+assert(not Round.throwLure(decoy,stock,"GlowLure",0,1,consume))
+assert(not Round.throwLure(decoy,stock,"MoonCandy",0,1,consume))
+assert(Round.throwLure(decoy,stock,"SillyLure",0,1,consume) and decoy.untilTime==5)
+assert(not Round.throwLure(decoy,stock,"SillyLure",0,2,consume) and stock.SillyLure==1 and decoy.position==1)
+assert(Round.throwLure(decoy,stock,"SillyLure",12,2,consume) and stock.SillyLure==0)
+print("PASS: simultaneous decoys charge one crafted item, respect cooldown and empty stock")
+
+local shy={courage=20,sociability=80}
+assert(Round.alarm("Snorf",shy,.2)=="PuppyYip")
+assert(Round.alarm("Snorf",{courage=100,sociability=80},.2)==nil)
+assert(Round.alarm("Swoop",shy,.2)=="BirdEcho" and Round.alarm("Swoop",shy,.9)==nil)
+assert(Round.alarm("Pip",shy,0)==nil)

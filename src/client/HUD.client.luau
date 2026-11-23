@@ -330,6 +330,27 @@ capture.Activated:Connect(function()
     if not ok then showNotice("Photo capture is unavailable on this device.",CREAM) end
 end)
 
+local lureButton=Instance.new("TextButton")
+lureButton.Name="RescueLure"
+lureButton.Size=UDim2.fromOffset(188,40)
+lureButton.AnchorPoint=Vector2.new(.5,1)
+lureButton.Position=UDim2.new(.5,0,1,-82)
+lureButton.BackgroundColor3=CREAM
+lureButton.Font=Enum.Font.GothamBold
+lureButton.TextColor3=DARK
+lureButton.Visible=false
+lureButton.Parent=gui
+round(lureButton,12)
+local lureId: string?=nil
+local mayThrow=false
+local out=false
+local function updateLure()
+    lureButton.Visible=mayThrow and not out and lureId~=nil
+end
+lureButton.Activated:Connect(function()
+    if lureId then remote:FireServer("GardenLure",lureId) end
+end)
+
 remote.OnClientEvent:Connect(function(event: any)
     if type(event) ~= "table" then return end
     if event.type == "state" then
@@ -338,6 +359,8 @@ remote.OnClientEvent:Connect(function(event: any)
         noiseCaption.Text = string.format("NOISE %d / %d   •   MORE CHAOS!", event.noise or 0, event.maxNoise or 100)
         timer.Text = countdown(event.time or 0)
         health.Visible = event.phase == "AWAKE"
+        mayThrow=health.Visible and event.lureReady==true
+        updateLure()
         -- Keep the playfield visible while dodging attacks: feeding is disabled
         -- by the server during a chase, so the giant food control panel hides.
         -- All four feed controls return automatically when the monster sleeps.
@@ -378,10 +401,19 @@ remote.OnClientEvent:Connect(function(event: any)
             title.TextColor3 = DARK
             prompt.Text = "FEED YOUR PET... IF YOU DARE 👀"
         end
+    elseif event.type=="garden" then
+        local stock=event.crafted or {}
+        lureId=if (stock.SillyLure or 0)>0 then "SillyLure" elseif (stock.GlowLure or 0)>0 then "GlowLure" else nil
+        lureButton.Text=if lureId=="GlowLure" then "Throw a Glow Lure" else "Throw a Silly Lure"
+        updateLure()
+    elseif event.type=="callWarning" then
+        showNotice(event.text,CREAM)
     elseif event.type=="rescueMoment" then
         offerPhoto(event.round)
     elseif event.type == "stats" then
         statsLabel.Text = string.format("🪙 %d   •   PET: %s", event.coins or 0, event.pet or "???")
+        out=event.knockedOut==true
+        updateLure()
         local count = math.clamp(event.hearts or 3, 0, 3)
         healthLabel.Text = if event.knockedOut then "💫 BONKED!" else string.rep("❤️", count) .. string.rep("🖤", 3 - count)
     elseif event.type == "petFeeling" then

@@ -40,6 +40,7 @@ local persistence = ProfileStore.new(DataStoreService, Config.DATASTORE_NAME,
 local WakeRound = require(script.Parent:WaitForChild("WakeRound"))
 local noiseSpot: Vector3? = nil
 local wakeMode = "Listen"
+local decoy = {readyAt=0,untilTime=0,position=Vector3.zero}
 local rng = Random.new()
 local noise = 0
 local phase = "SLEEP"
@@ -112,7 +113,7 @@ local function sendGarden(player: Player)
 end
 
 local function sendState(player: Player?)
-    local update = {type = "state", phase = phase, noise = noise, maxNoise = Config.NOISE_MAX, time = secondsLeft, wakes = wakeCount, wakeMode = wakeMode, rescue = RescueObjective.status(), weather = currentWeather, festivalFinds = festivalFinds, festivalGoal = X.FestivalGoal}
+    local update = {type = "state", phase = phase, noise = noise, maxNoise = Config.NOISE_MAX, time = secondsLeft, wakes = wakeCount, wakeMode = wakeMode, lureReady = os.clock()>=decoy.readyAt, rescue = RescueObjective.status(), weather = currentWeather, festivalFinds = festivalFinds, festivalGoal = X.FestivalGoal}
     if player then
         remote:FireClient(player, update)
     else
@@ -635,6 +636,29 @@ local function petEffect(profile: any, reaction: any, food: string)
     end
 end
 
+local function warnPetCall(player: Player, profile: any, personality: any)
+    local now=os.clock()
+    if now<(profile.nextCall or 0) then return end
+    local species=Config.Pets[profile.petIndex].name
+    local cue,volume=WakeRound.alarm(species,personality.traits,rng:NextNumber())
+    if not cue then return end
+    local pet,round=profile.pet,wakeCount
+    profile.nextCall=now+12
+    profile.callPending=true
+    World.emotePet(pet,"Curious",if cue=="BirdEcho" then "Echo?" else "Yip?")
+    remote:FireClient(player,{type="callWarning",text=species.." is about to "..(if cue=="BirdEcho" then "echo" else "bark")..". Tap SOOTHE!"})
+    task.delay(3.5,function()
+        if profiles[player]~=profile or not profile.callPending then return end
+        profile.callPending=false
+        if phase~="SLEEP" or wakeCount~=round or profile.pet~=pet or not pet.Parent or not pet.PrimaryPart then return end
+        noiseSpot=pet.PrimaryPart.Position
+        noise=math.min(Config.NOISE_MAX,noise+volume)
+        World.emotePet(pet,"Excited","+"..volume.." noise!")
+        remote:FireClient(player,{type="soundCue",cue=cue})
+        sendState()
+    end)
+end
+
 local function feed(player: Player, food: any, craftedId: string?)
     local profile = profiles[player]
     if not profile or typeof(food) ~= "string" then return end
@@ -705,6 +729,7 @@ local function feed(player: Player, food: any, craftedId: string?)
     if craftedId then text ..= " (GARDEN RECIPE!)" end
     notice(text, foodInfo.color)
     remote:FireClient(player, {type = "petFeeling", text = Config.Pets[profile.petIndex].name .. ": " .. emotionText})
+    warnPetCall(player,profile,activePersonality)
     sendStats(player)
     sendState()
     if #discoveries > 0 then
@@ -784,6 +809,7 @@ local function interactWithPet(player: Player, rawAction: any)
             World.burst(profile.pet.PrimaryPart.Position, Color3.fromRGB(254, 201, 121), 9, 8)
             sendState()
         elseif rawAction == "Comfort" then
+            profile.callPending=false
             local before = noise
             noise = WakeRound.comfort(before,p.traits.sensitivity,p.bond)
             if before > noise then
@@ -1004,6 +1030,23 @@ local function useLure(player: Player, id: any)
     if not profile or typeof(id) ~= "string" then return end
     local lure = RecipeCatalog.Recipes[id]
     if not lure or lure.type ~= "lure" then return end
+    if phase=="AWAKE" then
+        local root=rootFor(player)
+        local humanoid=player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+        if profile.knockedOut or not root or not humanoid or humanoid.Health<=0 then return end
+        local forward=root.CFrame.LookVector
+        local target=root.Position+Vector3.new(forward.X,0,forward.Z)*12
+        if WakeRound.throwLure(decoy,profile.garden,id,os.clock(),target,Garden.consume) then
+            if profile.loaded then profile.dirty=true end
+            profile.revision+=1
+            World.burst(target,Color3.fromRGB(255,217,128),12,9)
+            remote:FireAllClients({type="soundCue",cue="Boing"})
+            notice("Giggles followed the lure! Rescue a pet while he is distracted.")
+            sendGarden(player)
+            sendState()
+        end
+        return
+    end
     if phase ~= "SLEEP" then
         remote:FireClient(player, {type = "notice", text = "Wait until the monster sleeps!", color = Color3.fromRGB(255, 202, 156)})
         return
@@ -1226,6 +1269,7 @@ local function warnStrike(spot: Vector3, radius: number, strength: number, jump:
 end
 
 local function monsterAction()
+    if os.clock()<decoy.untilTime then return end
     if wakeMode == "Listen" then
         local location = noiseSpot or World.monsterPosition()
         local spot = Vector3.new(location.X,10,location.Z)
@@ -1418,6 +1462,7 @@ local function endWake()
         end
     end
     noiseSpot = nil
+    decoy.readyAt,decoy.untilTime=0,0
     RescueObjective.finish()
     notice(if teamCompleted then "GIGGLES IS ASLEEP! HEROES SAVED THE PETS!" else "GIGGLES IS ASLEEP! NEXT TIME, RESCUE THE RUNAWAYS!", Color3.fromRGB(150, 255, 204))
     sendState()
@@ -1517,6 +1562,7 @@ RunService.Heartbeat:Connect(function(dt: number)
     local destination=nearest
     if phase=="AWAKE" and wakeMode=="Listen" then destination=noiseSpot end
     if wakeMode=="Garden" then destination=nil end
+    if phase=="AWAKE" and t<decoy.untilTime then destination=decoy.position end
     World.followMonster(destination,interval)
 end)
 
