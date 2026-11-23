@@ -119,7 +119,7 @@ def garden_pond(g):
         for i in range(7):
             ang=i*2.4+j
             tip=(x+.33*cos(ang),.26+.13*(i%3),z+.31*sin(ang))
-            g.leaf(("moss","leaf","sage")[i%3],(x,.17,z),tip,.077,.103,5,3)
+            g.leaf(("moss","leaf","sage")[i%3],(x,.17,z),tip,.077,.103,4,2)
         for i in range(2):
             ang=j*2.26+i
             flower=(x+.13*cos(ang),.42+.092*i,z+.14*sin(ang))
@@ -128,7 +128,7 @@ def garden_pond(g):
                 turn=2*pi*petal/5+ang
                 xx,yy,zz=flower
                 tip=(xx+.092*cos(turn),yy+.037,zz+.092*sin(turn))
-                g.leaf("ivory" if j%3 else "lilac",flower,tip,.039,.020,4,2)
+                g.leaf("ivory" if j%3 else "lilac",flower,tip,.039,.020,3,2)
             g.blob("gold",flower,(.031,.028,.031),7,4)
 
     for j,a in enumerate((.92,1.16,2.82,3.04)):
@@ -137,7 +137,7 @@ def garden_pond(g):
             turn=i*2.40+j
             start=(x+.063*cos(turn),.155,z+.063*sin(turn))
             tip=(x+.32*cos(turn),.55+.34*(.5+.5*sin(i*2.13+j)),z+.30*sin(turn))
-            g.leaf("leafdeep" if i%2 else "leaflight",start,tip,.041,.092,6,3)
+            g.leaf("leafdeep" if i%2 else "leaflight",start,tip,.041,.092,4,2)
         for i in range(2):
             u=x+.14*i; v=z-.09*i
             top=(u+.09,.94+.22*sin(j+i),v+.07)

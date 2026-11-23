@@ -21,6 +21,7 @@ on:
       - "scripts/check_art_release.py"
       - "docs/ROBLOX_3D_ASSET_IMPORT.md"
       - ".github/workflows/art-library.yml"
+  pull_request:
   workflow_dispatch:
 
 permissions:
