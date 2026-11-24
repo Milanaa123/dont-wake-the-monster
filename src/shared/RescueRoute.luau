@@ -15,6 +15,13 @@ function Route.choose(targets: {Target}, userId: number, origin: Vector3): Targe
     return choice
 end
 
+-- A streamed-in model must belong to the same round as its target snapshot.
+function Route.modelFor(island: Instance?, round: number, id: number): Model?
+    local model = if island then island:FindFirstChild("RescueRunaway_" .. id) else nil
+    if model and model:IsA("Model") and model:GetAttribute("RescueRound") == round then return model end
+    return nil
+end
+
 local arrows = {"↑","↗","→","↘","↓","↙","←","↖"}
 function Route.arrow(delta: Vector3, cameraRight: Vector3): string
     -- Horizontal motion stays readable even when the camera points straight down.

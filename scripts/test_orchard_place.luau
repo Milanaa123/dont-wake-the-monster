@@ -219,6 +219,7 @@ end
 local _,idleBody=fixture("Pet_Floofle","Floofle")
 local responding,activeBody=fixture("Pet_Floofle","Floofle")
 local bossModel,bossBody=fixture("Environment_SleepingMonster","GigglesTheGiant")
+local _,sleepingBody=fixture("Environment_SleepingMonster","GigglesTheGiant")
 local owlet,owlBody=fixture("Pet_Swoop","Swoop")
 local openEyes=owlBody.Blink.Size
 assert(owlBody.Blink.Blink.Part0==owlBody.Head)
@@ -259,6 +260,35 @@ end
 local function difference(joint)
     return poseDifference(activeBody,idleBody,joint)
 end
+-- Lune does not simulate Motor6D physics. Resolve the shipped joint hierarchy
+-- for an offline mesh review, including each part's animated eye size.
+local function capturePose(poses,body,key,label,path)
+    if not path then return end
+    local parts={}
+    local function frame(part)
+        local joint=part:FindFirstChildOfClass("Motor6D")
+        if not joint then return part.CFrame end
+        return frame(joint.Part0)*joint.C0*joint.Transform*joint.C1:Inverse()
+    end
+    local function record(name,part)
+        local eyelid=name:match("^Lid") or name:match("^Eye")
+        parts[name]={cframe={frame(part):GetComponents()},size=xyz(part.Size),
+            hidden=if eyelid then part.LocalTransparencyModifier>=.99 else nil}
+    end
+    record("Body",body)
+    for _,part in body:GetChildren() do
+        if part:IsA("MeshPart") then record(part.Name,part) end
+    end
+    table.insert(poses,{label=label,asset=key,parts=parts})
+end
+local poses={}
+local bossPoses={}
+local function captureLamb(label)
+    capturePose(poses,lambBody,"Pet_Tofu",label,process.args[4])
+end
+local function captureBoss(label)
+    capturePose(bossPoses,bossBody,"Environment_SleepingMonster",label,process.args[5])
+end
 step(3)
 assert(difference("Head")<.0001)
 responding:SetAttribute("FedAt",clock)
@@ -274,47 +304,39 @@ responding:SetAttribute("MotionMode","Nap")
 step(20)
 assert(difference("Head")>.30 and difference("EarR")>.25,"Napping pose missing")
 assert(bossBody.EyeL.LocalTransparencyModifier>.99 and bossBody.LidL.LocalTransparencyModifier<.01)
+captureBoss("Asleep")
+bossModel:SetAttribute("Stirring",true)
+step(16)
+assert(poseDifference(bossBody,sleepingBody,"Head")>.15 and poseDifference(bossBody,sleepingBody,"ArmL")>.4)
+assert(bossBody.EyeL.LocalTransparencyModifier>.99 and bossBody.LidL.LocalTransparencyModifier<.01)
+captureBoss("Stirring")
+bossModel:SetAttribute("Stirring",false)
+step(20)
+assert(poseDifference(bossBody,sleepingBody,"Head")<.001 and poseDifference(bossBody,sleepingBody,"ArmL")<.001)
 bossModel:SetAttribute("Awake",true)
 step(23)
 assert(bossBody.EyeL.LocalTransparencyModifier<.01 and bossBody.LidL.LocalTransparencyModifier>.99)
+captureBoss("Awake")
+if process.args[5] then fs.writeFile(process.args[5],serde.encode("json",bossPoses,true)) end
+print("PASS: mounted boss stirs with eyes closed, settles when soothed, then opens eyes on waking")
 print("PASS: shipped client drives feed, recovery, petting, nap and boss eyelids on mounted joints at low quality")
 
--- Lune does not simulate Motor6D physics. Resolve the shipped joint hierarchy
--- for an offline mesh review, including each part's animated eye size.
-local poses={}
-local function capturePose(label)
-    if not process.args[4] then return end
-    local parts={}
-    local function frame(part)
-        local joint=part:FindFirstChildOfClass("Motor6D")
-        if not joint then return part.CFrame end
-        return frame(joint.Part0)*joint.C0*joint.Transform*joint.C1:Inverse()
-    end
-    local function record(name,part)
-        parts[name]={cframe={frame(part):GetComponents()},size=xyz(part.Size)}
-    end
-    record("Body",lambBody)
-    for _,part in lambBody:GetChildren() do
-        if part:IsA("MeshPart") then record(part.Name,part) end
-    end
-    table.insert(poses,{label=label,asset="Pet_Tofu",parts=parts})
-end
-capturePose("Idle")
+captureLamb("Idle")
 lamb:SetAttribute("FedAt",clock)
 step(2)
-capturePose("LeadingEar")
+captureLamb("LeadingEar")
 local function lambDifference(joint)
     return poseDifference(lambBody,comparisonBody,joint)
 end
 assert(lambDifference("EarL")>lambDifference("EarR")+.08,"Leading ear should lift first")
 step(4)
-capturePose("FollowingEar")
+captureLamb("FollowingEar")
 assert(lambDifference("EarR")>lambDifference("EarL")+.10,"Trailing ear should follow")
 step(15)
 assert(lambDifference("EarL")<.0001 and lambDifference("EarR")<.0001,"Ears should settle")
 lamb:SetAttribute("MotionMode","Pet")
 step(18)
-capturePose("Stroke")
+captureLamb("Stroke")
 assert(lambDifference("Head")>.3 and lambDifference("EarR")>.2,"Lamb should lean into a stroke")
 lamb:SetAttribute("MotionMode","Follow")
 step(20)

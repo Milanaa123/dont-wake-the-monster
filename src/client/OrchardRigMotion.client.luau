@@ -25,7 +25,7 @@ local function track(root: Instance)
     local species = model:GetAttribute("PetSpecies")
     local lamb = species=="Mochi" or species=="Tofu" or species=="Luma"
     rigs[root] = {model=model,joints=joints,added=added,removed=removed,prev=root.Position,phase=seed*.37,
-        lamb=lamb,travel=0,rest=0,hold=0,stroke=0,wake=0,last=os.clock(),seed=seed}
+        lamb=lamb,travel=0,rest=0,hold=0,stroke=0,wake=0,stir=0,last=os.clock(),seed=seed}
 end
 
 CollectionService:GetInstanceAddedSignal("OrchardRig"):Connect(track)
@@ -75,6 +75,7 @@ RunService.PreSimulation:Connect(function()
         r.hold=fade(r.hold,if mode=="Carry" then 1 else 0)
         r.stroke=fade(r.stroke,if mode=="Pet" then 1 else 0)
         r.wake=fade(r.wake,if model:GetAttribute("Awake") then 1 else 0)
+        if boss then r.stir=fade(r.stir,if model:GetAttribute("Stirring") and not model:GetAttribute("Awake") then 1 else 0) end
         r.phase+=dt*(2.2+math.min(speed,17)*.61)
         local beat=math.sin(r.phase)
         local breath=math.sin(now*(if boss then 1.13 else 1.92)+r.seed)
@@ -109,7 +110,7 @@ RunService.PreSimulation:Connect(function()
                 z=.08*r.hold
                 if r.lamb then z+=.20*r.stroke-.09*(firstEar-secondEar) end
                 if boss then
-                    x=.26*(1-r.wake)+.045*breath-.31*attack
+                    x=.26*(1-r.wake)+.045*breath-.31*attack+.17*r.stir
                     local scenario=model:GetAttribute("WakeMode")
                     if scenario=="Listen" then
                         y=.31*math.sin(now*1.45)*r.wake
@@ -117,6 +118,7 @@ RunService.PreSimulation:Connect(function()
                     elseif scenario=="Garden" then
                         x+=.12*math.sin(now*2.4)*r.wake
                     end
+                    y+=.22*math.sin(now*1.9)*r.stir
                 end
             elseif name:match("^Ear") then
                 x=.035*breath+.09*math.cos(r.phase*2-.48)*r.travel+.38*r.rest-.16*r.stroke
@@ -138,8 +140,8 @@ RunService.PreSimulation:Connect(function()
             elseif name:match("^Tendril") then
                 x=.15*math.sin(r.phase+(tonumber(name:sub(8)) or 0)*.82)
             elseif name:match("^Arm") then
-                x=.13*breath-.30*r.wake-.87*attack
-                z=side*(.08*breath+.10*r.wake+.18*attack)
+                x=.13*breath-.30*r.wake-.87*attack+(if side<0 then 1.12 else .19)*r.stir
+                z=side*(.08*breath+.10*r.wake+.18*attack-.32*r.stir)
             elseif name:match("^Leg") then
                 x=-.18*(1-r.wake)+side*.15*attack
                 if model:GetAttribute("Walking") then x+=side*.26*math.sin(now*3.4) end

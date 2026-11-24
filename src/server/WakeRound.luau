@@ -23,6 +23,18 @@ function Round.ribbon(mode: string, hearts: number, helped: boolean, tracked: nu
     return nil
 end
 
+-- A full meter can be soothed until the alarm expires. The normal end of
+-- sleep is independent, even if a player quiets the garden at the last tick.
+function Round.warning(noise: number, limit: number, secondsLeft: number, now: number, alarm: number?): (number?, string?, number?)
+    local deadline = if noise >= limit then alarm or (now + 5) else nil
+    local loudSeconds = if deadline then math.max(0, math.ceil(deadline - now)) else math.huge
+    if secondsLeft <= 5 and secondsLeft <= loudSeconds then
+        return deadline, "Timer", secondsLeft
+    end
+    if deadline then return deadline, "Noise", loudSeconds end
+    return nil, nil, nil
+end
+
 function Round.comfort(noise: number, sensitivity: number, bond: number): number
     local relief = 2 + math.floor((100-sensitivity)/35) + math.floor(bond/40)
     return math.max(0, noise-relief)

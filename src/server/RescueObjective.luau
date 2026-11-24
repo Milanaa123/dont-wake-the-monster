@@ -100,6 +100,7 @@ function Rescue.start(onRescue: (Player, boolean, number) -> (), allowed: (Playe
         -- Top of main island is approximately 7 studs; keep prompts reachable.
         local position = Vector3.new(math.cos(angle) * radius, 12.5, math.sin(angle) * radius)
         local pet = World.makePet(variant.name .. "_runaway_" .. i, variant.color, variant.ear == "pointy")
+        pet:SetAttribute("RescueRound", round)
         pet.Name = "RescueRunaway_" .. i
         pet:PivotTo(CFrame.new(position) * CFrame.Angles(0, angle, 0))
         table.insert(models, pet)

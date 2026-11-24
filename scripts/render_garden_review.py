@@ -201,6 +201,7 @@ def main():
             origin=Matrix.Translation(BASIS @ Vector(bank[asset]["center"]))
             for section in bank[asset]["parts"]:
                 name=section["name"]
+                if pose["parts"][name].get("hidden"): continue
                 transform=origin @ section_transform(pose["parts"][name],section)
                 place_mesh(scene,name,decode_section(section,mat),transform)
             floor_z=bank[asset]["center"][1]-bank[asset]["size"][1]/2

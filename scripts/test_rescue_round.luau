@@ -14,6 +14,24 @@ assert(not Round.takeResult({},1,false),"Late arrival must earn its place by res
 assert(Round.takeResult({},1,true) and not Round.takeResult(member,2,false))
 assert(Round.comfort(1,60,0)==0 and Round.comfort(20,10,90)<Round.comfort(20,90,0))
 
+local deadline,reason,seconds=Round.warning(99,100,45,20,nil)
+assert(not deadline and not reason and not seconds)
+deadline,reason,seconds=Round.warning(100,100,45,20,nil)
+assert(deadline==25 and reason=="Noise" and seconds==5)
+local unchanged,same,left=Round.warning(100,100,42,22.25,deadline)
+assert(unchanged==deadline and same=="Noise" and left==3)
+local quiet,cleared=Round.warning(Round.comfort(100,40,50),100,41,23,deadline)
+assert(not quiet and not cleared)
+local restarted=Round.warning(100,100,40,24,quiet)
+assert(restarted==29)
+local _,_,trigger=Round.warning(100,100,35,29,restarted)
+assert(trigger==0)
+local _,natural,napTime=Round.warning(100,100,2,28,nil)
+assert(natural=="Timer" and napTime==2)
+local _,due,zero=Round.warning(0,100,0,30,nil)
+assert(due=="Timer" and zero==0)
+print("PASS: noise warning, cancellation, new alarm and natural nap deadline")
+
 local prompts={}
 local root={Position=r.Vector3.zero,IsA=function(_,class) return class=="BasePart" end}
 local hum={Health=100}
@@ -24,7 +42,7 @@ local players={GetPlayers=function() return {a,b} end}
 local requires={Config={Pets={{name="Pip",ear="pointy",color=r.Color3.new()}}}, World={
     burst=function() end,
     makePet=function()
-        return {Parent=true,PrimaryPart={Position=r.Vector3.zero},PivotTo=function() end,
+        return {Parent=true,SetAttribute=function() end,PrimaryPart={Position=r.Vector3.zero},PivotTo=function() end,
             Destroy=function(self) self.Parent=nil end}
     end,
 }}
@@ -47,6 +65,15 @@ end
 rescue.start(grant,function() return true end)
 assert(rescue.status().goal==2 and #prompts==2)
 local route=luau.load(place:GetService("ReplicatedStorage").RescueRoute.Source)()
+local island=r.Instance.new("Folder")
+local specimen=r.Instance.new("Model")
+specimen.Name="RescueRunaway_1"
+specimen.Parent=island
+specimen:SetAttribute("RescueRound",5)
+assert(route.modelFor(island,5,1)==specimen)
+assert(route.modelFor(island,4,1)==nil and route.modelFor(island,5,2)==nil)
+specimen.Parent=nil
+assert(route.modelFor(island,5,1)==nil and route.modelFor(nil,5,1)==nil)
 local status=rescue.status()
 local round=status.round
 assert(#status.targets==2 and status.targets[1].name=="Pip")

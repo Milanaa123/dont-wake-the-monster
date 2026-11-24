@@ -45,6 +45,7 @@ local rng = Random.new()
 local noise = 0
 local phase = "SLEEP"
 local secondsLeft = Config.SLEEP_MAX_SECONDS
+local noiseAlarm: number? = nil
 local profiles: {[Player]: any} = {}
 local loading: {[Player]: boolean} = {}
 local arrival: {[Player]: number} = {}
@@ -112,8 +113,20 @@ local function sendGarden(player: Player)
     remote:FireClient(player, snapshot)
 end
 
+local function sleepWarning(): (string?, number?)
+    if phase ~= "SLEEP" then
+        noiseAlarm = nil
+        return nil, nil
+    end
+    local reason, seconds
+    noiseAlarm, reason, seconds = WakeRound.warning(noise, Config.NOISE_MAX, secondsLeft, os.clock(), noiseAlarm)
+    return reason, seconds
+end
+
 local function sendState(player: Player?)
-    local update = {type = "state", phase = phase, noise = noise, maxNoise = Config.NOISE_MAX, time = secondsLeft, wakes = wakeCount, wakeMode = wakeMode, lureReady = os.clock()>=decoy.readyAt, rescue = RescueObjective.status(), weather = currentWeather, festivalFinds = festivalFinds, festivalGoal = X.FestivalGoal}
+    local warning, wakeIn = sleepWarning()
+    World.setStirring(warning ~= nil)
+    local update = {type = "state", phase = phase, warning = warning, wakeIn = wakeIn, noise = noise, maxNoise = Config.NOISE_MAX, time = secondsLeft, wakes = wakeCount, wakeMode = wakeMode, lureReady = os.clock()>=decoy.readyAt, rescue = RescueObjective.status(), weather = currentWeather, festivalFinds = festivalFinds, festivalGoal = X.FestivalGoal}
     if player then
         remote:FireClient(player, update)
     else
@@ -464,7 +477,9 @@ local function onPlayerAdded(player: Player)
     sendGarden(player)
     sendState(player)
     careUpdate(player)
-    remote:FireClient(player, {type = "notice", text = "Meet " .. petDefinition.name .. "! Feed it. Nothing can go wrong... right?", color = Color3.fromRGB(252, 205, 255)})
+    if phase == "SLEEP" and not sleepWarning() then
+        remote:FireClient(player, {type = "notice", text = "Meet " .. petDefinition.name .. "! Pick a snack to feed your pet.", color = Color3.fromRGB(252, 205, 255)})
+    end
 end
 
 local function onPlayerRemoving(player: Player)
@@ -1387,7 +1402,7 @@ local function startWake()
     World.setWakeMode(wakeMode)
     remote:FireAllClients({type = "soundCue", cue = "MonsterWake"})
     remote:FireAllClients({type="soundCue",cue=if wakeMode=="Listen" then "SuspiciousMeow" elseif wakeMode=="Garden" then "SillyStorm" else "RecordScratch"})
-    notice("OH NO!!! YOU WOKE GIGGLES! SURVIVE!", Color3.fromRGB(255, 113, 145))
+    notice("Giggles is awake! Follow the rescue arrow and hold SAVE ME!", Color3.fromRGB(255, 113, 145))
     World.wave(Vector3.new(0, 11, 0), 90, Color3.fromRGB(255, 104, 156))
     RescueObjective.start(function(player: Player, justCompleted: boolean, reward: number)
         local profile=profiles[player]
@@ -1424,7 +1439,6 @@ local function startWake()
         local profile = profiles[player]
         return phase == "AWAKE" and profile ~= nil and not profile.knockedOut
     end)
-    notice("SAVE THE RUNAWAY PETS! Follow their HELP prompts!", Color3.fromRGB(255, 232, 151))
     sendState()
 end
 
@@ -1605,6 +1619,8 @@ task.spawn(function()
         task.wait(1)
         if not next(profiles) and phase=="SLEEP" then
             secondsLeft=Config.SLEEP_MAX_SECONDS
+            noiseAlarm=nil
+            World.setStirring(false)
             noise=0
             noiseSpot=nil
             continue
@@ -1616,7 +1632,8 @@ task.spawn(function()
                 surpriseWeather()
                 surpriseCooldown = rng:NextInteger(19, 33)
             end
-            if noise >= Config.NOISE_MAX or secondsLeft <= 0 then
+            local _, wakeIn = sleepWarning()
+            if wakeIn == 0 then
                 actionCooldown=4
                 startWake()
             end

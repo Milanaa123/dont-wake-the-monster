@@ -1,4 +1,4 @@
-"""Render two original, short animal calls as mono PCM for the existing sound bank."""
+"""Render original creature calls as mono PCM for the existing sound bank."""
 from array import array
 from math import exp, pi, sin
 from pathlib import Path
@@ -30,3 +30,4 @@ def render(name, length, notes):
 if __name__ == "__main__":
     render("PuppyYip", .54, [(0,.16,392,-.60,.74),(.235,.275,356,-.59,.70)])
     render("BirdEcho", .63, [(0,.14,1220,.52,.07),(.19,.13,1600,-.30,.08),(.39,.20,1180,.49,.06)])
+    render("SleepyGrumble", 1.22, [(0,.50,126,.42,.39),(.55,.66,165,-.41,.55)])

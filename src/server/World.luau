@@ -315,6 +315,10 @@ function World.followMonster(target: Vector3?, dt: number)
     if monster:GetAttribute("Walking")~=walking then monster:SetAttribute("Walking",walking) end
 end
 
+function World.setStirring(stirring: boolean)
+    if monster:GetAttribute("Stirring") ~= stirring then monster:SetAttribute("Stirring",stirring) end
+end
+
 function World.setWakeMode(mode: string)
     monster:SetAttribute("WakeMode",mode)
 end

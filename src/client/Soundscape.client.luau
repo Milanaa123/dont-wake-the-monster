@@ -26,6 +26,7 @@ local ambience: Sound? = nil
 local musicEnabled = true
 local effectsEnabled = true
 local phase = "SLEEP"
+local lastStirWake: number? = nil
 local recent: {[string]: number} = {}
 
 local gui = Instance.new("ScreenGui")
@@ -137,6 +138,10 @@ remote.OnClientEvent:Connect(function(event: any)
         playCue(event.cue)
     elseif event.type == "state" then
         local nextPhase = event.phase or phase
+        if nextPhase == "SLEEP" and event.warning and lastStirWake ~= event.wakes then
+            lastStirWake = event.wakes
+            playCue("SleepyGrumble")
+        end
         if nextPhase ~= phase then
             phase = nextPhase
             crossfadeMusic()

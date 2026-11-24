@@ -249,7 +249,7 @@ assert "SeedCache_" in explorer and "state.seedAlbum" in explorer and "TRACK" in
 assert "function Garden.weather(" in garden and "function Garden.assist(" in garden, "Missing growing and tending rules"
 assert 'PremiumProducts' in garden_cfg and all(v in garden_cfg for v in ('productId = 0', 'G.PLOT_COUNT = 9')), "Robux source must remain disabled"
 audio_names = [
-    "PuppyYip","BirdEcho",
+    "PuppyYip","BirdEcho","SleepyGrumble",
     "calm-garden-theme", "SeedFind", "RareDiscovery", "WeatherChime", "Boing", "MonsterWake",
     "Victory", "Festival", "SillyStorm", "HarvestPop", "MutationSparkle", "CatSwat",
     "tiny-violin-fail", "suspicious-meow", "cartoon-record-scratch", "comedy-drum-sting",
@@ -264,9 +264,9 @@ for name in audio_names:
         assert w.getframerate() >= 8000
         assert 0.5 <= w.getnframes() / w.getframerate() <= 30, "Audio duration out of bounds"
 assert "Audio.MusicAssetId = 0" in sounds, "Music must remain disabled until authorized asset upload"
-assert sounds.count(" = 0,") == 17, "Expected 17 muted SFX IDs"
+assert sounds.count(" = 0,") == 18, "Expected 18 muted SFX IDs"
 assert "playCue(" in soundscape and "MusicToggle" in soundscape and "EffectsToggle" in soundscape
-print("OK: 3 biomes, 9 seed caches, original music and ambience, 17 sound effects, pet tending")
+print("OK: 3 biomes, 9 seed caches, original music and ambience, 18 sound effects, pet tending")
 
 # Rotating free-coin seed merchant, no paid loot, real save integration.
 merchant = read("src/shared/SeedMerchant.luau")

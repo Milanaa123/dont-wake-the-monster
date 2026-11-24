@@ -13,6 +13,7 @@ Audio.Cues = {
     RareDiscovery = 0,    -- assets/audio/RareDiscovery.wav
     WeatherChime = 0,     -- assets/audio/WeatherChime.wav
     Boing = 0,            -- assets/audio/Boing.wav
+    SleepyGrumble = 0,
     MonsterWake = 0,      -- assets/audio/MonsterWake.wav
     Victory = 0,          -- assets/audio/Victory.wav
     Festival = 0,         -- assets/audio/Festival.wav

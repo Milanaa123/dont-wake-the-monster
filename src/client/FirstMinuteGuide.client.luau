@@ -77,11 +77,12 @@ local experimentCount = 0
 local planted = false
 local harvested = false
 local phase = "SLEEP"
+local warning = false
 local stage = ""
 local finished = false
 
 local function refresh()
-    if not collectionKnown or not gardenKnown or phase == "AWAKE" then
+    if not collectionKnown or not gardenKnown or phase == "AWAKE" or warning then
         panel.Visible = false
         return
     end
@@ -156,6 +157,7 @@ remote.OnClientEvent:Connect(function(event: any)
             end
         end
     elseif event.type == "state" then
+        warning = event.warning ~= nil
         phase = if type(event.phase) == "string" then event.phase else phase
     else
         return

@@ -106,7 +106,7 @@ local gradient = Instance.new("UIGradient")
 gradient.Color = ColorSequence.new(Color3.fromRGB(123, 218, 249), Color3.fromRGB(255, 91, 155))
 gradient.Parent = barFill
 
-local noiseCaption = label(header, "NOISE 0 / 100    •    every action makes chaos!", Enum.Font.GothamBold, 11, DARK)
+local noiseCaption = label(header, "NOISE 0 / 100", Enum.Font.GothamBold, 11, DARK)
 noiseCaption.Position = UDim2.new(0.04, 0, 0, 87)
 noiseCaption.Size = UDim2.new(0.92, 0, 0, 18)
 
@@ -363,12 +363,26 @@ local mayThrow=false
 local out=false
 local routeState: any = nil
 local shown: RescueRoute.Target? = nil
+local rescueOutline = Instance.new("Highlight")
+rescueOutline.Name = "SelectedLostPet"
+rescueOutline.Enabled = false
+rescueOutline.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+rescueOutline.OutlineColor = Color3.fromRGB(255, 220, 127)
+rescueOutline.FillColor = Color3.fromRGB(255, 210, 130)
+rescueOutline.FillTransparency = .91
+rescueOutline.Parent = workspace
+gui.Destroying:Connect(function() rescueOutline:Destroy() end)
+
 local function refreshRoute()
     local root = if player.Character then player.Character:FindFirstChild("HumanoidRootPart") else nil
     local camera = workspace.CurrentCamera
     shown = if routeState and root and root:IsA("BasePart") and not out
         then RescueRoute.choose(routeState.targets, player.UserId, root.Position) else nil
     local target = shown
+    local marked = if target and routeState then
+        RescueRoute.modelFor(workspace:FindFirstChild("MonsterIsland"),routeState.round,target.id) else nil
+    rescueOutline.Adornee = marked
+    rescueOutline.Enabled = marked ~= nil
     signal.Visible = target ~= nil and target.helper == 0
     routeLabel.Size = UDim2.new(1, if signal.Visible then -119 else -16, 0, 38)
     if not target or not root or not root:IsA("BasePart") or not camera then
@@ -408,8 +422,8 @@ remote.OnClientEvent:Connect(function(event: any)
     if event.type == "state" then
         local fraction = math.clamp((event.noise or 0) / (event.maxNoise or 100), 0, 1)
         TweenService:Create(barFill, TweenInfo.new(0.32, Enum.EasingStyle.Sine), {Size = UDim2.fromScale(fraction, 1)}):Play()
-        noiseCaption.Text = string.format("NOISE %d / %d   •   MORE CHAOS!", event.noise or 0, event.maxNoise or 100)
-        timer.Text = countdown(event.time or 0)
+        noiseCaption.Text = string.format("NOISE %d / %d", event.noise or 0, event.maxNoise or 100)
+        timer.Text = countdown(event.wakeIn or event.time or 0)
         health.Visible = event.phase == "AWAKE"
         mayThrow=health.Visible and event.lureReady==true
         updateLure()
@@ -449,6 +463,11 @@ remote.OnClientEvent:Connect(function(event: any)
                 else "CHASE • RUN OUTSIDE THE STRIKE MARKS"
             title.TextColor3 = Color3.fromRGB(243, 70, 107)
             prompt.Text = "SAVE THE LOST PETS!"
+        elseif event.warning then
+            title.Text = "Giggles is stirring…"
+            title.TextColor3 = Color3.fromRGB(139, 60, 40)
+            phaseText.Text = if event.warning == "Noise" then "SOOTHE YOUR PET TO QUIET THE GARDEN" else "NAP ALMOST OVER • GET READY TO RESCUE"
+            prompt.Text = if event.warning == "Noise" then "SHHH… HOLD THE SNACKS!" else "WATCH FOR THE LOST PETS"
         elseif event.phase == "COOLDOWN" then
             title.Text = "💤 PHEW... NAP TIME!"
             phaseText.Text = "YOUR COINS ARE ON THE WAY"
@@ -472,6 +491,7 @@ remote.OnClientEvent:Connect(function(event: any)
     elseif event.type == "stats" then
         statsLabel.Text = string.format("🪙 %d   •   PET: %s", event.coins or 0, event.pet or "???")
         out=event.knockedOut==true
+        refreshRoute()
         updateLure()
         local count = math.clamp(event.hearts or 3, 0, 3)
         healthLabel.Text = if event.knockedOut then "💫 BONKED!" else string.rep("❤️", count) .. string.rep("🖤", 3 - count)
@@ -490,4 +510,3 @@ remote.OnClientEvent:Connect(function(event: any)
 end)
 
 remote:FireServer("Sync")
-showNotice("WELCOME! TRY A SNACK 🍬🌶️🫧⭐", Color3.fromRGB(255, 227, 132))
