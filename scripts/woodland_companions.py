@@ -125,20 +125,43 @@ def owlet(g):
         (0,1.554,-.933,.10,.077),(0,1.58,-.901,.042,.043)],14)
 
 
+def fleece_locks(rows, phase):
+    """Distribute overlapping wool locks in staggered rows around the coat."""
+    locks=[]
+    for row,(latitude,count) in enumerate(rows):
+        for i in range(count):
+            angle=phase+2*pi*(i+.46*(row%2))/count+.075*sin(i*2.7+row)
+            lat=latitude+.073*cos(2.3*i+row+phase)
+            locks.append((cos(lat)*cos(angle),sin(lat),cos(lat)*sin(angle),
+                          1+.13*sin(3*i+row+phase)))
+    return locks
+
+
+def wool_relief(u,v,w,locks):
+    # A soft maximum rounds the trough where two neighbouring locks meet.
+    # A fast squared chord distance gives each lock a broad shoulder.
+    largest=second=0
+    for x,y,z,size in locks:
+        q=max(0,1-(1-u*x-v*y-w*z)*4.5/size)
+        weight=q*q
+        if weight>largest:
+            largest,second=weight,largest
+        elif weight>second:
+            second=weight
+    return .5*(largest+second+sqrt((largest-second)**2+.035**2))
+
+
 def lamb(g, name, skin):
     phase={"Mochi":.24,"Tofu":1.06,"Luma":1.86}[name]
     g.joint("Body",(0,0,0))
-    # The fleece is a connected volume. Three staggered curl bands broaden the
-    # haunches and give the belly a scalloped silhouette even in a side view.
+    coat=fleece_locks(((-1.23,3),(-.62,7),(.02,9),(.66,7),(1.28,3)),phase)
     def fleece(a,t):
         lat=(t-.5)*pi
-        v=sin(lat)
-        ring=cos(lat)
-        curl=(.5+.5*cos(8*a+1.30*sin(3*lat)+phase))*(.5+.5*cos(7*lat-.70*cos(3*a)))
-        width=(.94+.117*curl)*ring
-        return (width*cos(a),.87+.69*v+.028*ring*cos(6*a+phase),
-                .32+(1.055+.115*curl)*ring*sin(a))
-    turned_skin(g,fleece,lambda i,j:"ivory" if j<4 else "cream",(0,.87,.32),40,14)
+        u,v,w=cos(lat)*cos(a),sin(lat),cos(lat)*sin(a)
+        lock=wool_relief(u,v,w,coat)
+        return ((.84+.21*lock)*u,.86+(.56+.21*lock)*v,
+                .28+(.96+.21*lock)*w)
+    turned_skin(g,fleece,lambda i,j:"ivory" if j<3 else "cream",(0,.86,.28),40,16)
     for side,suffix in ((-1,"L"),(1,"R")):
         for fore in (True,False):
             x,z=side*(.43 if fore else .53),(-.31 if fore else .88)
@@ -151,16 +174,34 @@ def lamb(g, name, skin):
     rounded_sections(g,"cream",[(0,.73,1.30,.075,.09),(0,.80,1.37,.165,.17),
          (.03,.94,1.37,.209,.198),(.04,1.08,1.28,.15,.17),(.02,1.14,1.21,.07,.10)],15)
     g.joint("Head",(0,1.30,-.40))
-    cy,cz=1.68,-.62
+    cy,cz=1.66,-.62
+    crown=fleece_locks(((-.93,5),(-.28,8),(.35,9),(.93,6),(1.52,1)),phase+.36)
+    face_bands=6
+    bands=19
     def head(a,t):
-        lat=(t-.5)*pi
-        v=sin(lat)
-        return (.85*(1-.10*v)*cos(lat)*cos(a),cy+.67*v,cz+.66*cos(lat)*sin(a))
-    turned_skin(g,head,lambda i,j:skin,(0,cy,cz),28,12)
+        # Front-to-back rings follow the wool/face boundary. The sloping rim
+        # frames both cheeks and leaves the chin open above the bow.
+        top=max(0,sin(a))
+        hem=1.24-.57*top**1.3+.46*max(0,-sin(a))+.095*cos(7*a+phase+.50*sin(3*a))
+        progress=t*bands
+        if progress<=face_bands:
+            angle=hem*progress/face_bands
+            pile=0
+        else:
+            f=(progress-face_bands)/(bands-face_bands)
+            angle=hem+(pi-hem)*f
+            pile=min(1,f/.16)
+            pile=pile*pile*(3-2*pile)
+        u,v,w=sin(angle)*cos(a),sin(angle)*sin(a),-cos(angle)
+        relief=pile*(.042+.226*wool_relief(u,v,w,crown))
+        return ((.84*(1-.085*v)+relief)*u,cy+(.67+1.06*relief)*v,
+                cz+(.65+relief)*w)
+    turned_skin(g,head,lambda i,j:skin if j<face_bands else "cream",
+                (0,cy,cz),44,bands)
     def front(x,y):
         v=(y-cy)/.67
-        return cz-.66*sqrt(max(.001,1-v*v-(x/(.85*(1-.10*v)))**2))
-    bead_eyes(g,front,.326,1.67,.088,.109)
+        return cz-.65*sqrt(max(.001,1-v*v-(x/(.84*(1-.085*v)))**2))
+    bead_eyes(g,front,.316,1.69,.098,.118)
     for s in (-1,1):
         face_patch(g,"blush",front,s*.52,1.545,.117,.061)
         smile=[(s*x,y,front(s*x,y)-.016) for x,y in
@@ -169,48 +210,56 @@ def lamb(g, name, skin):
     g.blob("nose",(0,1.556,front(0,1.556)-.007),(.071,.042,.037),12,7)
 
     for s,suffix in ((-1,"L"),(1,"R")):
-        drop=.10 if name=="Tofu" else -.06 if name=="Luma" else .01
-        g.joint("Ear"+suffix,(s*.62,1.94,-.46),"Head")
-        # The ear folds down and away from the scalp. Pink stays on its inner shell.
+        length={"Tofu":.66,"Luma":.47,"Mochi":.55}[name]
+        spread={"Tofu":.46,"Luma":.64,"Mochi":.53}[name]
+        g.joint("Ear"+suffix,(s*.70,1.98,-.59),"Head")
         def ear(a,t):
-            bend=sin(pi*t)
-            x=s*(.57+.56*t+.083*bend)
-            y=2.02-(.24+drop)*t-.16*t*t+.075*bend
-            z=-.43-.12*t
-            return (x+s*.055*bend*cos(a), y+.167*bend*cos(a), z+.133*bend*sin(a))
-        turned_skin(g,ear,lambda i,j:"pink" if 9<=i<15 and 2<=j<9 else skin,
-                    (s*.84,1.85,-.48),18,11)
+            # A thick root folds away from the fleece; the rounded ear tip
+            # hangs in front of the shoulder. The inner shell faces forward.
+            bulge=max(0,sin(pi*t))**.64
+            x=.69+spread*t+.095*sin(pi*t)
+            y=1.99-length*t+.085*sin(pi*t)
+            width=(.128+.087*t)*bulge
+            return (s*(x+width*cos(a)),y+width*.72*cos(a),
+                    -.57-.17*t+.12*bulge*sin(a)+.048*bulge*cos(a)**2)
+        turned_skin(g,ear,lambda i,j:"pink" if 10<=i<=16 and 2<=j<=8 else skin,
+                    (s*.94,1.76,-.65),18,11)
     g.joint("Head",g.joints["Head"][1])
-    # The crown is a low dome with a rolled fringe. Its varying hem crosses
-    # the forehead and meets the ear roots, so no separate beads are needed.
-    def bonnet(a,t):
-        v=sin((t-.5)*pi)
-        ring=cos((t-.5)*pi)
-        wave=cos(7*a+phase+1.1*v+.26*sin(3*a))
-        breadth=ring*(1+.108*wave*(1-v*v))
-        return (.879*breadth*cos(a),2.16+.358*v+
-                (-.119*wave-.080*max(0,-sin(a)))*ring, -.56+.73*breadth*sin(a))
-    turned_skin(g,bonnet,lambda i,j:"ivory" if j<3 else "cream",(0,2.16,-.56),42,12)
     if name in ("Mochi","Luma"):
-        # A small golden blossom for Mochi, a raised five-point star for Luma.
-        x=.39 if name=="Mochi" else -.37
-        y,z=2.275,-1.18
+        a=(.34 if name=="Mochi" else .65)*pi
+        t=8.5/bands
+        anchor=head(a,t)
+        along=norm(sub(head(a+.01,t),head(a-.01,t)))
+        outward=norm(cross(along,sub(head(a,t+.002),head(a,t-.002))))
+        if outward[2]>0:
+            outward=tuple(-n for n in outward)
+        up=norm(cross(outward,along))
+        def pin(x,y,depth):
+            return tuple(p+x*h+y*k+depth*n for p,h,k,n in zip(anchor,along,up,outward))
         if name=="Mochi":
             for j in range(5):
-                a=2*pi*j/5
-                g.blob("ivory",(x+.071*cos(a),y+.071*sin(a),z),(.063,.061,.032),9,5)
-            g.blob("gold",(x,y,z-.031),(.054,.052,.031),10,6)
+                petal=2*pi*j/5
+                g.blob("ivory",pin(.075*cos(petal),.075*sin(petal),.025),(.068,.061,.051),9,5)
+            g.blob("gold",pin(0,0,.061),(.054,.052,.050),10,6)
         else:
-            corners=[(x+cos(i*pi/5+pi/2)*(.122 if i%2==0 else .063),
-                      y+sin(i*pi/5+pi/2)*(.122 if i%2==0 else .063),z) for i in range(10)]
+            corners=[]
+            for j in range(10):
+                angle=j*pi/5+pi/2
+                r=.134 if j%2==0 else .065
+                corners.append(pin(r*cos(angle),r*sin(angle),.024))
             for j,p in enumerate(corners):
-                g.tri("gold",(x,y,z-.044),corners[(j+1)%10],p)
+                g.tri("gold",pin(0,0,.055),p,corners[(j+1)%10],outward,outward,outward)
     g.joint("Body",(0,0,0))
-    for s in (-1,1):
-        rounded_sections(g,"rose",[(s*.16,.873,-.739,.052,.043),
-            (s*.19,.931,-.755,.119,.068),(s*.16,1.001,-.75,.123,.07),
-            (s*.19,1.070,-.727,.069,.046)],12)
-    g.blob("gold",(0,.97,-.788),(.066,.067,.049),10,7)
+    # Each loop opens toward its folded outer edge. The knot sits below the chin.
+    for side in (-1,1):
+        def ribbon(a,t):
+            fullness=sin(pi*t)**.56
+            height=(.065+.12*t)*fullness
+            ridge=(.046+.05*t)*fullness
+            return (side*(.035+.255*t),.765+.065*t+height*cos(a),
+                    -.94+.061*t+ridge*sin(a)+.028*fullness*cos(2*a))
+        turned_skin(g,ribbon,lambda i,j:"rose",(side*.15,.79,-.91),12,6)
+    g.blob("gold",(0,.78,-.96),(.073,.067,.063),10,7)
 
 
 def shell(g):

@@ -120,10 +120,22 @@ assert all(v[1]>.11 for v in pond.data["leafvein"][0])
 sheet=pond.data["turquoise"][0]
 assert max(v[1] for v in sheet)>.59 and min(v[1] for v in sheet)<.14
 assert any(.32<v[1]<.54 for v in sheet)
+ear_extents={}
 for name,_,base,second in PET_SPECS:
-    if SPECIES[name]=="lamb":
-        rig=sculpt_species(name,base,second,GameSculpt)
-        assert sum(len(buf[0])//3 for part in rig.parts.values() for buf in part.values())<5400
+    if SPECIES[name]!="lamb":
+        continue
+    rig=sculpt_species(name,base,second,GameSculpt)
+    assert sum(len(buf[0])//3 for part in rig.parts.values() for buf in part.values())<5400
+    head=rig.parts["Head"]
+    # Both pigments terminate on a single closed rim, so head motion cannot
+    # pull a separately modelled cap away from the cheeks.
+    rim=set(head[base][0]).intersection(head["cream"][0])
+    assert len(rim)>=30 and min(p[0] for p in rim)<-.65 and max(p[0] for p in rim)>.65
+    points=rig.parts["EarR"][base][0]
+    ear_extents[name]=(min(p[1] for p in points),max(p[0] for p in points))
+    assert {"rose","gold"}<=rig.parts["Body"].keys()
+for axis in (0,1):
+    assert ear_extents["Tofu"][axis]<ear_extents["Mochi"][axis]<ear_extents["Luma"][axis]
 
 crops={}
 for crop in CROP_NAMES:
