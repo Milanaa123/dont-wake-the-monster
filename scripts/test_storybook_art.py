@@ -136,6 +136,14 @@ for arm in ("ArmL","ArmR"):
         nails+=1
     assert nails==3 and min(p[2] for p in vertices)<-1.45
 
+hedge=sculpt_world("BloomingHedge",GameSculpt)
+finite_mesh(hedge)
+# The paired pale and lilac flower heads rise above the basal foliage.
+leaf_top=max(v[1] for v in hedge.data["leafdeep"][0])
+for pigment in ("lilac","lavender","cream","ivory","gold"):
+    assert max(v[1] for v in hedge.data[pigment][0])>leaf_top+.5
+assert bounds(hedge)[0][1]-bounds(hedge)[0][0]>4
+
 pond=sculpt_world("WaterPond",GameSculpt)
 finite_mesh(pond)
 assert {"water","turquoise","moss","pink","leafvein","stone","slate"} <= pond.data.keys()

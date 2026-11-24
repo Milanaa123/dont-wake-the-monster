@@ -319,16 +319,61 @@ def sculpt_world(name,S):
         tube("ink",[(0,1.10,.72),(.21,.78,1.23),(.39,.55,1.57)],
              [.24,.15,.032])
     elif name=="BloomingHedge":
-        rng=random.Random(19)
-        for i in range(14):
-            x=rng.uniform(-2.5,2.5);z=rng.uniform(-.55,.55)
-            y=rng.uniform(.57,1.36)
-            b("leaflight" if i%4==0 else "leaf",
-              (x,y,z),(.72,.60,.73),13,8)
-            if i%2==0:
-                blossom((x,y+.40,z-.49),pink=i%3==0,scale=.98)
-        for i in range(8):
-            a=i*2*pi/8
-            lf("leafdeep",(0,.27,0),
-                (sin(a)*2.12,.63,cos(a)*.55),.31)
+        hydrangea(g)
     return g
+
+def hydrangea(g):
+    """Low hedge with serrated leaves and rounded clusters of four-sepal florets."""
+    from generate_reference_glb import add, cross, mul, norm
+    rng=random.Random(19)
+    def foliage(at,angle,length,width,tip,tone):
+        dx,dz=cos(angle),sin(angle)
+        rows=[]
+        for step in range(9):
+            t=step/8
+            w=width*sin(pi*t)**.76*(1 if step%2 else .88)
+            x=at[0]+length*t*dx
+            y=at[1]+tip*t+.18*sin(pi*t)
+            z=at[2]+length*t*dz
+            rows.append([(x-side*dz*w,y+(.075 if side==0 else -.06)*sin(pi*t),z+side*dx*w)
+                         for side in (-1,0,1)])
+        for a,b in zip(rows,rows[1:]):
+            for k in (0,1):
+                g.quad(tone if k==0 else "sage",a[k],a[k+1],b[k+1],b[k])
+    def floret(at,normal,angle,tone):
+        u=norm(cross(normal,(0,0,1)))
+        v=cross(normal,u)
+        def point(a,x,y,h):
+            return add(at,add(mul(u,x*cos(a)-y*sin(a)),add(mul(v,x*sin(a)+y*cos(a)),mul(normal,h))))
+        for k in range(4):
+            a=angle+k*pi/2
+            # Rounded outer lobe, narrow throat and a raised fold.
+            edge=[point(a,x,y,h) for x,y,h in ((.015,-.013,0),(.105,-.081,.025),
+                (.176,-.060,.045),(.192,0,.052),(.171,.061,.044),(.10,.080,.025),(.015,.013,0))]
+            fold=point(a,.102,0,.055)
+            for i,end in enumerate(edge):
+                g.tri(tone,fold,end,edge[(i+1)%len(edge)],normal,normal,normal)
+        g.blob("gold",add(at,mul(normal,.026)),(.037,.035,.037),7,5)
+
+    for stem in range(5):
+        x=(stem-2)*.91
+        z=.22*sin(2.2*stem)
+        h=1.17+.26*sin(1.8*stem+.3)
+        crown=(x,h,z)
+        g.tube("moss",[(x*.83,.015,z+.12),(x-.11,.43,z+.05),
+                       (x+.07,.81*h,z+.07),crown],[.083,.062,.044,.026],7)
+        for j in range(8):
+            angle=j*2.39996+stem*1.7
+            layer=j//4
+            foliage((x,.30+.39*layer+.07*(j%3),z),angle,
+                    rng.uniform(.66,1.01),rng.uniform(.20,.29),
+                    -.19+.13*layer,("leafdeep","leaf","moss")[j%3])
+        for j in range(13):
+            a=j*2.39996+stem
+            radius=(j/13)**.5
+            xx,zz=radius*cos(a),radius*sin(a)
+            site=(x+.44*xx,h+.23*(1-radius**2),z+.43*zz)
+            if j%2==1:
+                g.tube("sage",[(x,h-.17,z),site],[.021,.014],5)
+            pigment=(("lilac","lavender","sky"),("cream","ivory","pink"))[stem%2][j%3]
+            floret(site,norm((1.5*xx,.93,1.5*zz)),a+.36,pigment)
