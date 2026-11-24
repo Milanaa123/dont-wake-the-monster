@@ -2,43 +2,7 @@
 from math import cos, exp, hypot, pi, sin, sqrt
 
 from generate_reference_glb import cross, norm, sub
-from orchard_sculpt import rounded_sections
-
-
-def turned_skin(g, point, pigment, center, sides, bands):
-    """Join a closed family of deformed rings, with smooth normals across pigment seams."""
-    rows = []
-    for j in range(bands + 1):
-        row = []
-        t = j / bands
-        for i in range(sides):
-            a = 2*pi*i/sides
-            p = point(a,t)
-            radial = sub(p,center)
-            if j in (0,bands):
-                normal = norm(radial)
-            else:
-                around = sub(point(a+.001,t),point(a-.001,t))
-                along = sub(point(a,t+.0002),point(a,t-.0002))
-                normal = norm(cross(around,along))
-                if sum(v*w for v,w in zip(normal,radial)) < 0:
-                    normal = tuple(-v for v in normal)
-            row.append((p,normal))
-        rows.append(row)
-    for j,(lower,upper) in enumerate(zip(rows,rows[1:])):
-        for i in range(sides):
-            k = (i+1)%sides
-            corners = [lower[i],lower[k],upper[k],upper[i]]
-            if j == 0:
-                corners.pop(1)
-            if j == bands-1:
-                corners.pop(2)
-            points,normals = zip(*corners)
-            mat = pigment(i,j)
-            if len(corners)==3:
-                g.tri(mat,*points,*normals)
-            else:
-                g.quad(mat,*points,vertex_normals=normals)
+from orchard_sculpt import rounded_sections, turned_skin
 
 
 def bead_eyes(g, depth, spacing, y, width, height):

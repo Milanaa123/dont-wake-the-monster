@@ -110,6 +110,32 @@ for name,_,base,second in PET_SPECS:
 # Shoreline width sets the island placement scale. Keep a flat water surface
 # below the floating leaves, stones around the margin and reeds above it.
 from world_shapes_v2 import sculpt_world
+giant=sculpt_world("SleepingMonster",GameSculpt)
+finite_mesh(giant)
+for arm in ("ArmL","ArmR"):
+    palm=giant.parts[arm]
+    assert giant.joints[arm][0]=="Body" and "footfur" in palm
+    vertices=palm["ivory"][0]
+    # Each of the three nail beds has a continuous border shared with the digit.
+    edges={}
+    for i in range(0,len(vertices),3):
+        triangle=vertices[i:i+3]
+        for point in triangle:
+            edges.setdefault(point,set()).update(triangle)
+    skin=set(palm["fur"][0])
+    nails=0
+    while edges:
+        pending=[next(iter(edges))]
+        bed=set()
+        while pending:
+            point=pending.pop()
+            if point in bed: continue
+            bed.add(point)
+            pending.extend(edges.pop(point))
+        assert len(bed & skin)>=12
+        nails+=1
+    assert nails==3 and min(p[2] for p in vertices)<-1.45
+
 pond=sculpt_world("WaterPond",GameSculpt)
 finite_mesh(pond)
 assert {"water","turquoise","moss","pink","leafvein","stone","slate"} <= pond.data.keys()

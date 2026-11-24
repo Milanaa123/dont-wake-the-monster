@@ -43,6 +43,86 @@ def rounded_sections(g, pigment, rings, sides=20):
             g.tri(bands[k],rings[k][:3],*( (a,b) if k==0 else (b,a) ))
 
 
+def turned_skin(g, point, pigment, center, sides, bands):
+    """Join a closed family of deformed rings, with smooth normals across pigment seams."""
+    from generate_reference_glb import cross, norm, sub
+    rows = []
+    for j in range(bands + 1):
+        row = []
+        t = j / bands
+        for i in range(sides):
+            a = 2*pi*i/sides
+            p = point(a,t)
+            radial = sub(p,center)
+            if j in (0,bands):
+                normal = norm(radial)
+            else:
+                around = sub(point(a+.001,t),point(a-.001,t))
+                along = sub(point(a,t+.0002),point(a,t-.0002))
+                normal = norm(cross(around,along))
+                if sum(v*w for v,w in zip(normal,radial)) < 0:
+                    normal = tuple(-v for v in normal)
+            row.append((p,normal))
+        rows.append(row)
+    for j,(lower,upper) in enumerate(zip(rows,rows[1:])):
+        for i in range(sides):
+            k = (i+1)%sides
+            corners = [lower[i],lower[k],upper[k],upper[i]]
+            if j == 0:
+                corners.pop(1)
+            if j == bands-1:
+                corners.pop(2)
+            points,normals = zip(*corners)
+            mat = pigment(i,j)
+            if len(corners)==3:
+                g.tri(mat,*points,*normals)
+            else:
+                g.quad(mat,*points,vertex_normals=normals)
+
+
+def giant_paw(g, side):
+    # From the underside of a weight-bearing palm through the narrow wrist
+    # to the shoulder. The palm swings on the existing shoulder pivot.
+    def ring(x,y,z,width,depth):
+        return side*x,y,z,width,depth
+    rounded_sections(g,"fur",[ring(*section) for section in (
+        (1.45,.27,-.88,.28,.28), (1.47,.33,-.90,.48,.43),
+        (1.49,.48,-.89,.57,.48), (1.50,.68,-.81,.56,.46),
+        (1.52,.86,-.65,.49,.40), (1.56,1.08,-.45,.37,.32),
+        (1.54,1.36,-.35,.36,.37), (1.46,1.64,-.28,.39,.39),
+        (1.33,1.92,-.24,.33,.32), (1.22,2.09,-.22,.17,.17))],24)
+
+    for finger in (-1,0,1):
+        # Dorsal nail and toe share a surface. The nail narrows at both ends.
+        root_x=1.47+.294*finger
+        tip_z=-1.56+.084*abs(finger)
+        def digit(a,t):
+            # Concentrate four dorsal columns into a rounded nail bed. The
+            # pigment border follows mesh edges without a stepped grid mask.
+            dorsal=(a-pi/2+pi)%(2*pi)-pi
+            progress=max(0,min(1,(12*t-5)/6))
+            width=.20+.94*max(0,sin(pi*progress))**.68
+            offset=abs(dorsal)
+            if offset<=pi/4:
+                offset=width*offset/(pi/4)
+            else:
+                offset=width+(pi-width)*(offset-pi/4)/(3*pi/4)
+            a=pi/2+(offset if dorsal>=0 else -offset)
+            arch=max(0,sin(pi*t))**.57
+            x=root_x+.055*finger*t
+            y=.52+.12*sin(pi*t)-.13*t
+            z=-1.04+(tip_z+1.04)*t
+            return (side*(x+.182*arch*cos(a)),y+.169*arch*sin(a),z)
+        def pigment(i,j):
+            return "ivory" if 5<=j<11 and 2<=i<6 else "fur"
+        turned_skin(g,digit,pigment,(side*root_x,.54,(tip_z-1.04)*.5),16,12)
+    # Palm pad and toe pads are shallow, inlaid underside contours.
+    # They become visible when the giant lifts its hand.
+    rounded_sections(g,"footfur",[ring(*section) for section in (
+        (1.46,.246,-.92,.18,.14),(1.46,.252,-.92,.30,.23),
+        (1.46,.282,-.92,.33,.26),(1.46,.319,-.92,.25,.21))],16)
+
+
 def monster(S):
     g=S("Environment_SleepingMonster")
     g.joint("Body",(0,0,0))
@@ -137,13 +217,7 @@ def monster(S):
         for j in range(12):
             g.tri("blush",middle,cheek[(j+1)%12],cheek[j])
         g.joint("Arm"+suffix,(s*1.28,1.93,-.22))
-        rounded_sections(g,"fur",[(s*1.44,.39,-.73,.27,.32),
-            (s*1.49,.51,-.76,.47,.50),(s*1.51,.78,-.67,.49,.51),
-            (s*1.55,1.12,-.48,.40,.41),(s*1.48,1.53,-.33,.36,.36),
-            (s*1.33,1.93,-.25,.31,.29),(s*1.22,2.09,-.22,.17,.17)],22)
-        for j in (-1,0,1):
-            g.blob("ivory",(s*1.46+j*.21,.52,-1.16+.075*abs(j)),
-                   (.087,.080,.102),10,6)
+        giant_paw(g,s)
         g.joint("Leg"+suffix,(s*.83,.79,.30))
         rounded_sections(g,"footfur",[(s*.89,.045,-.22,.40,.52),
             (s*.91,.13,-.23,.53,.64),(s*.91,.33,-.18,.54,.61),
