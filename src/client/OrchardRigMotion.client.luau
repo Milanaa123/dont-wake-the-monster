@@ -22,8 +22,10 @@ local function track(root: Instance)
     local removed=root.DescendantRemoving:Connect(function(item)
         if joints[item.Name]==item then joints[item.Name]=nil end
     end)
+    local species = model:GetAttribute("PetSpecies")
+    local lamb = species=="Mochi" or species=="Tofu" or species=="Luma"
     rigs[root] = {model=model,joints=joints,added=added,removed=removed,prev=root.Position,phase=seed*.37,
-        travel=0,rest=0,hold=0,stroke=0,wake=0,last=os.clock(),seed=seed}
+        lamb=lamb,travel=0,rest=0,hold=0,stroke=0,wake=0,last=os.clock(),seed=seed}
 end
 
 CollectionService:GetInstanceAddedSignal("OrchardRig"):Connect(track)
@@ -33,6 +35,13 @@ CollectionService:GetInstanceRemovedSignal("OrchardRig"):Connect(function(root)
     rigs[root :: BasePart]=nil
 end)
 for _,root in ipairs(CollectionService:GetTagged("OrchardRig")) do track(root) end
+
+-- One ear lifts, then settles a little past its resting position.
+local function earFlick(age: number): number
+    if age<=0 or age>=.72 then return 0 end
+    local t=age/.72
+    return math.sin(math.pi*t)^2*math.sin(2*math.pi*t)
+end
 
 RunService.PreSimulation:Connect(function()
     local camera=workspace.CurrentCamera
@@ -70,10 +79,15 @@ RunService.PreSimulation:Connect(function()
         local beat=math.sin(r.phase)
         local breath=math.sin(now*(if boss then 1.13 else 1.92)+r.seed)
         local nibble=0
+        local firstEar,secondEar=0,0
         local fedAt=model:GetAttribute("FedAt")
         if type(fedAt)=="number" then
             local age=workspace:GetServerTimeNow()-fedAt
             if age>=0 and age<1.2 then
+                if r.lamb then
+                    firstEar=earFlick(age)*(1-r.rest)
+                    secondEar=earFlick(age-.14)*(1-r.rest)
+                end
                 nibble=math.sin(math.pi*age/1.2)^2 * (.60+.40*math.sin(age*16))
             end
         end
@@ -93,6 +107,7 @@ RunService.PreSimulation:Connect(function()
                 x=.055*breath+.09*r.travel*math.cos(r.phase*2)+.45*r.rest-.17*r.stroke+.22*nibble
                 y=.10*math.sin(now*.94+r.seed)*(1-r.travel)+.28*r.stroke
                 z=.08*r.hold
+                if r.lamb then z+=.20*r.stroke-.09*(firstEar-secondEar) end
                 if boss then
                     x=.26*(1-r.wake)+.045*breath-.31*attack
                     local scenario=model:GetAttribute("WakeMode")
@@ -106,6 +121,11 @@ RunService.PreSimulation:Connect(function()
             elseif name:match("^Ear") then
                 x=.035*breath+.09*math.cos(r.phase*2-.48)*r.travel+.38*r.rest-.16*r.stroke
                 z=side*(.035*breath+.12*nibble+.09*r.hold)
+                if r.lamb then
+                    local flick=if side<0 then firstEar else secondEar
+                    z+=side*(.46*flick+.15*r.stroke)
+                    y+=side*(.13*flick+.12*r.stroke)
+                end
             elseif name:match("^Fore") or name:match("^Hind") then
                 local pair=if name:match("^Fore") then 1 else -1
                 x=beat*side*pair*r.travel*.67+pair*(r.rest*.60+r.hold*.37)

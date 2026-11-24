@@ -128,6 +128,14 @@ def photograph(scene, path, focus, direction, scale, floor_z, light_scale=1, ver
     bpy.ops.render.render(write_still=True)
 
 
+def section_transform(item,section):
+    values=item["cframe"]
+    assert len(values)==12
+    rotation=Matrix((values[3:6],values[6:9],values[9:12])).to_4x4()
+    scale=Matrix.Diagonal([actual/authored for actual,authored in zip(item["size"],section["size"])]+[1])
+    return BASIS @ Matrix.Translation(values[:3]) @ rotation @ scale @ BASIS.inverted()
+
+
 def render_entrance(layout, bank, atlas, out, pond_view=None, frame=None):
     resolution=frame["resolution"] if frame else (1440,880)
     scene,mat=setup_scene(atlas,resolution)
@@ -140,11 +148,7 @@ def render_entrance(layout, bank, atlas, out, pond_view=None, frame=None):
         if key not in meshes:
             meshes[key]=decode_section(section,mat)
         # Preserve the section-local origin, scale and rigid transform used by the place.
-        values=item["cframe"]
-        assert len(values)==12
-        rotation=Matrix((values[3:6],values[6:9],values[9:12])).to_4x4()
-        scale=Matrix.Diagonal([actual/authored for actual,authored in zip(item["size"],section["size"])]+[1])
-        transform=BASIS @ Matrix.Translation(values[:3]) @ rotation @ scale @ BASIS.inverted()
+        transform=section_transform(item,section)
         obj=place_mesh(scene,item["name"],meshes[key],transform)
         corners.extend(transform @ Vector(p) for p in obj.bound_box)
     if pond_view:
@@ -169,7 +173,9 @@ def main():
     parser.add_argument("bank",type=Path)
     parser.add_argument("output",type=Path)
     parser.add_argument("assets",nargs="*")
-    parser.add_argument("--layout",type=Path)
+    inputs=parser.add_mutually_exclusive_group()
+    inputs.add_argument("--layout",type=Path)
+    inputs.add_argument("--poses",type=Path,help="Motor6D pose export from test_orchard_place")
     parser.add_argument("--pond-view",choices=("portrait","landscape"))
     parser.add_argument("--camera-frames",type=Path)
     args=parser.parse_args(sys.argv[sys.argv.index("--")+1:])
@@ -184,6 +190,21 @@ def main():
     if args.layout:
         frame=json.loads(args.camera_frames.read_text())[args.pond_view] if args.pond_view else None
         render_entrance(json.loads(args.layout.read_text()),bank,atlas,out,args.pond_view,frame)
+        return
+    if args.poses:
+        shots={key:(focus,direction,scale) for key,focus,direction,scale in SHOTS}
+        for pose in json.loads(args.poses.read_text()):
+            asset=pose["asset"]
+            scene,mat=setup_scene(atlas,(480,400))
+            # Art.mount places the origin at the full bounding box center.
+            # Our fixed studio cameras frame the original authoring coordinates.
+            origin=Matrix.Translation(BASIS @ Vector(bank[asset]["center"]))
+            for section in bank[asset]["parts"]:
+                name=section["name"]
+                transform=origin @ section_transform(pose["parts"][name],section)
+                place_mesh(scene,name,decode_section(section,mat),transform)
+            floor_z=bank[asset]["center"][1]-bank[asset]["size"][1]/2
+            photograph(scene,out/(asset+"-"+pose["label"]+".png"),*shots[asset],floor_z)
         return
     for asset,focus,direction,scale in SHOTS:
         if args.assets and asset not in args.assets:

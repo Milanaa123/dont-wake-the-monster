@@ -525,6 +525,7 @@ function World.makePet(name: string, color: Color3, pointy: boolean): Model
     body.CanCollide = false
     pet.PrimaryPart = body
     local species = (string.match(name, "^[^_]+") or name):gsub("^Wild", "")
+    pet:SetAttribute("PetSpecies",species)
     pet:SetAttribute("Airborne",species=="Echo" or species=="Twinkle" or species=="Doodle" or species=="Swoop")
     local tag = Instance.new("BillboardGui")
     tag.Name = "PetNameTag"

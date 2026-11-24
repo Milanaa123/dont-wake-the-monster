@@ -222,6 +222,10 @@ local bossModel,bossBody=fixture("Environment_SleepingMonster","GigglesTheGiant"
 local owlet,owlBody=fixture("Pet_Swoop","Swoop")
 local openEyes=owlBody.Blink.Size
 assert(owlBody.Blink.Blink.Part0==owlBody.Head)
+local lamb,lambBody=fixture("Pet_Tofu","RescueRunaway_2")
+local comparison,comparisonBody=fixture("Pet_Tofu","RescueRunaway_2")
+lamb:SetAttribute("PetSpecies","Tofu")
+comparison:SetAttribute("PetSpecies","Tofu")
 local frameEvent=signal()
 local tags={
     GetTagged=function(_,tag) return if tag=="OrchardRig" then roots else {} end,
@@ -247,10 +251,13 @@ local function step(frames)
         frameEvent.callback()
     end
 end
-local function difference(joint)
-    local a=activeBody[joint][joint].Transform
-    local b=idleBody[joint][joint].Transform
+local function poseDifference(first,second,joint)
+    local a=first[joint][joint].Transform
+    local b=second[joint][joint].Transform
     return (a.LookVector-b.LookVector).Magnitude+(a.UpVector-b.UpVector).Magnitude
+end
+local function difference(joint)
+    return poseDifference(activeBody,idleBody,joint)
 end
 step(3)
 assert(difference("Head")<.0001)
@@ -271,6 +278,49 @@ bossModel:SetAttribute("Awake",true)
 step(23)
 assert(bossBody.EyeL.LocalTransparencyModifier<.01 and bossBody.LidL.LocalTransparencyModifier>.99)
 print("PASS: shipped client drives feed, recovery, petting, nap and boss eyelids on mounted joints at low quality")
+
+-- Lune does not simulate Motor6D physics. Resolve the shipped joint hierarchy
+-- for an offline mesh review, including each part's animated eye size.
+local poses={}
+local function capturePose(label)
+    if not process.args[4] then return end
+    local parts={}
+    local function frame(part)
+        local joint=part:FindFirstChildOfClass("Motor6D")
+        if not joint then return part.CFrame end
+        return frame(joint.Part0)*joint.C0*joint.Transform*joint.C1:Inverse()
+    end
+    local function record(name,part)
+        parts[name]={cframe={frame(part):GetComponents()},size=xyz(part.Size)}
+    end
+    record("Body",lambBody)
+    for _,part in lambBody:GetChildren() do
+        if part:IsA("MeshPart") then record(part.Name,part) end
+    end
+    table.insert(poses,{label=label,asset="Pet_Tofu",parts=parts})
+end
+capturePose("Idle")
+lamb:SetAttribute("FedAt",clock)
+step(2)
+capturePose("LeadingEar")
+local function lambDifference(joint)
+    return poseDifference(lambBody,comparisonBody,joint)
+end
+assert(lambDifference("EarL")>lambDifference("EarR")+.08,"Leading ear should lift first")
+step(4)
+capturePose("FollowingEar")
+assert(lambDifference("EarR")>lambDifference("EarL")+.10,"Trailing ear should follow")
+step(15)
+assert(lambDifference("EarL")<.0001 and lambDifference("EarR")<.0001,"Ears should settle")
+lamb:SetAttribute("MotionMode","Pet")
+step(18)
+capturePose("Stroke")
+assert(lambDifference("Head")>.3 and lambDifference("EarR")>.2,"Lamb should lean into a stroke")
+lamb:SetAttribute("MotionMode","Follow")
+step(20)
+assert(lambDifference("Head")<.001,"Ending a stroke should release the head")
+if process.args[4] then fs.writeFile(process.args[4],serde.encode("json",poses,true)) end
+print("PASS: both ears of a renamed rescue lamb follow the feed in sequence, settle and respond to petting")
 
 owlet:SetAttribute("MotionMode","Nap")
 step(20)
