@@ -132,19 +132,30 @@ function ProfileStore.release(self: any, userId: number, profile: any): boolean
     if not self.store or not profile.loaded or not self.serverToken then return true end
     while self.saving[profile] do task.wait() end
     self.saving[profile] = true
-    local owned = false
-    local ok, err = pcall(function()
-        self.store:UpdateAsync("player_" .. userId, function(previous: any)
-            if not ours(self, previous, profile.dataSessionId) then return nil end
-            owned = true
-            local nextState = table.clone(previous)
-            nextState[LEASE_FIELD] = nil
-            return nextState
+    local released = false
+    for attempt = 1, 3 do
+        local ok, err = pcall(function()
+            self.store:UpdateAsync("player_" .. userId, function(previous: any)
+                -- Roblox may call the transform again against a newer record.
+                -- A prior attempt may also have committed before its response failed.
+                released = type(previous) == "table" and previous[LEASE_FIELD] == nil
+                if not ours(self, previous, profile.dataSessionId) then return nil end
+                released = true
+                local nextState = table.clone(previous)
+                nextState[LEASE_FIELD] = nil
+                return nextState
+            end)
         end)
-    end)
+        if ok then break end
+        released = false
+        if attempt == 3 then
+            warn("DWTM: lease release failed for " .. userId .. ": " .. tostring(err))
+        else
+            task.wait(attempt)
+        end
+    end
     self.saving[profile] = nil
-    if not ok then warn("DWTM: lease release failed for " .. userId .. ": " .. tostring(err)) end
-    return ok and owned
+    return released
 end
 
 -- A transient failure during PlayerRemoving has no later autosave to retry it.

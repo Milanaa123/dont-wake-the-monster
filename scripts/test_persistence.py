@@ -153,6 +153,51 @@ local started,yielded=coroutine.resume(finish)
 assert(started and yielded=="waiting" and records.player_7.coins==208)
 assert(coroutine.resume(finish) and coroutine.status(finish)=="dead")
 assert(records.player_7.coins==301 and not records.player_7._dwtmLease)
+-- Release-only failures must permit prompt rejoin after the final snapshot.
+-- Simulate both a rejected request and a lost reply after a committed update.
+for visit,committed in {false,true} do
+    concurrentStore.UpdateAsync=realUpdate
+    local ok,restore=transient:load(7)
+    assert(ok and restore.coins==300+visit)
+    local state={loaded=true,dirty=true,revision=3,coins=restore.coins+1,dataSessionId=restore._dwtmLease.token}
+    local calls=0
+    concurrentStore.UpdateAsync=function(...)
+        calls+=1
+        if calls==2 then
+            if committed then realUpdate(...) end
+            error("release reply unavailable")
+        end
+        return realUpdate(...)
+    end
+    local leave=coroutine.create(function() assert(transient:finish(7,state)) end)
+    local ok,waiting=coroutine.resume(leave)
+    assert(ok and waiting=="waiting" and records.player_7.coins==state.coins)
+    assert(coroutine.resume(leave) and coroutine.status(leave)=="dead")
+    assert(calls==3 and not records.player_7._dwtmLease)
+end
+concurrentStore.UpdateAsync=realUpdate
+local ok,data=transient:load(7)
+assert(ok)
+local oldVisit={loaded=true,dataSessionId=data._dwtmLease.token}
+local attempts=0
+concurrentStore.UpdateAsync=function()
+    attempts+=1
+    error("DataStore unavailable")
+end
+local failure=coroutine.create(function() assert(not transient:release(7,oldVisit)) end)
+for _=1,3 do assert(coroutine.resume(failure)) end
+assert(coroutine.status(failure)=="dead" and attempts==3)
+assert(transient.saving[oldVisit]==nil and records.player_7._dwtmLease.token==oldVisit.dataSessionId)
+-- First evaluation proposes a release. The final evaluation observes a
+-- newer visit. Only the final callback result may determine success.
+concurrentStore.UpdateAsync=function(_,key,callback)
+    assert(callback(records[key])._dwtmLease==nil)
+    records[key]={coins=488,_dwtmLease={token="next-visit",expiresAt=os.time()+240}}
+    assert(callback(records[key])==nil)
+end
+assert(not transient:release(7,oldVisit))
+assert(records.player_7.coins==488 and records.player_7._dwtmLease.token=="next-visit")
+print("PASS: transient final release, lost release reply and ownership change during retry")
 print("PASS: cross-server acquisition, conflict rejection, lease renewal, release, stale-write protection and timeout recovery")
 print("PASS: unavailable/new/failed loads, no writes from unloaded profiles, save retry, autosave/leave ordering, dirty revisions and serializer recovery")
 '''.replace("MODULE", module)
