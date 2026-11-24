@@ -88,7 +88,7 @@ function Bridge.prepare(owner: Instance, group: string, keys: {string}, ready: (
 end
 
 local function makeVisual(source: MeshPart, parent: Instance, name: string,
-    pivot: CFrame, height: number): MeshPart?
+    pivot: CFrame, height: number, bodyAnchor: BasePart?): MeshPart?
     if not source.Archivable then return nil end
     local mesh = source:Clone()
     mesh.Name = name
@@ -109,7 +109,7 @@ local function makeVisual(source: MeshPart, parent: Instance, name: string,
         else full.Y
     local ratio = height / math.max(sourceSpan, 0.001)
     mesh.Size = mesh.Size * ratio
-    Geometry.mount(mesh,pivot,ratio)
+    Geometry.mount(mesh,pivot,ratio,bodyAnchor)
     mesh:SetAttribute("VisualOffset",(mesh:GetAttribute("PieceCenter") or Vector3.zero)*ratio)
     if mesh:FindFirstChildWhichIsA("Motor6D",true) then mesh:AddTag("OrchardRig") end
     mesh.Parent = parent
@@ -126,6 +126,22 @@ function Bridge.ground(owner: Instance, key: string, frame: CFrame, span: number
         local mesh=makeVisual(source,owner,key,frame*CFrame.new(0,height/2,0),height)
         if mesh and replaced and replaced.Parent then replaced:Destroy() end
     end)
+end
+
+-- Keep the planting on the dais when the giant leaves to chase players.
+function Bridge.decorateDen(dais: BasePart)
+    if dais:FindFirstChild("DenFlowers") then return end
+    local flowers=Instance.new("Folder")
+    flowers.Name="DenFlowers"
+    flowers.Parent=dais
+    local surface=dais.Position+Vector3.yAxis*(dais.Size.X*.5)
+    local function plant(asset: string,x: number,z: number,yaw: number,span: number)
+        Bridge.ground(flowers,"Environment_"..asset,CFrame.new(surface+Vector3.new(x,0,z))*CFrame.Angles(0,yaw,0),span,nil)
+    end
+    plant("BloomingHedge",1,20.5,.09,22)
+    plant("MeadowVerge",-21,12.5,-.82,13)
+    plant("MeadowVerge",21,11,1.08,13)
+    plant("BloomingHedge",-11,-18,-.38,10)
 end
 
 -- Two stretches of paving lead around the berry border to the cottage steps.
@@ -285,12 +301,29 @@ function Bridge.applyGardenerAvatar(character: Model): boolean
     return true
 end
 
+-- A static GLB import can stand in while the articulated model loads.
+function Bridge.prepareGiant(boss: Model, ready: (MeshPart) -> ())
+    task.defer(function()
+        if not boss.Parent then return end
+        Geometry.load("Environment_SleepingMonster")
+        if boss.Parent then
+            local mesh=Bridge.applySleepingMonster(boss)
+            if mesh then ready(mesh) end
+        end
+    end)
+end
+
 function Bridge.applySleepingMonster(boss: Model): MeshPart?
-    local source = findMesh("World", "Environment_SleepingMonster")
+    local existing=boss:FindFirstChild("ImportedSleepingMonster")
+    local packed=Geometry.cached("Environment_SleepingMonster")
+    if existing and existing:IsA("MeshPart") and (existing:HasTag("OrchardRig") or not packed) then
+        return existing
+    end
+    local source = packed or findMesh("World", "Environment_SleepingMonster")
     if not source then return nil end
     local height = 52
     local mesh = makeVisual(source, boss, "ImportedSleepingMonster",
-        boss:GetPivot() * CFrame.new(0,10+height/2-29,0), height)
+        boss:GetPivot() * CFrame.new(0,10+height/2-29,0), height, boss.PrimaryPart)
     if not mesh then return nil end
     mesh:SetAttribute("BossRest",boss:GetPivot():ToObjectSpace(mesh.CFrame))
     for _, obj in ipairs(boss:GetDescendants()) do

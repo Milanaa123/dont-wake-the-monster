@@ -25,6 +25,8 @@ local services={
 local game={GetService=function(_,k) return assert(services[k],k) end}
 r.implementMethod("Instance","WaitForChild",function(self,name) return assert(self:FindFirstChild(name),name) end)
 r.implementMethod("BindableEvent","Fire",function() end)
+-- Test fixtures use PrimaryPart with the default identity PivotOffset.
+r.implementMethod("Model","GetPivot",function(self) return assert(self.PrimaryPart).CFrame end)
 local modules={}
 local function load(module)
     local env={game=game,script=module,workspace=world,Instance=r.Instance,Enum=r.Enum,
@@ -203,9 +205,25 @@ local function fixture(key,modelName)
     local model=r.Instance.new("Model")
     model.Name=modelName
     model.Parent=island
-    local body=geometry.load(key):Clone()
-    geometry.mount(body,r.CFrame.new(),1)
-    body.Parent=model
+    local body
+    if modelName=="GigglesTheGiant" then
+        local anchor=r.Instance.new("Part")
+        anchor.Anchored=true
+        anchor.CFrame=r.CFrame.new(0,29,0)*r.CFrame.Angles(0,math.pi,0)
+        anchor.Parent=model
+        model.PrimaryPart=anchor
+        local previous=r.Instance.new("MeshPart")
+        previous.Name="ImportedSleepingMonster"
+        previous.Parent=model
+        body=assert(bridge.applySleepingMonster(model))
+        assert(previous.Parent==nil and model.PrimaryPart==anchor)
+        assert(body.Spine.Part0==anchor and body.Spine.Part1==body and not body.Anchored)
+        assert(bridge.applySleepingMonster(model)==body,"Duplicate sleeping giant")
+    else
+        body=geometry.load(key):Clone()
+        geometry.mount(body,r.CFrame.new(),1)
+        body.Parent=model
+    end
     local root={
         Name=key,Parent=model,Position=r.Vector3.zero,
         DescendantAdded=signal(),DescendantRemoving=signal(),
@@ -262,9 +280,31 @@ local function difference(joint)
 end
 -- Lune does not simulate Motor6D physics. Resolve the shipped joint hierarchy
 -- for an offline mesh review, including each part's animated eye size.
+local dais=r.Instance.new("Part")
+dais.Name="MonsterPlatform"
+dais.Size=r.Vector3.new(4,60,60)
+dais.Position=r.Vector3.new(0,8,0)
+dais.Parent=island
+bridge.decorateDen(dais)
+bridge.decorateDen(dais)
+drain()
+assert(#dais.DenFlowers:GetChildren()==4)
+local function renderSpace(body)
+    local spine=body.Spine
+    local unit=spine:GetAttribute("PoseScale")
+    local origin=spine.Part0.CFrame*spine.C0*r.CFrame.new(-body:GetAttribute("PieceCenter")*unit)
+    assert(math.abs(origin.Y-body:GetAttribute("ArtSize").Y*unit/2-10)<.002)
+    return origin,unit
+end
+local function scaledFrame(cf,origin,unit)
+    local f=origin:ToObjectSpace(cf)
+    return f.Rotation+f.Position/unit
+end
 local function capturePose(poses,body,key,label,path)
     if not path then return end
     local parts={}
+    local origin,unit=r.CFrame.identity,1
+    if body:FindFirstChild("Spine") then origin,unit=renderSpace(body) end
     local function frame(part)
         local joint=part:FindFirstChildOfClass("Motor6D")
         if not joint then return part.CFrame end
@@ -272,14 +312,24 @@ local function capturePose(poses,body,key,label,path)
     end
     local function record(name,part)
         local eyelid=name:match("^Lid") or name:match("^Eye")
-        parts[name]={cframe={frame(part):GetComponents()},size=xyz(part.Size),
+        parts[name]={cframe={scaledFrame(frame(part),origin,unit):GetComponents()},size=xyz(part.Size/unit),
             hidden=if eyelid then part.LocalTransparencyModifier>=.99 else nil}
     end
     record("Body",body)
     for _,part in body:GetChildren() do
         if part:IsA("MeshPart") then record(part.Name,part) end
     end
-    table.insert(poses,{label=label,asset=key,parts=parts})
+    local scenery=nil
+    if key=="Environment_SleepingMonster" and path==process.args[5] then
+        scenery={}
+        for _,mesh in dais.DenFlowers:GetChildren() do
+            assert(not mesh.CanCollide and not mesh.CanQuery)
+            table.insert(scenery,{asset=mesh.Name,size=xyz(mesh.Size/unit),
+                cframe={scaledFrame(mesh.CFrame,origin,unit):GetComponents()}})
+        end
+        table.sort(scenery,function(a,b) return a.cframe[1]<b.cframe[1] end)
+    end
+    table.insert(poses,{label=label,asset=key,parts=parts,scenery=scenery})
 end
 local poses={}
 local bossPoses={}
@@ -318,6 +368,33 @@ step(23)
 assert(bossBody.EyeL.LocalTransparencyModifier<.01 and bossBody.LidL.LocalTransparencyModifier>.99)
 captureBoss("Awake")
 if process.args[5] then fs.writeFile(process.args[5],serde.encode("json",bossPoses,true)) end
+if process.args[6] then
+    local transitions={}
+    local function sample(label)
+        for i=1,18 do
+            step(1)
+            capturePose(transitions,bossBody,"Environment_SleepingMonster",label..i,process.args[6])
+        end
+    end
+    bossModel:SetAttribute("Awake",false)
+    sample("Settle")
+    bossModel:SetAttribute("Stirring",true)
+    sample("Warn")
+    bossModel:SetAttribute("Awake",true)
+    bossModel:SetAttribute("Stirring",false)
+    sample("Rise")
+    fs.writeFile(process.args[6],serde.encode("json",transitions))
+end
+local previousCamera=env.workspace.CurrentCamera.CFrame
+env.workspace.CurrentCamera.CFrame=r.CFrame.new(0,0,220)
+bossModel:SetAttribute("Awake",false)
+step(37)
+assert(bossBody.EyeL.LocalTransparencyModifier>.99 and bossBody.Spine.Transform.UpVector.Z<-.75)
+bossModel:SetAttribute("Awake",true)
+step(37)
+assert(bossBody.EyeL.LocalTransparencyModifier<.01 and math.abs(bossBody.Spine.Transform.UpVector.Z)<.02)
+env.workspace.CurrentCamera.CFrame=previousCamera
+print("PASS: giant changes posture at a distance on low quality")
 print("PASS: mounted boss stirs with eyes closed, settles when soothed, then opens eyes on waking")
 print("PASS: shipped client drives feed, recovery, petting, nap and boss eyelids on mounted joints at low quality")
 

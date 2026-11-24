@@ -170,9 +170,20 @@ function Art.cached(key: string): MeshPart?
 end
 
 -- Align sections about authored pivots, retaining the API- and gameplay-owned root.
-function Art.mount(mesh: MeshPart, frame: CFrame, scale: number)
+function Art.mount(mesh: MeshPart, frame: CFrame, scale: number, bodyAnchor: BasePart?)
     local base = mesh:GetAttribute("PieceCenter") or Vector3.zero
     mesh.CFrame = frame * CFrame.new(base*scale)
+    if bodyAnchor and mesh:GetAttribute("ArtSize") then
+        local spine=Instance.new("Motor6D")
+        spine.Name="Spine"
+        spine.C0=bodyAnchor.CFrame:ToObjectSpace(mesh.CFrame)
+        spine.C1=CFrame.identity
+        spine.Part0,spine.Part1=bodyAnchor,mesh
+        spine:SetAttribute("PoseScale",scale)
+        spine:SetAttribute("FloorClearance",(mesh:GetAttribute("ArtSize").Y*.5+base.Y)*scale)
+        spine.Parent=mesh
+        mesh.Anchored=false
+    end
     local members: {[string]: MeshPart} = {Body=mesh}
     for _, child in ipairs(mesh:GetChildren()) do
         if child:IsA("MeshPart") and child:GetAttribute("JointParent") then

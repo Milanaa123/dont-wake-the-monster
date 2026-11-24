@@ -21,6 +21,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parent))
 from package_studio import png, unpack
 
 SHOTS = [
+    ("Environment_BloomingHedge",(0,0,.82),(3,-9,3.4),6.3),
     ("Pet_Puffin",(0,.03,1.23),(4,-9,2.7),3.55),
     ("Pet_Nugget",(0,.03,1.24),(4,-9,2.7),3.55),
     ("Pet_Swoop",(0,.05,1.27),(3,-9,2.8),3.65),
@@ -204,6 +205,9 @@ def main():
                 if pose["parts"][name].get("hidden"): continue
                 transform=origin @ section_transform(pose["parts"][name],section)
                 place_mesh(scene,name,decode_section(section,mat),transform)
+            for item in pose.get("scenery",[]):
+                section,=bank[item["asset"]]["parts"]
+                place_mesh(scene,item["asset"],decode_section(section,mat),origin @ section_transform(item,section))
             floor_z=bank[asset]["center"][1]-bank[asset]["size"][1]/2
             photograph(scene,out/(asset+"-"+pose["label"]+".png"),*shots[asset],floor_z)
         return

@@ -130,7 +130,8 @@ function World.build()
     platform(scenery, "MainIsland", Vector3.new(0, 0, 0), 118, 14, Color3.fromRGB(151, 197, 124))
     platform(scenery, "MainEdge", Vector3.new(0, -8, 0), 113, 8, Color3.fromRGB(194, 156, 119))
     platform(scenery, "UpperEarth", Vector3.new(0, -16, 0), 88, 9, Color3.fromRGB(154, 130, 114))
-    platform(scenery, "MonsterPlatform", Vector3.new(0, 8, 0), 30, 4, Color3.fromRGB(217, 196, 149))
+    local dais=platform(scenery, "MonsterPlatform", Vector3.new(0, 8, 0), 30, 4, Color3.fromRGB(157, 181, 114))
+    ReferenceMeshLibrary.decorateDen(dais)
 
     local spawn = Instance.new("SpawnLocation")
     spawn.Name = "SafeSpawn"
@@ -279,9 +280,9 @@ function World.build()
     halo.CanCollide = false
 
     importedSleepingMonster = ReferenceMeshLibrary.applySleepingMonster(monster)
-    if not importedSleepingMonster then
-        ReferenceMeshLibrary.prepare(monster,"World",{"Environment_SleepingMonster"},function()
-            importedSleepingMonster = ReferenceMeshLibrary.applySleepingMonster(monster)
+    if not importedSleepingMonster or not importedSleepingMonster:HasTag("OrchardRig") then
+        ReferenceMeshLibrary.prepareGiant(monster,function(mesh)
+            importedSleepingMonster = mesh
         end)
     end
     -- The spawn is on the southern side (+Z); face the garden entrance.
