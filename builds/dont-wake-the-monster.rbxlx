@@ -21,6 +21,7 @@ Audio.Cues = {
     RareDiscovery = 0,    -- assets/audio/RareDiscovery.wav
     WeatherChime = 0,     -- assets/audio/WeatherChime.wav
     Boing = 0,            -- assets/audio/Boing.wav
+    SleepyGrumble = 0,
     MonsterWake = 0,      -- assets/audio/MonsterWake.wav
     Victory = 0,          -- assets/audio/Victory.wav
     Festival = 0,         -- assets/audio/Festival.wav
@@ -734,6 +735,13 @@ function Route.choose(targets: {Target}, userId: number, origin: Vector3): Targe
         end
     end
     return choice
+end
+
+-- A streamed-in model must belong to the same round as its target snapshot.
+function Route.modelFor(island: Instance?, round: number, id: number): Model?
+    local model = if island then island:FindFirstChild("RescueRunaway_" .. id) else nil
+    if model and model:IsA("Model") and model:GetAttribute("RescueRound") == round then return model end
+    return nil
 end
 
 local arrows = {"↑","↗","→","↘","↓","↙","←","↖"}
@@ -1589,6 +1597,7 @@ local rng = Random.new()
 local noise = 0
 local phase = "SLEEP"
 local secondsLeft = Config.SLEEP_MAX_SECONDS
+local noiseAlarm: number? = nil
 local profiles: {[Player]: any} = {}
 local loading: {[Player]: boolean} = {}
 local arrival: {[Player]: number} = {}
@@ -1656,8 +1665,20 @@ local function sendGarden(player: Player)
     remote:FireClient(player, snapshot)
 end
 
+local function sleepWarning(): (string?, number?)
+    if phase ~= "SLEEP" then
+        noiseAlarm = nil
+        return nil, nil
+    end
+    local reason, seconds
+    noiseAlarm, reason, seconds = WakeRound.warning(noise, Config.NOISE_MAX, secondsLeft, os.clock(), noiseAlarm)
+    return reason, seconds
+end
+
 local function sendState(player: Player?)
-    local update = {type = "state", phase = phase, noise = noise, maxNoise = Config.NOISE_MAX, time = secondsLeft, wakes = wakeCount, wakeMode = wakeMode, lureReady = os.clock()>=decoy.readyAt, rescue = RescueObjective.status(), weather = currentWeather, festivalFinds = festivalFinds, festivalGoal = X.FestivalGoal}
+    local warning, wakeIn = sleepWarning()
+    World.setStirring(warning ~= nil)
+    local update = {type = "state", phase = phase, warning = warning, wakeIn = wakeIn, noise = noise, maxNoise = Config.NOISE_MAX, time = secondsLeft, wakes = wakeCount, wakeMode = wakeMode, lureReady = os.clock()>=decoy.readyAt, rescue = RescueObjective.status(), weather = currentWeather, festivalFinds = festivalFinds, festivalGoal = X.FestivalGoal}
     if player then
         remote:FireClient(player, update)
     else
@@ -2008,7 +2029,9 @@ local function onPlayerAdded(player: Player)
     sendGarden(player)
     sendState(player)
     careUpdate(player)
-    remote:FireClient(player, {type = "notice", text = "Meet " .. petDefinition.name .. "! Feed it. Nothing can go wrong... right?", color = Color3.fromRGB(252, 205, 255)})
+    if phase == "SLEEP" and not sleepWarning() then
+        remote:FireClient(player, {type = "notice", text = "Meet " .. petDefinition.name .. "! Pick a snack to feed your pet.", color = Color3.fromRGB(252, 205, 255)})
+    end
 end
 
 local function onPlayerRemoving(player: Player)
@@ -2931,7 +2954,7 @@ local function startWake()
     World.setWakeMode(wakeMode)
     remote:FireAllClients({type = "soundCue", cue = "MonsterWake"})
     remote:FireAllClients({type="soundCue",cue=if wakeMode=="Listen" then "SuspiciousMeow" elseif wakeMode=="Garden" then "SillyStorm" else "RecordScratch"})
-    notice("OH NO!!! YOU WOKE GIGGLES! SURVIVE!", Color3.fromRGB(255, 113, 145))
+    notice("Giggles is awake! Follow the rescue arrow and hold SAVE ME!", Color3.fromRGB(255, 113, 145))
     World.wave(Vector3.new(0, 11, 0), 90, Color3.fromRGB(255, 104, 156))
     RescueObjective.start(function(player: Player, justCompleted: boolean, reward: number)
         local profile=profiles[player]
@@ -2968,7 +2991,6 @@ local function startWake()
         local profile = profiles[player]
         return phase == "AWAKE" and profile ~= nil and not profile.knockedOut
     end)
-    notice("SAVE THE RUNAWAY PETS! Follow their HELP prompts!", Color3.fromRGB(255, 232, 151))
     sendState()
 end
 
@@ -3149,6 +3171,8 @@ task.spawn(function()
         task.wait(1)
         if not next(profiles) and phase=="SLEEP" then
             secondsLeft=Config.SLEEP_MAX_SECONDS
+            noiseAlarm=nil
+            World.setStirring(false)
             noise=0
             noiseSpot=nil
             continue
@@ -3160,7 +3184,8 @@ task.spawn(function()
                 surpriseWeather()
                 surpriseCooldown = rng:NextInteger(19, 33)
             end
-            if noise >= Config.NOISE_MAX or secondsLeft <= 0 then
+            local _, wakeIn = sleepWarning()
+            if wakeIn == 0 then
                 actionCooldown=4
                 startWake()
             end
@@ -7300,6 +7325,7 @@ function Rescue.start(onRescue: (Player, boolean, number) -> (), allowed: (Playe
         -- Top of main island is approximately 7 studs; keep prompts reachable.
         local position = Vector3.new(math.cos(angle) * radius, 12.5, math.sin(angle) * radius)
         local pet = World.makePet(variant.name .. "_runaway_" .. i, variant.color, variant.ear == "pointy")
+        pet:SetAttribute("RescueRound", round)
         pet.Name = "RescueRunaway_" .. i
         pet:PivotTo(CFrame.new(position) * CFrame.Angles(0, angle, 0))
         table.insert(models, pet)
@@ -7840,6 +7866,18 @@ function Round.ribbon(mode: string, hearts: number, helped: boolean, tracked: nu
     return nil
 end
 
+-- A full meter can be soothed until the alarm expires. The normal end of
+-- sleep is independent, even if a player quiets the garden at the last tick.
+function Round.warning(noise: number, limit: number, secondsLeft: number, now: number, alarm: number?): (number?, string?, number?)
+    local deadline = if noise >= limit then alarm or (now + 5) else nil
+    local loudSeconds = if deadline then math.max(0, math.ceil(deadline - now)) else math.huge
+    if secondsLeft <= 5 and secondsLeft <= loudSeconds then
+        return deadline, "Timer", secondsLeft
+    end
+    if deadline then return deadline, "Noise", loudSeconds end
+    return nil, nil, nil
+end
+
 function Round.comfort(noise: number, sensitivity: number, bond: number): number
     local relief = 2 + math.floor((100-sensitivity)/35) + math.floor(bond/40)
     return math.max(0, noise-relief)
@@ -8187,6 +8225,10 @@ function World.followMonster(target: Vector3?, dt: number)
     if current~=desired then monster:PivotTo(desired) end
     local walking=(nextFoot-foot).Magnitude>.03
     if monster:GetAttribute("Walking")~=walking then monster:SetAttribute("Walking",walking) end
+end
+
+function World.setStirring(stirring: boolean)
+    if monster:GetAttribute("Stirring") ~= stirring then monster:SetAttribute("Stirring",stirring) end
 end
 
 function World.setWakeMode(mode: string)
@@ -10559,11 +10601,12 @@ local experimentCount = 0
 local planted = false
 local harvested = false
 local phase = "SLEEP"
+local warning = false
 local stage = ""
 local finished = false
 
 local function refresh()
-    if not collectionKnown or not gardenKnown or phase == "AWAKE" then
+    if not collectionKnown or not gardenKnown or phase == "AWAKE" or warning then
         panel.Visible = false
         return
     end
@@ -10638,6 +10681,7 @@ remote.OnClientEvent:Connect(function(event: any)
             end
         end
     elseif event.type == "state" then
+        warning = event.warning ~= nil
         phase = if type(event.phase) == "string" then event.phase else phase
     else
         return
@@ -11449,7 +11493,7 @@ local gradient = Instance.new("UIGradient")
 gradient.Color = ColorSequence.new(Color3.fromRGB(123, 218, 249), Color3.fromRGB(255, 91, 155))
 gradient.Parent = barFill
 
-local noiseCaption = label(header, "NOISE 0 / 100    •    every action makes chaos!", Enum.Font.GothamBold, 11, DARK)
+local noiseCaption = label(header, "NOISE 0 / 100", Enum.Font.GothamBold, 11, DARK)
 noiseCaption.Position = UDim2.new(0.04, 0, 0, 87)
 noiseCaption.Size = UDim2.new(0.92, 0, 0, 18)
 
@@ -11706,12 +11750,26 @@ local mayThrow=false
 local out=false
 local routeState: any = nil
 local shown: RescueRoute.Target? = nil
+local rescueOutline = Instance.new("Highlight")
+rescueOutline.Name = "SelectedLostPet"
+rescueOutline.Enabled = false
+rescueOutline.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+rescueOutline.OutlineColor = Color3.fromRGB(255, 220, 127)
+rescueOutline.FillColor = Color3.fromRGB(255, 210, 130)
+rescueOutline.FillTransparency = .91
+rescueOutline.Parent = workspace
+gui.Destroying:Connect(function() rescueOutline:Destroy() end)
+
 local function refreshRoute()
     local root = if player.Character then player.Character:FindFirstChild("HumanoidRootPart") else nil
     local camera = workspace.CurrentCamera
     shown = if routeState and root and root:IsA("BasePart") and not out
         then RescueRoute.choose(routeState.targets, player.UserId, root.Position) else nil
     local target = shown
+    local marked = if target and routeState then
+        RescueRoute.modelFor(workspace:FindFirstChild("MonsterIsland"),routeState.round,target.id) else nil
+    rescueOutline.Adornee = marked
+    rescueOutline.Enabled = marked ~= nil
     signal.Visible = target ~= nil and target.helper == 0
     routeLabel.Size = UDim2.new(1, if signal.Visible then -119 else -16, 0, 38)
     if not target or not root or not root:IsA("BasePart") or not camera then
@@ -11751,8 +11809,8 @@ remote.OnClientEvent:Connect(function(event: any)
     if event.type == "state" then
         local fraction = math.clamp((event.noise or 0) / (event.maxNoise or 100), 0, 1)
         TweenService:Create(barFill, TweenInfo.new(0.32, Enum.EasingStyle.Sine), {Size = UDim2.fromScale(fraction, 1)}):Play()
-        noiseCaption.Text = string.format("NOISE %d / %d   •   MORE CHAOS!", event.noise or 0, event.maxNoise or 100)
-        timer.Text = countdown(event.time or 0)
+        noiseCaption.Text = string.format("NOISE %d / %d", event.noise or 0, event.maxNoise or 100)
+        timer.Text = countdown(event.wakeIn or event.time or 0)
         health.Visible = event.phase == "AWAKE"
         mayThrow=health.Visible and event.lureReady==true
         updateLure()
@@ -11792,6 +11850,11 @@ remote.OnClientEvent:Connect(function(event: any)
                 else "CHASE • RUN OUTSIDE THE STRIKE MARKS"
             title.TextColor3 = Color3.fromRGB(243, 70, 107)
             prompt.Text = "SAVE THE LOST PETS!"
+        elseif event.warning then
+            title.Text = "Giggles is stirring…"
+            title.TextColor3 = Color3.fromRGB(139, 60, 40)
+            phaseText.Text = if event.warning == "Noise" then "SOOTHE YOUR PET TO QUIET THE GARDEN" else "NAP ALMOST OVER • GET READY TO RESCUE"
+            prompt.Text = if event.warning == "Noise" then "SHHH… HOLD THE SNACKS!" else "WATCH FOR THE LOST PETS"
         elseif event.phase == "COOLDOWN" then
             title.Text = "💤 PHEW... NAP TIME!"
             phaseText.Text = "YOUR COINS ARE ON THE WAY"
@@ -11815,6 +11878,7 @@ remote.OnClientEvent:Connect(function(event: any)
     elseif event.type == "stats" then
         statsLabel.Text = string.format("🪙 %d   •   PET: %s", event.coins or 0, event.pet or "???")
         out=event.knockedOut==true
+        refreshRoute()
         updateLure()
         local count = math.clamp(event.hearts or 3, 0, 3)
         healthLabel.Text = if event.knockedOut then "💫 BONKED!" else string.rep("❤️", count) .. string.rep("🖤", 3 - count)
@@ -11833,7 +11897,6 @@ remote.OnClientEvent:Connect(function(event: any)
 end)
 
 remote:FireServer("Sync")
-showNotice("WELCOME! TRY A SNACK 🍬🌶️🫧⭐", Color3.fromRGB(255, 227, 132))
 ]]></string>
         </Properties>
       </Item>
@@ -12291,7 +12354,7 @@ local function track(root: Instance)
     local species = model:GetAttribute("PetSpecies")
     local lamb = species=="Mochi" or species=="Tofu" or species=="Luma"
     rigs[root] = {model=model,joints=joints,added=added,removed=removed,prev=root.Position,phase=seed*.37,
-        lamb=lamb,travel=0,rest=0,hold=0,stroke=0,wake=0,last=os.clock(),seed=seed}
+        lamb=lamb,travel=0,rest=0,hold=0,stroke=0,wake=0,stir=0,last=os.clock(),seed=seed}
 end
 
 CollectionService:GetInstanceAddedSignal("OrchardRig"):Connect(track)
@@ -12341,6 +12404,7 @@ RunService.PreSimulation:Connect(function()
         r.hold=fade(r.hold,if mode=="Carry" then 1 else 0)
         r.stroke=fade(r.stroke,if mode=="Pet" then 1 else 0)
         r.wake=fade(r.wake,if model:GetAttribute("Awake") then 1 else 0)
+        if boss then r.stir=fade(r.stir,if model:GetAttribute("Stirring") and not model:GetAttribute("Awake") then 1 else 0) end
         r.phase+=dt*(2.2+math.min(speed,17)*.61)
         local beat=math.sin(r.phase)
         local breath=math.sin(now*(if boss then 1.13 else 1.92)+r.seed)
@@ -12375,7 +12439,7 @@ RunService.PreSimulation:Connect(function()
                 z=.08*r.hold
                 if r.lamb then z+=.20*r.stroke-.09*(firstEar-secondEar) end
                 if boss then
-                    x=.26*(1-r.wake)+.045*breath-.31*attack
+                    x=.26*(1-r.wake)+.045*breath-.31*attack+.17*r.stir
                     local scenario=model:GetAttribute("WakeMode")
                     if scenario=="Listen" then
                         y=.31*math.sin(now*1.45)*r.wake
@@ -12383,6 +12447,7 @@ RunService.PreSimulation:Connect(function()
                     elseif scenario=="Garden" then
                         x+=.12*math.sin(now*2.4)*r.wake
                     end
+                    y+=.22*math.sin(now*1.9)*r.stir
                 end
             elseif name:match("^Ear") then
                 x=.035*breath+.09*math.cos(r.phase*2-.48)*r.travel+.38*r.rest-.16*r.stroke
@@ -12404,8 +12469,8 @@ RunService.PreSimulation:Connect(function()
             elseif name:match("^Tendril") then
                 x=.15*math.sin(r.phase+(tonumber(name:sub(8)) or 0)*.82)
             elseif name:match("^Arm") then
-                x=.13*breath-.30*r.wake-.87*attack
-                z=side*(.08*breath+.10*r.wake+.18*attack)
+                x=.13*breath-.30*r.wake-.87*attack+(if side<0 then 1.12 else .19)*r.stir
+                z=side*(.08*breath+.10*r.wake+.18*attack-.32*r.stir)
             elseif name:match("^Leg") then
                 x=-.18*(1-r.wake)+side*.15*attack
                 if model:GetAttribute("Walking") then x+=side*.26*math.sin(now*3.4) end
@@ -13232,6 +13297,7 @@ local ambience: Sound? = nil
 local musicEnabled = true
 local effectsEnabled = true
 local phase = "SLEEP"
+local lastStirWake: number? = nil
 local recent: {[string]: number} = {}
 
 local gui = Instance.new("ScreenGui")
@@ -13343,6 +13409,10 @@ remote.OnClientEvent:Connect(function(event: any)
         playCue(event.cue)
     elseif event.type == "state" then
         local nextPhase = event.phase or phase
+        if nextPhase == "SLEEP" and event.warning and lastStirWake ~= event.wakes then
+            lastStirWake = event.wakes
+            playCue("SleepyGrumble")
+        end
         if nextPhase ~= phase then
             phase = nextPhase
             crossfadeMusic()
