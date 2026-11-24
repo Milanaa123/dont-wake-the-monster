@@ -60,7 +60,13 @@ def inspect(path: pathlib.Path):
         uv=data["accessors"][prim["attributes"]["TEXCOORD_0"]]
         assert pos["count"]==normal["count"]==uv["count"]
         assert all(.998<sum(k*k for k in n)<1.002 for n in records(normal,"<3f")), name
-        assert all(0<=u<=1 and 0<=v<=1 for u,v in records(uv,"<2f")),name
+        texcoords=records(uv,"<2f")
+        assert all(0<=u<=1 and 0<=v<=1 for u,v in texcoords),name
+        if name=="Environment_WaterPond":
+            from generate_reference_glb import MAT
+            water=sorted(MAT).index("water")
+            depths=[v for u,v in texcoords if int(u*len(MAT))==water]
+            assert min(depths)<.22 and max(depths)>.90, "Missing GLB water depth gradient"
         face_indices=[v[0] for v in records(indices,{5123:"<H",5125:"<I"}[indices["componentType"]])]
         assert set(face_indices)==set(range(len(vertices))),name
         for i in range(0,len(face_indices),3):

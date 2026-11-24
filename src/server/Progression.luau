@@ -21,6 +21,7 @@ end
 function Progression.new()
     return {
         coins = 0,
+        metricFlags = {},
         petIndex = 1,
         owned = {[1] = true},
         discovered = {},
@@ -36,6 +37,13 @@ end
 
 function Progression.load(profile: any, data: any)
     if type(data) ~= "table" then return end
+    if type(data.metricFlags)=="table" then
+        for _,id in ipairs({"FirstVisit","FirstReturn","FirstPetFed","FirstReaction","FirstWakeSeen",
+            "FirstPetRescued","FirstRoundFinished","FirstBossSurvived","FirstSeedLocated",
+            "FirstSeedPlanted","FirstHarvest","FirstCoopRescue","IntroComplete"}) do
+            if data.metricFlags[id]==true then profile.metricFlags[id]=true end
+        end
+    end
     profile.coins = saneInt(data.coins, MAX_COINS)
     profile.garden = Garden.load(data.garden)
     local id = saneInt(data.petIndex, #Config.Pets)
@@ -101,6 +109,7 @@ function Progression.serialize(profile: any)
     end
     return {
         coins = saneInt(profile.coins, MAX_COINS),
+        metricFlags = table.clone(profile.metricFlags or {}),
         personalities = personalityData,
         petIndex = profile.petIndex,
         owned = owned,
@@ -186,6 +195,8 @@ function Progression.catalog(profile: any)
                 favoriteFood = if p.bond >= 25 then p.favoriteFood else "???",
                 dislikedFood = if p.bond >= 25 then p.dislikedFood else "???",
                 bondStage = Personality.bondStage(p),
+                rescues = p.rescues,
+                ribbons = table.clone(p.ribbons),
                 traits = table.clone(p.traits),
                 happiness = p.happiness,
                 energy = p.energy,

@@ -1,6 +1,6 @@
 # Original music & comedy sound effects — v1.0
 
-**Implementation status (2026-11-19):** Source code and all **19 original WAVs**
+**Implementation status (2026-11-19):** Source code and the original WAV library
 are committed to this repository. They pass audio-integrity checks and the
 Roblox source bundle builds. **They will not play inside Roblox until the
 experience owner uploads them as Roblox audio assets and configures IDs.**
@@ -13,6 +13,7 @@ experience owner uploads them as Roblox audio assets and configures IDs.**
 | `monster-chase-theme.wav` | Faster 9-second loop while the giant is awake |
 | `sleepy-forest-ambience.wav` | Quiet 9-second breeze/birds ambience |
 | `original-cat-purr-loop.wav` | Original 4-second sound for a contented cat, with dynamic 3D volume |
+| `PuppyYip.wav` and `BirdEcho.wav` | A warned puppy bark and bird answer. Rebuild with `python3 scripts/companion_calls.py`. Both public IDs are zero. |
 | `SeedFind.wav` | Picking up a seed cache |
 | `RareDiscovery.wav` | Rare seed found |
 | `WeatherChime.wav` | Weather shift / pet helping |

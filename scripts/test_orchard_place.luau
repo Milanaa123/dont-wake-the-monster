@@ -18,13 +18,15 @@ local function drain()
     while #tasks>0 do table.remove(tasks,1)() end
 end
 local services={
-    ServerStorage=storage, ReplicatedStorage=replicated, AssetService={}, EncodingService={},
+    ServerStorage=storage, ReplicatedStorage=replicated, Lighting=place:GetService("Lighting"), AssetService={}, EncodingService={},
     HttpService={JSONDecode=function(_,v) return serde.decode("json",v) end},
     RunService={IsStudio=function() return true end},
 }
 local game={GetService=function(_,k) return assert(services[k],k) end}
 r.implementMethod("Instance","WaitForChild",function(self,name) return assert(self:FindFirstChild(name),name) end)
 r.implementMethod("BindableEvent","Fire",function() end)
+-- Test fixtures use PrimaryPart with the default identity PivotOffset.
+r.implementMethod("Model","GetPivot",function(self) return assert(self.PrimaryPart).CFrame end)
 local modules={}
 local function load(module)
     local env={game=game,script=module,workspace=world,Instance=r.Instance,Enum=r.Enum,
@@ -72,10 +74,51 @@ island.Parent=world
 local env=r.Instance.new("Folder")
 env.Name="CottageGardenEnvironment"
 env.Parent=island
-assert(bridge.applySetDress(island)==4)
+local nativePond=r.Instance.new("Model")
+nativePond.Name="ShadedOrchardPond"
+nativePond.Parent=env
+local pondTemplate=geometry.cached("Environment_WaterPond")
+pondTemplate.Archivable=false
+assert(bridge.applySetDress(island)==3 and nativePond.Parent==env)
+pondTemplate.Archivable=true
+assert(bridge.applySetDress(island)==4 and nativePond.Parent==nil)
+local childCount=#env:GetChildren()
+assert(bridge.applySetDress(island)==4 and #env:GetChildren()==childCount,"Duplicated orchard scenery on retry")
 local pond=env.ImportedWaterPond
 assert(math.abs(pond.CFrame.Position.Y-pond.Size.Y*.5-6.98)<.002 and not pond.CanCollide,
     "Pond bank should meet the island, even when reeds grow taller")
+local frame=load(replicated.GardenCameraFrame)
+local origin=r.Vector3.new(48,10,91)
+local center=world:GetAttribute("GardenPondCenter")
+assert(center==pond.CFrame.Position)
+local frames={}
+local function xyz(v) return {v.X,v.Y,v.Z} end
+for name,viewport in {portrait={480,854},landscape={854,480}} do
+    local aspect=viewport[1]/viewport[2]
+    local focus,offset,fov=frame.at(origin,r.Vector3.zero,aspect,center)
+    local oldFocus,oldOffset,oldFov=frame.at(origin,r.Vector3.zero,aspect,nil)
+    local walking=frame.at(origin,r.Vector3.new(1,0,0),aspect,center)
+    assert(offset==oldOffset and fov==oldFov and fov==(if name=="portrait" then 52 else 48))
+    assert((focus-oldFocus).Magnitude<=8.001 and walking.Y==focus.Y)
+    local far=r.Vector3.new(0,10,85)
+    assert(frame.at(far,r.Vector3.zero,aspect,center)==frame.at(far,r.Vector3.zero,aspect,nil))
+    local cam=r.CFrame.lookAt(focus+offset,focus)
+    local function inside(worldPoint)
+        local p=cam:PointToObjectSpace(worldPoint)
+        local halfHeight=-p.Z*math.tan(math.rad(fov/2))
+        return math.abs(p.Y)<halfHeight and math.abs(p.X)<halfHeight*aspect
+    end
+    assert(inside(origin),"Player left the pond view")
+    for _,sx in {-1,1} do
+        for _,sz in {-1,1} do
+            local corner=pond.CFrame.Position+r.Vector3.new(sx*pond.Size.X*.5,-pond.Size.Y*.4,sz*pond.Size.Z*.5)
+            assert(inside(corner),"Pond bank cropped in "..name)
+        end
+    end
+    frames[name]={resolution=viewport,focus=xyz(focus),offset=xyz(offset),verticalFov=fov}
+end
+if process.args[3] then fs.writeFile(process.args[3],serde.encode("json",frames,true)) end
+print("PASS: pond survives failed replacement, retries keep one orchard, and both garden camera frames include the bank")
 assert(bridge.decorateEntrance(island)==31)
 bridge.decorateWalkway(island)
 drain()
@@ -162,9 +205,25 @@ local function fixture(key,modelName)
     local model=r.Instance.new("Model")
     model.Name=modelName
     model.Parent=island
-    local body=geometry.load(key):Clone()
-    geometry.mount(body,r.CFrame.new(),1)
-    body.Parent=model
+    local body
+    if modelName=="GigglesTheGiant" then
+        local anchor=r.Instance.new("Part")
+        anchor.Anchored=true
+        anchor.CFrame=r.CFrame.new(0,29,0)*r.CFrame.Angles(0,math.pi,0)
+        anchor.Parent=model
+        model.PrimaryPart=anchor
+        local previous=r.Instance.new("MeshPart")
+        previous.Name="ImportedSleepingMonster"
+        previous.Parent=model
+        body=assert(bridge.applySleepingMonster(model))
+        assert(previous.Parent==nil and model.PrimaryPart==anchor)
+        assert(body.Spine.Part0==anchor and body.Spine.Part1==body and not body.Anchored)
+        assert(bridge.applySleepingMonster(model)==body,"Duplicate sleeping giant")
+    else
+        body=geometry.load(key):Clone()
+        geometry.mount(body,r.CFrame.new(),1)
+        body.Parent=model
+    end
     local root={
         Name=key,Parent=model,Position=r.Vector3.zero,
         DescendantAdded=signal(),DescendantRemoving=signal(),
@@ -178,9 +237,14 @@ end
 local _,idleBody=fixture("Pet_Floofle","Floofle")
 local responding,activeBody=fixture("Pet_Floofle","Floofle")
 local bossModel,bossBody=fixture("Environment_SleepingMonster","GigglesTheGiant")
+local _,sleepingBody=fixture("Environment_SleepingMonster","GigglesTheGiant")
 local owlet,owlBody=fixture("Pet_Swoop","Swoop")
 local openEyes=owlBody.Blink.Size
 assert(owlBody.Blink.Blink.Part0==owlBody.Head)
+local lamb,lambBody=fixture("Pet_Tofu","RescueRunaway_2")
+local comparison,comparisonBody=fixture("Pet_Tofu","RescueRunaway_2")
+lamb:SetAttribute("PetSpecies","Tofu")
+comparison:SetAttribute("PetSpecies","Tofu")
 local frameEvent=signal()
 local tags={
     GetTagged=function(_,tag) return if tag=="OrchardRig" then roots else {} end,
@@ -206,10 +270,74 @@ local function step(frames)
         frameEvent.callback()
     end
 end
-local function difference(joint)
-    local a=activeBody[joint][joint].Transform
-    local b=idleBody[joint][joint].Transform
+local function poseDifference(first,second,joint)
+    local a=first[joint][joint].Transform
+    local b=second[joint][joint].Transform
     return (a.LookVector-b.LookVector).Magnitude+(a.UpVector-b.UpVector).Magnitude
+end
+local function difference(joint)
+    return poseDifference(activeBody,idleBody,joint)
+end
+-- Lune does not simulate Motor6D physics. Resolve the shipped joint hierarchy
+-- for an offline mesh review, including each part's animated eye size.
+local dais=r.Instance.new("Part")
+dais.Name="MonsterPlatform"
+dais.Size=r.Vector3.new(4,60,60)
+dais.Position=r.Vector3.new(0,8,0)
+dais.Parent=island
+bridge.decorateDen(dais)
+bridge.decorateDen(dais)
+drain()
+assert(#dais.DenFlowers:GetChildren()==4)
+local function renderSpace(body)
+    local spine=body.Spine
+    local unit=spine:GetAttribute("PoseScale")
+    local origin=spine.Part0.CFrame*spine.C0*r.CFrame.new(-body:GetAttribute("PieceCenter")*unit)
+    assert(math.abs(origin.Y-body:GetAttribute("ArtSize").Y*unit/2-10)<.002)
+    return origin,unit
+end
+local function scaledFrame(cf,origin,unit)
+    local f=origin:ToObjectSpace(cf)
+    return f.Rotation+f.Position/unit
+end
+local function capturePose(poses,body,key,label,path)
+    if not path then return end
+    local parts={}
+    local origin,unit=r.CFrame.identity,1
+    if body:FindFirstChild("Spine") then origin,unit=renderSpace(body) end
+    local function frame(part)
+        local joint=part:FindFirstChildOfClass("Motor6D")
+        if not joint then return part.CFrame end
+        return frame(joint.Part0)*joint.C0*joint.Transform*joint.C1:Inverse()
+    end
+    local function record(name,part)
+        local eyelid=name:match("^Lid") or name:match("^Eye")
+        parts[name]={cframe={scaledFrame(frame(part),origin,unit):GetComponents()},size=xyz(part.Size/unit),
+            hidden=if eyelid then part.LocalTransparencyModifier>=.99 else nil}
+    end
+    record("Body",body)
+    for _,part in body:GetChildren() do
+        if part:IsA("MeshPart") then record(part.Name,part) end
+    end
+    local scenery=nil
+    if key=="Environment_SleepingMonster" and path==process.args[5] then
+        scenery={}
+        for _,mesh in dais.DenFlowers:GetChildren() do
+            assert(not mesh.CanCollide and not mesh.CanQuery)
+            table.insert(scenery,{asset=mesh.Name,size=xyz(mesh.Size/unit),
+                cframe={scaledFrame(mesh.CFrame,origin,unit):GetComponents()}})
+        end
+        table.sort(scenery,function(a,b) return a.cframe[1]<b.cframe[1] end)
+    end
+    table.insert(poses,{label=label,asset=key,parts=parts,scenery=scenery})
+end
+local poses={}
+local bossPoses={}
+local function captureLamb(label)
+    capturePose(poses,lambBody,"Pet_Tofu",label,process.args[4])
+end
+local function captureBoss(label)
+    capturePose(bossPoses,bossBody,"Environment_SleepingMonster",label,process.args[5])
 end
 step(3)
 assert(difference("Head")<.0001)
@@ -226,10 +354,72 @@ responding:SetAttribute("MotionMode","Nap")
 step(20)
 assert(difference("Head")>.30 and difference("EarR")>.25,"Napping pose missing")
 assert(bossBody.EyeL.LocalTransparencyModifier>.99 and bossBody.LidL.LocalTransparencyModifier<.01)
+captureBoss("Asleep")
+bossModel:SetAttribute("Stirring",true)
+step(16)
+assert(poseDifference(bossBody,sleepingBody,"Head")>.15 and poseDifference(bossBody,sleepingBody,"ArmL")>.4)
+assert(bossBody.EyeL.LocalTransparencyModifier>.99 and bossBody.LidL.LocalTransparencyModifier<.01)
+captureBoss("Stirring")
+bossModel:SetAttribute("Stirring",false)
+step(20)
+assert(poseDifference(bossBody,sleepingBody,"Head")<.001 and poseDifference(bossBody,sleepingBody,"ArmL")<.001)
 bossModel:SetAttribute("Awake",true)
 step(23)
 assert(bossBody.EyeL.LocalTransparencyModifier<.01 and bossBody.LidL.LocalTransparencyModifier>.99)
+captureBoss("Awake")
+if process.args[5] then fs.writeFile(process.args[5],serde.encode("json",bossPoses,true)) end
+if process.args[6] then
+    local transitions={}
+    local function sample(label)
+        for i=1,18 do
+            step(1)
+            capturePose(transitions,bossBody,"Environment_SleepingMonster",label..i,process.args[6])
+        end
+    end
+    bossModel:SetAttribute("Awake",false)
+    sample("Settle")
+    bossModel:SetAttribute("Stirring",true)
+    sample("Warn")
+    bossModel:SetAttribute("Awake",true)
+    bossModel:SetAttribute("Stirring",false)
+    sample("Rise")
+    fs.writeFile(process.args[6],serde.encode("json",transitions))
+end
+local previousCamera=env.workspace.CurrentCamera.CFrame
+env.workspace.CurrentCamera.CFrame=r.CFrame.new(0,0,220)
+bossModel:SetAttribute("Awake",false)
+step(37)
+assert(bossBody.EyeL.LocalTransparencyModifier>.99 and bossBody.Spine.Transform.UpVector.Z<-.75)
+bossModel:SetAttribute("Awake",true)
+step(37)
+assert(bossBody.EyeL.LocalTransparencyModifier<.01 and math.abs(bossBody.Spine.Transform.UpVector.Z)<.02)
+env.workspace.CurrentCamera.CFrame=previousCamera
+print("PASS: giant changes posture at a distance on low quality")
+print("PASS: mounted boss stirs with eyes closed, settles when soothed, then opens eyes on waking")
 print("PASS: shipped client drives feed, recovery, petting, nap and boss eyelids on mounted joints at low quality")
+
+captureLamb("Idle")
+lamb:SetAttribute("FedAt",clock)
+step(2)
+captureLamb("LeadingEar")
+local function lambDifference(joint)
+    return poseDifference(lambBody,comparisonBody,joint)
+end
+assert(lambDifference("EarL")>lambDifference("EarR")+.08,"Leading ear should lift first")
+step(4)
+captureLamb("FollowingEar")
+assert(lambDifference("EarR")>lambDifference("EarL")+.10,"Trailing ear should follow")
+step(15)
+assert(lambDifference("EarL")<.0001 and lambDifference("EarR")<.0001,"Ears should settle")
+lamb:SetAttribute("MotionMode","Pet")
+step(18)
+captureLamb("Stroke")
+assert(lambDifference("Head")>.3 and lambDifference("EarR")>.2,"Lamb should lean into a stroke")
+lamb:SetAttribute("MotionMode","Follow")
+step(20)
+assert(lambDifference("Head")<.001,"Ending a stroke should release the head")
+if process.args[4] then fs.writeFile(process.args[4],serde.encode("json",poses,true)) end
+print("PASS: both ears of a renamed rescue lamb follow the feed in sequence, settle and respond to petting")
 
 owlet:SetAttribute("MotionMode","Nap")
 step(20)
@@ -245,3 +435,23 @@ for _=1,90 do
 end
 assert(minHeight<openEyes.Y*.35 and maxHeight>openEyes.Y*.99,"Awake owlet must reopen and blink")
 print("PASS: owlet sleeps, wakes and blinks on its mounted face")
+
+local cottage=load(scripts.CottageGardenStyle)
+local farm=r.Instance.new("Model")
+farm.Parent=island
+local bed=r.Instance.new("Model")
+bed.Name="Plot_1"
+bed.Parent=farm
+cottage.styleEntrance(farm,r.CFrame.new(),"Cottage")
+drain()
+local shelter=farm.EntranceDecor.Environment_GardenCottage
+assert(not shelter.CanCollide and not shelter.CanQuery)
+cottage.styleEntrance(farm,r.CFrame.new(),"Cottage")
+drain()
+assert(farm.EntranceDecor.Environment_GardenCottage==shelter)
+cottage.styleEntrance(farm,r.CFrame.new(),"Blossom")
+drain()
+assert(#farm.EntranceDecor:GetChildren()==2 and shelter.Parent==nil)
+cottage.styleEntrance(farm,r.CFrame.new(),"Meadow")
+assert(not farm:FindFirstChild("EntranceDecor") and farm.Plot_1==bed)
+print("PASS: live garden style swap reuses original mesh templates, preserves beds and removes stale decorations")

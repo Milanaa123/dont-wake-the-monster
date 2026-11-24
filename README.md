@@ -2,6 +2,8 @@
 
 A colorful, chaotic multiplayer Roblox prototype: feed your ridiculous pet, trigger unpredictable reactions, fill the noise meter, and survive the giant monster's wake-up tantrum.
 
+[Private playtest evidence, events and acceptance checks](docs/PRIVATE_PLAYTEST.md)
+
 ## Prototype features
 
 - Procedurally constructed floating island, decorations, glowing crystals, clouds and an enormous sleeping monster.
@@ -34,7 +36,7 @@ A colorful, chaotic multiplayer Roblox prototype: feed your ridiculous pet, trig
 - Responsive touchscreen controls and keyboard support.
 - Automatic Luau compilation, Rojo `.rbxlx` build and source/invariant checks through GitHub Actions.
 
-**Status: v1.0 source-code MVP. GitHub CI compiles, runs pure-Luau garden + personality tests and builds a .rbxlx; actual Roblox Studio runtime, appearance and multiplayer testing have NOT yet been performed.** The place contains original packed meshes and client-driven joints. The Blender comparisons below use the packed geometry and atlas. NO real Robux payments or marketplace product IDs are connected. In-game coin prices are not Robux prices. Cross-server persistence needs session-lock hardening before public release.
+**Status: v1.0 source-code MVP. GitHub CI compiles, runs pure-Luau garden + personality tests and builds a .rbxlx; actual Roblox Studio runtime, appearance and multiplayer testing have NOT yet been performed.** The place contains original packed meshes and client-driven joints. The Blender comparisons below use the packed geometry and atlas. NO real Robux payments or marketplace product IDs are connected. In-game coin prices are not Robux prices. Session leases and shutdown retries are tested with simulated stores. Live multi-server persistence remains a private-playtest check.
 
 ## Visual reference update — 20 Nov 2026
 
@@ -50,6 +52,8 @@ The checked-in place includes the packed geometry. The GLB archive contains four
 - [Download the playable place](builds/dont-wake-the-monster.rbxlx)
 - [Download the four GLB packs](builds/Original3DArt.zip)
 - [Compare the rabbit, frog, strawberries and cottage before and after in Blender](docs/evidence/garden-mesh-comparison.jpg)
+- [Compare Swoop, Pebble and the lily pond](docs/evidence/woodland-and-pond.jpg)
+- [Compare the fleece, ears and faces of Mochi, Tofu and Luma](docs/evidence/lamb-fleece.jpg)
 - [Compare the two kittens and the tomato vine](docs/evidence/kittens-and-tomatoes.jpg)
 - [Compare Snorf, Giggles, the orange tree and the paving](docs/evidence/orchard-mesh-comparison.jpg)
 - [Strawberry growth stages](docs/evidence/strawberry-growth.jpg) and [tomato growth stages](docs/evidence/tomato-growth.jpg)

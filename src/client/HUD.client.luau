@@ -7,6 +7,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
 local Config = require(ReplicatedStorage:WaitForChild("Config"))
+local RescueRoute = require(ReplicatedStorage:WaitForChild("RescueRoute"))
 local remote = ReplicatedStorage:WaitForChild("MonsterRemote") :: RemoteEvent
 local gui = Instance.new("ScreenGui")
 gui.Name = "MonsterHUD"
@@ -105,7 +106,7 @@ local gradient = Instance.new("UIGradient")
 gradient.Color = ColorSequence.new(Color3.fromRGB(123, 218, 249), Color3.fromRGB(255, 91, 155))
 gradient.Parent = barFill
 
-local noiseCaption = label(header, "NOISE 0 / 100    •    every action makes chaos!", Enum.Font.GothamBold, 11, DARK)
+local noiseCaption = label(header, "NOISE 0 / 100", Enum.Font.GothamBold, 11, DARK)
 noiseCaption.Position = UDim2.new(0.04, 0, 0, 87)
 noiseCaption.Size = UDim2.new(0.92, 0, 0, 18)
 
@@ -164,7 +165,7 @@ local rescueCard = Instance.new("Frame")
 rescueCard.Name = "CoopRescueChallenge"
 rescueCard.AnchorPoint = Vector2.new(0.5, 1)
 rescueCard.Position = UDim2.new(0.5, 0, 1, -193)
-rescueCard.Size = UDim2.new(0.9, 0, 0, 48)
+rescueCard.Size = UDim2.new(0.9, 0, 0, 75)
 rescueCard.BackgroundColor3 = Color3.fromRGB(232, 250, 216)
 rescueCard.BorderSizePixel = 0
 rescueCard.Visible = false
@@ -172,16 +173,32 @@ rescueCard.Parent = gui
 round(rescueCard, 15)
 stroke(rescueCard, Color3.fromRGB(128, 212, 150), 2)
 local rescueLimit = Instance.new("UISizeConstraint")
-rescueLimit.MaxSize = Vector2.new(570, 48)
+rescueLimit.MaxSize = Vector2.new(570, 75)
 rescueLimit.Parent = rescueCard
 local rescueLabel = label(rescueCard, "🐾 SAVE THE LOST PETS! 0/3", Enum.Font.GothamBlack, 18, DARK)
-rescueLabel.Size = UDim2.new(1, -12, 1, -4)
+rescueLabel.Size = UDim2.new(1, -12, 0, 30)
 rescueLabel.Position = UDim2.fromOffset(6, 2)
 rescueLabel.TextScaled = true
 local rescueTextLimit = Instance.new("UITextSizeConstraint")
 rescueTextLimit.MinTextSize = 12
 rescueTextLimit.MaxTextSize = 18
 rescueTextLimit.Parent = rescueLabel
+
+local routeLabel = label(rescueCard, "", Enum.Font.GothamBold, 14, DARK)
+routeLabel.Position = UDim2.fromOffset(8, 34)
+routeLabel.Size = UDim2.new(1,-119,0,38)
+local signal = Instance.new("TextButton")
+signal.Name = "SignalTeammates"
+signal.AnchorPoint = Vector2.new(1,1)
+signal.Position = UDim2.new(1,-5,1,-4)
+signal.Size = UDim2.fromOffset(102,44)
+signal.BackgroundColor3 = Color3.fromRGB(49,100,81)
+signal.TextColor3 = CREAM
+signal.Text = "I'll help"
+signal.Font = Enum.Font.GothamBold
+signal.TextSize = 15
+signal.Parent = rescueCard
+round(signal,10)
 
 local foodPanel = Instance.new("Frame")
 foodPanel.Name = "FeedControls"
@@ -295,14 +312,121 @@ local function countdown(seconds: number): string
     return string.format("%02d:%02d", math.floor(value / 60), value % 60)
 end
 
+local capture=Instance.new("TextButton")
+capture.Name="RescueCapture"
+capture.Text="📷 Save a rescue photo"
+capture.Size=UDim2.fromOffset(174,38)
+capture.Position=UDim2.new(.5,0,0,130)
+capture.AnchorPoint=Vector2.new(.5,0)
+capture.BackgroundColor3=CREAM
+capture.TextColor3=DARK
+capture.Font=Enum.Font.GothamBold
+capture.Visible=false
+capture.Parent=gui
+round(capture,12)
+local captureRound=0
+local function offerPhoto(roundId: number)
+    if roundId<=captureRound then return end
+    captureRound=roundId
+    capture.Visible=true
+    task.delay(8,function()
+        if captureRound==roundId then capture.Visible=false end
+    end)
+end
+capture.Activated:Connect(function()
+    capture.Visible=false
+    local ok=pcall(function()
+        local service=game:GetService("CaptureService")
+        service:CaptureScreenshot(function(id)
+            local prompted=pcall(function()
+                service:PromptSaveCapturesToGallery({id},function() end)
+            end)
+            if not prompted then showNotice("Photo saving is unavailable on this device.",CREAM) end
+        end)
+    end)
+    if not ok then showNotice("Photo capture is unavailable on this device.",CREAM) end
+end)
+
+local lureButton=Instance.new("TextButton")
+lureButton.Name="RescueLure"
+lureButton.Size=UDim2.fromOffset(188,40)
+lureButton.AnchorPoint=Vector2.new(.5,1)
+lureButton.Position=UDim2.new(.5,0,1,-107)
+lureButton.BackgroundColor3=CREAM
+lureButton.Font=Enum.Font.GothamBold
+lureButton.TextColor3=DARK
+lureButton.Visible=false
+lureButton.Parent=gui
+round(lureButton,12)
+local lureId: string?=nil
+local mayThrow=false
+local out=false
+local routeState: any = nil
+local shown: RescueRoute.Target? = nil
+local rescueOutline = Instance.new("Highlight")
+rescueOutline.Name = "SelectedLostPet"
+rescueOutline.Enabled = false
+rescueOutline.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+rescueOutline.OutlineColor = Color3.fromRGB(255, 220, 127)
+rescueOutline.FillColor = Color3.fromRGB(255, 210, 130)
+rescueOutline.FillTransparency = .91
+rescueOutline.Parent = workspace
+gui.Destroying:Connect(function() rescueOutline:Destroy() end)
+
+local function refreshRoute()
+    local root = if player.Character then player.Character:FindFirstChild("HumanoidRootPart") else nil
+    local camera = workspace.CurrentCamera
+    shown = if routeState and root and root:IsA("BasePart") and not out
+        then RescueRoute.choose(routeState.targets, player.UserId, root.Position) else nil
+    local target = shown
+    local marked = if target and routeState then
+        RescueRoute.modelFor(workspace:FindFirstChild("MonsterIsland"),routeState.round,target.id) else nil
+    rescueOutline.Adornee = marked
+    rescueOutline.Enabled = marked ~= nil
+    signal.Visible = target ~= nil and target.helper == 0
+    routeLabel.Size = UDim2.new(1, if signal.Visible then -119 else -16, 0, 38)
+    if not target or not root or not root:IsA("BasePart") or not camera then
+        routeLabel.Text = if out and routeState then "Your teammates are still rescuing" else ""
+        return
+    end
+    local delta = target.position - root.Position
+    local hint = if delta.Magnitude <= 13 then "Use SAVE ME!"
+        elseif target.helper == player.UserId then "On my way"
+        elseif target.helper ~= 0 then "Teammate en route" else "Lost pet"
+    routeLabel.Text = string.format("%s %s · %d studs · %s",
+        RescueRoute.arrow(delta,camera.CFrame.RightVector),target.name,math.round(delta.Magnitude),hint)
+end
+signal.Activated:Connect(function()
+    if routeState and shown and shown.helper == 0 and not out then
+        remote:FireServer("RescueSignal",{round = routeState.round, id = shown.id})
+    end
+end)
+local routeElapsed = 0
+game:GetService("RunService").Heartbeat:Connect(function(dt)
+    if not routeState then return end
+    routeElapsed += dt
+    if routeElapsed >= .15 then
+        routeElapsed = 0
+        refreshRoute()
+    end
+end)
+local function updateLure()
+    lureButton.Visible=mayThrow and not out and lureId~=nil
+end
+lureButton.Activated:Connect(function()
+    if lureId then remote:FireServer("GardenLure",lureId) end
+end)
+
 remote.OnClientEvent:Connect(function(event: any)
     if type(event) ~= "table" then return end
     if event.type == "state" then
         local fraction = math.clamp((event.noise or 0) / (event.maxNoise or 100), 0, 1)
         TweenService:Create(barFill, TweenInfo.new(0.32, Enum.EasingStyle.Sine), {Size = UDim2.fromScale(fraction, 1)}):Play()
-        noiseCaption.Text = string.format("NOISE %d / %d   •   MORE CHAOS!", event.noise or 0, event.maxNoise or 100)
-        timer.Text = countdown(event.time or 0)
+        noiseCaption.Text = string.format("NOISE %d / %d", event.noise or 0, event.maxNoise or 100)
+        timer.Text = countdown(event.wakeIn or event.time or 0)
         health.Visible = event.phase == "AWAKE"
+        mayThrow=health.Visible and event.lureReady==true
+        updateLure()
         -- Keep the playfield visible while dodging attacks: feeding is disabled
         -- by the server during a chase, so the giant food control panel hides.
         -- All four feed controls return automatically when the monster sleeps.
@@ -312,12 +436,19 @@ remote.OnClientEvent:Connect(function(event: any)
             else UDim2.new(0.5, 0, 1, -193)
         local rescue = event.rescue
         rescueCard.Visible = event.phase == "AWAKE" and typeof(rescue) == "table" and rescue.active == true
+        routeState = if rescueCard.Visible and not rescue.completed then rescue else nil
+        refreshRoute()
+        rescueLabel.Size = if routeState then UDim2.new(1,-12,0,30) else UDim2.new(1,-12,1,-4)
         if typeof(rescue) == "table" then
             if rescue.completed then
                 rescueLabel.Text = "🎉 ALL SAVED! +30 COINS FOR SURVIVING HEROES"
                 rescueCard.BackgroundColor3 = Color3.fromRGB(181, 245, 188)
             else
-                rescueLabel.Text = string.format("🐾 RESCUE THE LOST PETS!  %d / %d  •  +%d BONUS", rescue.rescued or 0, rescue.goal or 3, rescue.bonus or 30)
+                local ribbon=if event.wakeMode=="Garden" then "Garden Keeper • help finish the rescue"
+                    elseif event.wakeMode=="Listen" then "Quiet Steps • rescue without a bonk"
+                    else "Trail Runner • draw Giggles away for 3 seconds"
+                rescueLabel.Text = string.format("🐾 Rescue %d / %d   •   +%d team bonus\n%s",
+                    rescue.rescued or 0,rescue.goal or 2,rescue.bonus or 30,ribbon)
                 rescueCard.BackgroundColor3 = Color3.fromRGB(232, 250, 216)
             end
         end
@@ -327,9 +458,16 @@ remote.OnClientEvent:Connect(function(event: any)
         end
         if event.phase == "AWAKE" then
             title.Text = "🚨 GIGGLES IS AWAKE! RUN!"
-            phaseText.Text = "DODGE THE SHOCKWAVES!"
+            phaseText.Text = if event.wakeMode=="Listen" then "LISTENING • LEAVE THE BLUE RING"
+                elseif event.wakeMode=="Garden" then "JELLY SHOWER • DODGE THE GOLD RINGS"
+                else "CHASE • RUN OUTSIDE THE STRIKE MARKS"
             title.TextColor3 = Color3.fromRGB(243, 70, 107)
-            prompt.Text = "SURVIVE! THE PETS NEED YOU!"
+            prompt.Text = "SAVE THE LOST PETS!"
+        elseif event.warning then
+            title.Text = "Giggles is stirring…"
+            title.TextColor3 = Color3.fromRGB(139, 60, 40)
+            phaseText.Text = if event.warning == "Noise" then "SOOTHE YOUR PET TO QUIET THE GARDEN" else "NAP ALMOST OVER • GET READY TO RESCUE"
+            prompt.Text = if event.warning == "Noise" then "SHHH… HOLD THE SNACKS!" else "WATCH FOR THE LOST PETS"
         elseif event.phase == "COOLDOWN" then
             title.Text = "💤 PHEW... NAP TIME!"
             phaseText.Text = "YOUR COINS ARE ON THE WAY"
@@ -341,8 +479,20 @@ remote.OnClientEvent:Connect(function(event: any)
             title.TextColor3 = DARK
             prompt.Text = "FEED YOUR PET... IF YOU DARE 👀"
         end
+    elseif event.type=="garden" then
+        local stock=event.crafted or {}
+        lureId=if (stock.SillyLure or 0)>0 then "SillyLure" elseif (stock.GlowLure or 0)>0 then "GlowLure" else nil
+        lureButton.Text=if lureId=="GlowLure" then "Throw a Glow Lure" else "Throw a Silly Lure"
+        updateLure()
+    elseif event.type=="callWarning" then
+        showNotice(event.text,CREAM)
+    elseif event.type=="rescueMoment" then
+        offerPhoto(event.round)
     elseif event.type == "stats" then
         statsLabel.Text = string.format("🪙 %d   •   PET: %s", event.coins or 0, event.pet or "???")
+        out=event.knockedOut==true
+        refreshRoute()
+        updateLure()
         local count = math.clamp(event.hearts or 3, 0, 3)
         healthLabel.Text = if event.knockedOut then "💫 BONKED!" else string.rep("❤️", count) .. string.rep("🖤", 3 - count)
     elseif event.type == "petFeeling" then
@@ -360,4 +510,3 @@ remote.OnClientEvent:Connect(function(event: any)
 end)
 
 remote:FireServer("Sync")
-showNotice("WELCOME! TRY A SNACK 🍬🌶️🫧⭐", Color3.fromRGB(255, 227, 132))

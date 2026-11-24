@@ -116,6 +116,14 @@ assert(Personality.bondStage(friend) == "Friends", "friendship progresses")
 friend.bond = 100
 assert(Personality.bondStage(friend) == "Soulmates", "highest friendship rank")
 
+local legacy = Personality.restore({seed=211}, "kitten")
+assert(legacy.rescues==0)
+legacy.ribbons.QuietSteps=true
+legacy.ribbons.fake=true
+local memory=Personality.restore(Personality.pack(legacy),"kitten")
+assert(memory.ribbons.QuietSteps and not memory.ribbons.fake)
+legacy.rescues=9
+assert(Personality.restore(Personality.pack(legacy),"kitten").rescues==9)
 local m = Personality.mood(a, false)
 assert(type(m) == "string", "mood returned")
 a.energy = 1

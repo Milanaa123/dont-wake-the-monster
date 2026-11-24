@@ -19,6 +19,8 @@ local NativeAvatar = require(script.Parent:WaitForChild("NativeGardenerAvatar"))
 local Progression = require(script.Parent:WaitForChild("Progression"))
 local ProfileStore = require(script.Parent:WaitForChild("ProfileStore"))
 local Garden = require(script.Parent:WaitForChild("Garden"))
+local Cosmetic = require(script.Parent:WaitForChild("GardenCosmetic"))
+local MarketplaceService = game:GetService("MarketplaceService")
 local GardenActionVFX = require(script.Parent:WaitForChild("GardenActionVFX"))
 local RecipeCatalog = require(script.Parent:WaitForChild("RecipeCatalog"))
 local RescueObjective = require(script.Parent:WaitForChild("RescueObjective"))
@@ -35,12 +37,18 @@ remote.Parent = ReplicatedStorage
 
 local persistence = ProfileStore.new(DataStoreService, Config.DATASTORE_NAME,
     Progression.serialize, HttpService:GenerateGUID(false))
+local WakeRound = require(script.Parent:WaitForChild("WakeRound"))
+local noiseSpot: Vector3? = nil
+local wakeMode = "Listen"
+local decoy = {readyAt=0,untilTime=0,position=Vector3.zero}
 local rng = Random.new()
 local noise = 0
 local phase = "SLEEP"
 local secondsLeft = Config.SLEEP_MAX_SECONDS
+local noiseAlarm: number? = nil
 local profiles: {[Player]: any} = {}
 local loading: {[Player]: boolean} = {}
+local arrival: {[Player]: number} = {}
 local closingProfiles: {[Player]: any} = {}
 local shuttingDown = false
 local totalActions = 0
@@ -67,6 +75,7 @@ end
 local function onceMetric(player: Player, profile: any, eventName: string)
     if profile.metricFlags[eventName] then return end
     profile.metricFlags[eventName] = true
+    if profile.loaded then profile.dirty=true profile.revision+=1 end
     metric(player, eventName)
 end
 
@@ -104,8 +113,20 @@ local function sendGarden(player: Player)
     remote:FireClient(player, snapshot)
 end
 
+local function sleepWarning(): (string?, number?)
+    if phase ~= "SLEEP" then
+        noiseAlarm = nil
+        return nil, nil
+    end
+    local reason, seconds
+    noiseAlarm, reason, seconds = WakeRound.warning(noise, Config.NOISE_MAX, secondsLeft, os.clock(), noiseAlarm)
+    return reason, seconds
+end
+
 local function sendState(player: Player?)
-    local update = {type = "state", phase = phase, noise = noise, maxNoise = Config.NOISE_MAX, time = secondsLeft, wakes = wakeCount, rescue = RescueObjective.status(), weather = currentWeather, festivalFinds = festivalFinds, festivalGoal = X.FestivalGoal}
+    local warning, wakeIn = sleepWarning()
+    World.setStirring(warning ~= nil)
+    local update = {type = "state", phase = phase, warning = warning, wakeIn = wakeIn, noise = noise, maxNoise = Config.NOISE_MAX, time = secondsLeft, wakes = wakeCount, wakeMode = wakeMode, lureReady = os.clock()>=decoy.readyAt, rescue = RescueObjective.status(), weather = currentWeather, festivalFinds = festivalFinds, festivalGoal = X.FestivalGoal}
     if player then
         remote:FireClient(player, update)
     else
@@ -150,9 +171,12 @@ local function monsterStrike(center: Vector3, radius: number, strength: number, 
             profile.hearts = math.max(0, profile.hearts - 1)
             knock(root, center, strength)
             remote:FireClient(player, {type = "shake", amount = 1})
+            if profile.hearts <= 0 then
+                profile.knockedOut=true
+                RescueObjective.release(player)
+            end
             sendStats(player)
             if profile.hearts <= 0 then
-                profile.knockedOut = true
                 remote:FireClient(player, {type = "notice", text = "OOPS! YOU GOT BONKED! Watch until next round.", color = Color3.fromRGB(255, 150, 158)})
                 task.delay(0.2, function()
                     if root.Parent and profiles[player] == profile then
@@ -180,7 +204,13 @@ end
 
 local function save(player: Player)
     local profile = profiles[player]
-    if profile then persistence:save(player.UserId, profile) end
+    if profile and not persistence:save(player.UserId,profile) then
+        metric(player,"ProfileSaveFailed")
+        if not profile.loaded then
+            remote:FireClient(player,{type="notice",text="Saving stopped. Rejoin before making more progress."})
+            sendGarden(player)
+        end
+    end
 end
 
 local function movePetNearPlayer(player: Player)
@@ -284,11 +314,29 @@ local function toggleCarry(player: Player)
     careUpdate(player)
 end
 
+local function refreshGarland(player: Player, profile: any)
+    if not Cosmetic.Enabled or Cosmetic.PassId<=0 then return end
+    task.spawn(function()
+        local owned=Cosmetic.owns(MarketplaceService,player.UserId,Cosmetic.Enabled,Cosmetic.PassId)
+        if profiles[player]==profile and owned then
+            World.showGarland(player.UserId)
+        end
+    end)
+end
+
+if Cosmetic.Enabled and Cosmetic.PassId>0 then
+    MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player,passId,purchased)
+        local profile=profiles[player]
+        if profile and purchased and passId==Cosmetic.PassId then refreshGarland(player,profile) end
+    end)
+end
+
 local function onPlayerAdded(player: Player)
     if shuttingDown or loading[player] or profiles[player] then return end
     loading[player] = true
+    arrival[player]=os.clock()
+    metric(player,"VisitStarted")
     local profile = Progression.new()
-    profile.metricFlags = {}
     profile.lastFeed = -100
     profile.lastSync = -100
     profile.lastShopAction = -100
@@ -327,13 +375,14 @@ local function onPlayerAdded(player: Player)
     else
         warn("DWTM: data load unavailable for " .. player.UserId .. ". Progress is session-only.")
     end
-    loading[player] = nil
     if shuttingDown or player.Parent ~= Players then
         if ok then persistence:release(player.UserId, profile) end
+        loading[player]=nil
         return
     end
     -- Publish only fully loaded state. Remotes/timers cannot mutate a temporary
     -- starter garden while GetAsync yields and then overwrite or lose progress.
+    loading[player]=nil
     profiles[player] = profile
     if not ok then
         -- Make it unmistakable that session-only progress is not permanent.
@@ -346,7 +395,13 @@ local function onPlayerAdded(player: Player)
             color = Color3.fromRGB(255, 164, 148),
         })
     end
-    onceMetric(player, profile, "JoinedGame")
+    if ok then
+        profile.firstObservedVisit=not profile.metricFlags.FirstVisit
+        onceMetric(player,profile,if profile.metricFlags.FirstVisit then "FirstReturn" else "FirstVisit")
+    else
+        metric(player,"ProfileLoadFailed")
+    end
+    if phase=="AWAKE" then onceMetric(player,profile,"FirstWakeSeen") end
     task.delay(600, function()
         if profiles[player] == profile then metric(player, "StayedTenMinutes") end
     end)
@@ -367,6 +422,7 @@ local function onPlayerAdded(player: Player)
             farmSlots[slot] = player
             farmOfPlayer[player] = slot
             World.createGarden(player.UserId, player.DisplayName, slot)
+            refreshGarland(player,profile)
             World.updateGarden(player.UserId, profile.garden, GardenConfig)
             break
         end
@@ -384,6 +440,7 @@ local function onPlayerAdded(player: Player)
                 careUpdate(player)
                 if phase == "AWAKE" and profiles[player] == profile and player.Character == character then
                     profile.knockedOut = true
+                    RescueObjective.release(player)
                     profile.hearts = 0
                     sendStats(player)
                     remote:FireClient(player, {type = "notice", text = "OH NO! YOU'RE OUT UNTIL THE NEXT ROUND!", color = Color3.fromRGB(255, 161, 170)})
@@ -420,10 +477,21 @@ local function onPlayerAdded(player: Player)
     sendGarden(player)
     sendState(player)
     careUpdate(player)
-    remote:FireClient(player, {type = "notice", text = "Meet " .. petDefinition.name .. "! Feed it. Nothing can go wrong... right?", color = Color3.fromRGB(252, 205, 255)})
+    if phase == "SLEEP" and not sleepWarning() then
+        remote:FireClient(player, {type = "notice", text = "Meet " .. petDefinition.name .. "! Pick a snack to feed your pet.", color = Color3.fromRGB(252, 205, 255)})
+    end
 end
 
 local function onPlayerRemoving(player: Player)
+    RescueObjective.release(player)
+    local started=arrival[player]
+    if started then
+        arrival[player]=nil
+        local seconds=math.floor(os.clock()-started)
+        metric(player,"VisitSeconds",seconds)
+        if seconds<60 then metric(player,"LeftBefore60") end
+        if seconds<180 then metric(player,"LeftBefore180") end
+    end
     local profile = profiles[player]
     if not profile then return end
     closingProfiles[player] = profile
@@ -434,11 +502,10 @@ local function onPlayerRemoving(player: Player)
     local slot = farmOfPlayer[player]
     if slot then farmSlots[slot] = nil end
     farmOfPlayer[player] = nil
-    if persistence:save(player.UserId, profile) then
-        persistence:release(player.UserId, profile)
-    else
+    if not persistence:finish(player.UserId, profile) then
         -- Retain the lease until expiry rather than allowing a second server
         -- to join while an unsaved snapshot may still exist in memory.
+        metric(player,"ProfileSaveFailed")
         warn("DWTM: final save failed; lease will expire for " .. player.UserId)
     end
     closingProfiles[player] = nil
@@ -589,6 +656,29 @@ local function petEffect(profile: any, reaction: any, food: string)
     end
 end
 
+local function warnPetCall(player: Player, profile: any, personality: any)
+    local now=os.clock()
+    if now<(profile.nextCall or 0) then return end
+    local species=Config.Pets[profile.petIndex].name
+    local cue,volume=WakeRound.alarm(species,personality.traits,rng:NextNumber())
+    if not cue then return end
+    local pet,round=profile.pet,wakeCount
+    profile.nextCall=now+12
+    profile.callPending=true
+    World.emotePet(pet,"Curious",if cue=="BirdEcho" then "Echo?" else "Yip?")
+    remote:FireClient(player,{type="callWarning",text=species.." is about to "..(if cue=="BirdEcho" then "echo" else "bark")..". Tap SOOTHE!"})
+    task.delay(3.5,function()
+        if profiles[player]~=profile or not profile.callPending then return end
+        profile.callPending=false
+        if phase~="SLEEP" or wakeCount~=round or profile.pet~=pet or not pet.Parent or not pet.PrimaryPart then return end
+        noiseSpot=pet.PrimaryPart.Position
+        noise=math.min(Config.NOISE_MAX,noise+volume)
+        World.emotePet(pet,"Excited","+"..volume.." noise!")
+        remote:FireClient(player,{type="soundCue",cue=cue})
+        sendState()
+    end)
+end
+
 local function feed(player: Player, food: any, craftedId: string?)
     local profile = profiles[player]
     if not profile or typeof(food) ~= "string" then return end
@@ -644,10 +734,13 @@ local function feed(player: Player, food: any, craftedId: string?)
             World.burst(profile.pet.PrimaryPart.Position, GardenConfig.Crops.Berry.color, 12, 11)
         end
     end
+    if earnedNoise > 0 then noiseSpot = profile.pet.PrimaryPart.Position end
     noise = math.min(Config.NOISE_MAX, noise + earnedNoise)
     local bonus, discoveries = Progression.recordFeed(profile, reaction.id)
     addCoins(player, Config.FEED_REWARD + (if combo then 3 else 0) + bonus)
     sendCollection(player)
+    onceMetric(player,profile,"FirstReaction")
+    remote:FireClient(player,{type="feedNoise", amount=earnedNoise, reaction=reaction.title})
     local text = player.DisplayName .. "'s " .. Config.Pets[profile.petIndex].name .. ": " .. reaction.title
     if combo then
         text ..= " + COMBO!"
@@ -656,6 +749,7 @@ local function feed(player: Player, food: any, craftedId: string?)
     if craftedId then text ..= " (GARDEN RECIPE!)" end
     notice(text, foodInfo.color)
     remote:FireClient(player, {type = "petFeeling", text = Config.Pets[profile.petIndex].name .. ": " .. emotionText})
+    warnPetCall(player,profile,activePersonality)
     sendStats(player)
     sendState()
     if #discoveries > 0 then
@@ -677,7 +771,9 @@ local function switchPet(player: Player, rawId: any, isPurchase: boolean)
     end
     local ok, message
     if isPurchase then
+        metric(player,"PetCoinPurchaseAttempt")
         ok, message = Progression.buy(profile, rawId)
+        if ok then metric(player,"PetCoinPurchaseSuccess") end
     else
         ok, message = Progression.equip(profile, rawId)
     end
@@ -710,7 +806,8 @@ local function interactWithPet(player: Player, rawAction: any)
     local profile = profiles[player]
     if not profile or phase == "AWAKE" then return end
     local now = os.clock()
-    if now - profile.lastPetInteraction < 3.5 then return end
+    local answeringCall=rawAction=="Comfort" and profile.callPending==true
+    if not answeringCall and now - profile.lastPetInteraction < 3.5 then return end
     local root = rootFor(player)
     if not root or not profile.pet or not profile.pet.PrimaryPart then return end
     if (root.Position - profile.pet.PrimaryPart.Position).Magnitude > Config.FEED_DISTANCE then
@@ -733,6 +830,14 @@ local function interactWithPet(player: Player, rawAction: any)
             World.burst(profile.pet.PrimaryPart.Position, Color3.fromRGB(254, 201, 121), 9, 8)
             sendState()
         elseif rawAction == "Comfort" then
+            profile.callPending=false
+            local before = noise
+            noise = WakeRound.comfort(before,p.traits.sensitivity,p.bond)
+            if p.ribbons.QuietSteps then noise=math.max(0,noise-1) end
+            if before > noise then
+                message ..= "  Quieted the garden by " .. (before-noise) .. "."
+                sendState()
+            end
             World.burst(profile.pet.PrimaryPart.Position, Color3.fromRGB(215, 175, 255), 8, 7)
         end
         sendStats(player)
@@ -765,7 +870,11 @@ local function gardenAction(player: Player, command: string, arg: any)
         harvestedMutation = plot and plot.mutation ~= nil or false
         harvestedSeed = if plot then plot.seed else nil
     end
-    if command == "GardenMerchantBuy" then
+    if command=="GardenStyle" then
+        if now-(profile.lastDecorChange or -100)<2 then return end
+        profile.lastDecorChange=now
+        ok,message=Garden.setStyle(g,arg)
+    elseif command == "GardenMerchantBuy" then
         if not profile.loaded then
             remote:FireClient(player, {type = "notice", text = "Saving is offline. Merchant purchases are paused."})
             return
@@ -822,6 +931,7 @@ local function gardenAction(player: Player, command: string, arg: any)
             player.Character:SetAttribute("GestureAt",workspace:GetServerTimeNow())
         end
         if command == "GardenPlant" then onceMetric(player, profile, "FirstSeedPlanted") end
+        if command=="GardenHarvest" then onceMetric(player,profile,"FirstHarvest") end
         if newlyDiscovered then metric(player, "SecretRecipeFound") end
         if profile.loaded then profile.dirty = true end
         profile.revision += 1
@@ -942,6 +1052,23 @@ local function useLure(player: Player, id: any)
     if not profile or typeof(id) ~= "string" then return end
     local lure = RecipeCatalog.Recipes[id]
     if not lure or lure.type ~= "lure" then return end
+    if phase=="AWAKE" then
+        local root=rootFor(player)
+        local humanoid=player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+        if profile.knockedOut or not root or not humanoid or humanoid.Health<=0 then return end
+        local forward=root.CFrame.LookVector
+        local target=root.Position+Vector3.new(forward.X,0,forward.Z)*12
+        if WakeRound.throwLure(decoy,profile.garden,id,os.clock(),target,Garden.consume) then
+            if profile.loaded then profile.dirty=true end
+            profile.revision+=1
+            World.burst(target,Color3.fromRGB(255,217,128),12,9)
+            remote:FireAllClients({type="soundCue",cue="Boing"})
+            notice("Giggles followed the lure! Rescue a pet while he is distracted.")
+            sendGarden(player)
+            sendState()
+        end
+        return
+    end
     if phase ~= "SLEEP" then
         remote:FireClient(player, {type = "notice", text = "Wait until the monster sleeps!", color = Color3.fromRGB(255, 202, 156)})
         return
@@ -969,6 +1096,7 @@ local function useLure(player: Player, id: any)
     if not effect then return end
     local center = root.Position + root.CFrame.LookVector * 9
     World.burst(center, Color3.fromHSV(rng:NextNumber(), 0.56, 1), if effect.visitors > 2 then 26 else 17, 14)
+    noiseSpot = center
     noise = math.min(Config.NOISE_MAX, noise + effect.noise)
     local visitors = effect.visitors
     for i = 1, visitors do
@@ -1088,10 +1216,21 @@ remote.OnServerEvent:Connect(function(player: Player, command: any, arg: any)
         end
     elseif command == "GardenMerchantBuy" or command == "GardenBuySeed" or command == "GardenPlant" or command == "GardenHarvest"
        or command == "GardenFertilize" or command == "GardenCraft" or command == "GardenExperiment"
-       or command == "GardenAssist" then
+       or command == "GardenAssist" or command=="GardenStyle" then
         gardenAction(player, command, arg)
+    elseif command == "RescueSignal" then
+        if phase == "AWAKE" and not profile.knockedOut and typeof(arg) == "table"
+            and RescueObjective.signal(player, arg.round, arg.id) then
+            sendState()
+        end
     elseif command == "GardenLure" then
         useLure(player, arg)
+    elseif command=="GardenWelcome" then
+        if typeof(arg)~="boolean" or not farmOfPlayer[player] or phase=="AWAKE" then return end
+        if os.clock()-profile.lastGardenAction<.5 then return end
+        profile.lastGardenAction=os.clock()
+        player:SetAttribute("GardenOpen",arg)
+        sendGarden(player)
     elseif command == "GardenVisit" then
         if phase == "AWAKE" then
             remote:FireClient(player, {type = "notice", text = "No teleporting away from Giggles! SURVIVE!", color = Color3.fromRGB(255, 178, 135)})
@@ -1099,7 +1238,9 @@ remote.OnServerEvent:Connect(function(player: Player, command: any, arg: any)
         end
         if os.clock() - profile.lastGardenVisit < 2 then return end
         profile.lastGardenVisit = os.clock()
-        local spot = World.gardenSpawn(player.UserId)
+        local owner=Garden.visitOwner(player,arg,Players,farmOfPlayer)
+        if not owner then return end
+        local spot = World.gardenSpawn(owner.UserId)
         local root = rootFor(player)
         if spot and root then
             root.CFrame = CFrame.new(spot)
@@ -1141,33 +1282,47 @@ remote.OnServerEvent:Connect(function(player: Player, command: any, arg: any)
     end
 end)
 
+local function warnStrike(spot: Vector3, radius: number, strength: number, jump: boolean, delay: number, color: Color3)
+    local round=wakeCount
+    World.markDanger(spot,radius,color,delay)
+    task.delay(delay,function()
+        if wakeCount==round then monsterStrike(spot,radius,strength,jump) end
+    end)
+end
+
 local function monsterAction()
-    local choice = rng:NextInteger(1, 4)
+    if os.clock()<decoy.untilTime then return end
+    if wakeMode == "Listen" then
+        local location = noiseSpot or World.monsterPosition()
+        local spot = Vector3.new(location.X,10,location.Z)
+        World.monsterGesture()
+        notice("Giggles heard something! Step outside the blue ring.")
+        warnStrike(spot,16,26,false,1.8,Color3.fromRGB(145,211,255))
+        return
+    end
+    local choice = if wakeMode=="Garden" then 3 else rng:NextInteger(1,3)
+    if wakeMode=="Chase" and choice==3 then choice=4 end
     World.monsterGesture()
     if choice == 1 then
         notice("GIGGLES STOMPS! JUMP AWAY!", Color3.fromRGB(255, 113, 146))
         local spot = Vector3.new(rng:NextNumber(-35, 35), 9, rng:NextNumber(-35, 35))
-        World.wave(spot, 30, Color3.fromRGB(255, 116, 178))
-        task.delay(0.8, function() monsterStrike(spot, 28, 55, true) end)
+        warnStrike(spot,24,55,true,1.7,Color3.fromRGB(255,116,178))
     elseif choice == 2 then
         notice("GIANT SNEEZE! HOLD ON!", Color3.fromRGB(136, 229, 255))
         local body=World.monsterPosition()
         local epicentre=Vector3.new(body.X,12,body.Z)
-        World.wave(epicentre, 60, Color3.fromRGB(122, 213, 255))
-        task.delay(0.9, function() monsterStrike(epicentre, 58, 55, false) end)
+        warnStrike(epicentre,22,55,false,2.0,Color3.fromRGB(122,213,255))
     elseif choice == 3 then
         notice("THE SKY IS RAINING JELLY!", Color3.fromRGB(255, 223, 114))
         for _ = 1, 3 do
             local spot = Vector3.new(rng:NextNumber(-70, 70), 11, rng:NextNumber(-70, 70))
             World.burst(spot, Color3.fromRGB(252, rng:NextInteger(130, 240), 192), 12, 12)
-            World.wave(spot, 14, Color3.fromRGB(255, 214, 130))
-            task.delay(0.7, function() monsterStrike(spot, 12, 24, false) end)
+            warnStrike(spot,12,24,false,1.45,Color3.fromRGB(255,214,130))
         end
     else
         notice("MONSTER FART TORNADO! RUN!", Color3.fromRGB(183, 244, 154))
         local spot = Vector3.new(rng:NextNumber(-40, 40), 12, rng:NextNumber(-40, 40))
-        World.wave(spot, 38, Color3.fromRGB(175, 255, 152))
-        task.delay(0.8, function() monsterStrike(spot, 38, 38, false) end)
+        warnStrike(spot,18,38,false,1.6,Color3.fromRGB(175,255,152))
     end
 end
 
@@ -1220,7 +1375,12 @@ local function startWake()
     noise = Config.NOISE_MAX
     secondsLeft = Config.WAKE_SECONDS
     wakeCount += 1
+    wakeMode = WakeRound.mode(wakeCount)
     for player, profile in pairs(profiles) do
+        profile.trackedSeconds=0
+        profile.roundPet=profile.petIndex
+        if rootFor(player) then profile.enteredWake = wakeCount end
+        onceMetric(player,profile,"FirstWakeSeen")
         stopPetting(player, profile)
         -- Chase mode must not leave a mobile player holding an animal
         -- with no visible button to put it down.
@@ -1239,11 +1399,35 @@ local function startWake()
         sendStats(player)
     end
     World.setMonsterAwake(true)
+    World.setWakeMode(wakeMode)
     remote:FireAllClients({type = "soundCue", cue = "MonsterWake"})
-    notice("OH NO!!! YOU WOKE GIGGLES! SURVIVE!", Color3.fromRGB(255, 113, 145))
+    remote:FireAllClients({type="soundCue",cue=if wakeMode=="Listen" then "SuspiciousMeow" elseif wakeMode=="Garden" then "SillyStorm" else "RecordScratch"})
+    notice("Giggles is awake! Follow the rescue arrow and hold SAVE ME!", Color3.fromRGB(255, 113, 145))
     World.wave(Vector3.new(0, 11, 0), 90, Color3.fromRGB(255, 104, 156))
     RescueObjective.start(function(player: Player, justCompleted: boolean, reward: number)
+        local profile=profiles[player]
+        local companion=profile.personalities[profile.petIndex]
+        if companion then companion.rescues=math.min(1000000,companion.rescues+1) end
+        onceMetric(player,profile,"FirstPetRescued")
+        if justCompleted then
+            local contributors={}
+            for other in pairs(profiles) do
+                if RescueObjective.participated(other) then table.insert(contributors,other) end
+            end
+            if #contributors>=2 then
+                for _,other in ipairs(contributors) do
+                    local teammate=profiles[other]
+                    onceMetric(other,teammate,"FirstCoopRescue")
+                    if not teammate.coopThisVisit then
+                        teammate.coopThisVisit=true
+                        metric(other,"VisitWithCoopRescue")
+                    end
+                end
+            end
+        end
         addCoins(player, reward)
+        sendCollection(player)
+        remote:FireClient(player,{type="rescueMoment",round=wakeCount})
         if justCompleted then
             notice("TEAM CHALLENGE COMPLETE! ALL LOST PETS ARE SAFE!", Color3.fromRGB(160, 255, 203))
             World.burst(Vector3.new(0, 52, 0), Color3.fromRGB(255, 232, 122), 30, 32)
@@ -1255,7 +1439,6 @@ local function startWake()
         local profile = profiles[player]
         return phase == "AWAKE" and profile ~= nil and not profile.knockedOut
     end)
-    notice("SAVE THE RUNAWAY PETS! Follow their HELP prompts!", Color3.fromRGB(255, 232, 151))
     sendState()
 end
 
@@ -1268,12 +1451,25 @@ local function endWake()
     local teamCompleted = RescueObjective.completed()
     for _, player in ipairs(Players:GetPlayers()) do
         local profile = profiles[player]
-        if profile then
+        if profile and WakeRound.takeResult(profile,wakeCount,RescueObjective.participated(player)) then
+            onceMetric(player,profile,"FirstRoundFinished")
+            if profile.firstObservedVisit and not profile.firstVisitFinished then
+                profile.firstVisitFinished=true
+                metric(player,"FirstVisitRoundFinished")
+            end
             if rootFor(player) and not profile.knockedOut then
+                local ribbon=WakeRound.ribbon(wakeMode,profile.hearts,RescueObjective.participated(player),
+                    profile.trackedSeconds or 0,teamCompleted)
+                local companion=profile.personalities[profile.roundPet or profile.petIndex]
+                if ribbon and companion and not companion.ribbons[ribbon] then
+                    companion.ribbons[ribbon]=true
+                    remote:FireClient(player,{type="questToast",text="New rescue ribbon in your pet diary!"})
+                end
                 local bonus = Progression.recordSurvival(profile)
                 local rescueBonus = if teamCompleted and RescueObjective.participated(player) then RescueObjective.status().bonus else 0
                 addCoins(player, Config.SURVIVAL_REWARD + bonus + rescueBonus)
                 onceMetric(player, profile, "FirstBossSurvived")
+                if profile.feedCount>0 then onceMetric(player,profile,"IntroComplete") end
                 if rescueBonus > 0 then
                     remote:FireClient(player, {type = "questToast", text = "CO-OP HERO! +" .. rescueBonus .. " BONUS COINS!"})
                 end
@@ -1287,12 +1483,16 @@ local function endWake()
             else
                 addCoins(player, 8) -- consolation so new players can still progress
             end
+            sendCollection(player)
+        end
+        if profile then
             profile.hearts = 3
             profile.knockedOut = false
             sendStats(player)
-            sendCollection(player)
         end
     end
+    noiseSpot = nil
+    decoy.readyAt,decoy.untilTime=0,0
     RescueObjective.finish()
     notice(if teamCompleted then "GIGGLES IS ASLEEP! HEROES SAVED THE PETS!" else "GIGGLES IS ASLEEP! NEXT TIME, RESCUE THE RUNAWAYS!", Color3.fromRGB(150, 255, 204))
     sendState()
@@ -1311,6 +1511,7 @@ RunService.Heartbeat:Connect(function(dt: number)
     local interval=lastHeartbeat
     lastHeartbeat = 0
     local nearest: Vector3? = nil
+    local nearestPlayer: Player?=nil
     local nearestDistance=math.huge
     local bossPosition=World.monsterPosition()
     local t = os.clock()
@@ -1320,6 +1521,7 @@ RunService.Heartbeat:Connect(function(dt: number)
         if root and root.Position.Y < -18 then
             if phase == "AWAKE" and not profile.knockedOut then
                 profile.knockedOut = true
+                RescueObjective.release(player)
                 profile.hearts = 0
                 sendStats(player)
                 remote:FireClient(player, {type = "notice", text = "SPLASH! OUT FOR THIS ROUND!", color = Color3.fromRGB(152, 230, 255)})
@@ -1329,7 +1531,7 @@ RunService.Heartbeat:Connect(function(dt: number)
         end
         if phase=="AWAKE" and root and not profile.knockedOut then
             local distance=(root.Position-bossPosition).Magnitude
-            if distance<nearestDistance then nearest,nearestDistance=root.Position,distance end
+            if distance<nearestDistance then nearest,nearestDistance,nearestPlayer=root.Position,distance,player end
         end
         if root and pet and pet.Parent and pet.PrimaryPart then
             local mode=if profile.carrying then "Carry" elseif profile.petting then "Pet"
@@ -1389,7 +1591,18 @@ RunService.Heartbeat:Connect(function(dt: number)
             end
         end
     end
-    World.followMonster(nearest,interval)
+    local destination=nearest
+    if phase=="AWAKE" and wakeMode=="Listen" then destination=noiseSpot end
+    if wakeMode=="Garden" then destination=nil end
+    if phase=="AWAKE" and t<decoy.untilTime then destination=decoy.position end
+    if phase=="AWAKE" and wakeMode=="Chase" and nearestPlayer and nearest and t>=decoy.untilTime then
+        local delta=nearest-bossPosition
+        if delta.X*delta.X+delta.Z*delta.Z<=40*40 then
+            local tracked=profiles[nearestPlayer]
+            if tracked then tracked.trackedSeconds=(tracked.trackedSeconds or 0)+math.min(interval,.2) end
+        end
+    end
+    World.followMonster(destination,interval)
 end)
 
 task.spawn(function()
@@ -1404,6 +1617,14 @@ task.spawn(function()
     local surpriseCooldown = rng:NextInteger(17, 29)
     while true do
         task.wait(1)
+        if not next(profiles) and phase=="SLEEP" then
+            secondsLeft=Config.SLEEP_MAX_SECONDS
+            noiseAlarm=nil
+            World.setStirring(false)
+            noise=0
+            noiseSpot=nil
+            continue
+        end
         secondsLeft = math.max(0, secondsLeft - 1)
         if phase == "SLEEP" then
             surpriseCooldown -= 1
@@ -1411,7 +1632,9 @@ task.spawn(function()
                 surpriseWeather()
                 surpriseCooldown = rng:NextInteger(19, 33)
             end
-            if noise >= Config.NOISE_MAX or secondsLeft <= 0 then
+            local _, wakeIn = sleepWarning()
+            if wakeIn == 0 then
+                actionCooldown=4
                 startWake()
             end
         elseif phase == "AWAKE" then
@@ -1513,6 +1736,7 @@ task.spawn(function()
             if not personality then stopPetting(player, profile) continue end
             local oldBond = Personality.bondStage(personality)
             local outcome = Affection.step(personality, session, Affection.TickSeconds, rng:NextNumber())
+            if outcome.noise > 0 then noiseSpot = pet.PrimaryPart.Position end
             noise = math.min(Config.NOISE_MAX, noise + outcome.noise)
             profile.purr = outcome.purr
             if profile.loaded then profile.dirty = true end
@@ -1636,7 +1860,7 @@ game:BindToClose(function()
     end
     -- Save different players concurrently within Roblox's shutdown window.
     local deadline = os.clock() + 25
-    while (next(profiles) or next(closingProfiles)) and os.clock() < deadline do
+    while (next(profiles) or next(closingProfiles) or next(loading)) and os.clock() < deadline do
         task.wait(0.05)
     end
 end)

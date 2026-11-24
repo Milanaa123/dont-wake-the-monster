@@ -68,36 +68,46 @@ hint.Parent = panel
 
 local collectionKnown = false
 local gardenKnown = false
-local tutorialSeen = false
+local lastReaction = ""
+local lastNoise = 0
+local visitSurvivals: number? = nil
 local feedCount = 0
 local survivalCount = 0
 local experimentCount = 0
 local planted = false
 local harvested = false
 local phase = "SLEEP"
+local warning = false
 local stage = ""
 local finished = false
 
 local function refresh()
-    if not collectionKnown or not gardenKnown or not tutorialSeen or phase == "AWAKE" then
+    if not collectionKnown or not gardenKnown or phase == "AWAKE" or warning then
         panel.Visible = false
         return
     end
     -- Established players should not see a repetitive tutorial after every
     -- respawn or join; this is an introductory experience, not a daily quest.
-    if survivalCount > 0 or experimentCount > 0 or feedCount >= 4 or finished then
+    if (visitSurvivals or 0)>0 or experimentCount > 0 or finished then
         panel.Visible = false
         return
     end
     local nextStage, titleText, message
-    if feedCount == 0 then
-        nextStage, titleText = "feed", "1 / 3  🍬  Feed your little companion"
-        message = "Tap any food below. Every pet has its own reactions!"
+    if phase=="COOLDOWN" and survivalCount==0 then
+        nextStage,titleText="recover","Giggles is heading back to bed"
+        message="In the next round, stay outside the marked rings and hold SAVE ME beside a lost pet."
+    elseif feedCount == 0 then
+        nextStage, titleText = "feed", "Meet your pet. Giggles is sleeping nearby."
+        message = "Tap a snack below and watch your companion."
+    elseif survivalCount==0 then
+        nextStage = "noise"..lastReaction..tostring(lastNoise)
+        titleText = if lastReaction~="" then lastReaction.."   +"..lastNoise.." noise" else "Every snack can stir Giggles"
+        message = "Try SOOTHE to quiet your pet, or feed again. When Giggles wakes, look for SAVE ME."
     elseif not planted and not harvested then
-        nextStage, titleText = "plant", "2 / 3  🌱  Plant your first seed"
+        nextStage, titleText = "plant", "🌱  You survived! Plant your first seed"
         message = "Walk to your garden and tap PLANT on an empty bed."
     elseif not harvested then
-        nextStage, titleText = "harvest", "3 / 3  🍓  Watch your crop grow"
+        nextStage, titleText = "harvest", "🍓  Watch your crop grow"
         message = "Return to a ripe plant and tap HARVEST for ingredients."
     else
         finished = true
@@ -121,9 +131,12 @@ remote.OnClientEvent:Connect(function(event: any)
     if type(event) ~= "table" or type(event.type) ~= "string" then return end
     if event.type == "collection" then
         collectionKnown = true
-        tutorialSeen = event.tutorialSeen == true
         feedCount = math.max(0, tonumber(event.feedCount) or 0)
         survivalCount = math.max(0, tonumber(event.survivalCount) or 0)
+        if visitSurvivals==nil then visitSurvivals=survivalCount end
+    elseif event.type=="feedNoise" then
+        lastNoise=event.amount
+        lastReaction=event.reaction
     elseif event.type == "garden" then
         gardenKnown = true
         experimentCount = math.max(0, tonumber(event.experiments) or 0)
@@ -144,6 +157,7 @@ remote.OnClientEvent:Connect(function(event: any)
             end
         end
     elseif event.type == "state" then
+        warning = event.warning ~= nil
         phase = if type(event.phase) == "string" then event.phase else phase
     else
         return

@@ -9,6 +9,7 @@ The optional layout comes from the Lune built-place test (entrance-layout CI art
 
 import argparse
 import json
+from math import radians, tan
 import struct
 import sys
 from pathlib import Path
@@ -20,6 +21,9 @@ sys.path.insert(0,str(Path(__file__).resolve().parent))
 from package_studio import png, unpack
 
 SHOTS = [
+    ("Environment_BloomingHedge",(0,0,.82),(3,-9,3.4),6.3),
+    ("Pet_Puffin",(0,.03,1.23),(4,-9,2.7),3.55),
+    ("Pet_Nugget",(0,.03,1.24),(4,-9,2.7),3.55),
     ("Pet_Swoop",(0,.05,1.27),(3,-9,2.8),3.65),
     ("Pet_Mochi",(0,.07,1.42),(4,-9,3.1),4.25),
     ("Pet_Tofu",(0,.07,1.42),(4,-9,3.1),4.25),
@@ -94,7 +98,7 @@ def place_mesh(scene, name, mesh, transform):
     return obj
 
 
-def photograph(scene, path, focus, direction, scale, floor_z, light_scale=1):
+def photograph(scene, path, focus, direction, scale, floor_z, light_scale=1, vertical_fov=None):
     # The neutral floor only receives shadows. It is distinct from the shipped terrain.
     target=Vector(focus)
     bpy.ops.mesh.primitive_plane_add(size=max(200,scale*4),location=(target.x,target.y,floor_z-.006))
@@ -112,16 +116,30 @@ def photograph(scene, path, focus, direction, scale, floor_z, light_scale=1):
     bpy.ops.object.camera_add(location=target+Vector(direction))
     cam=bpy.context.object
     cam.rotation_euler=(-Vector(direction)).to_track_quat("-Z","Y").to_euler()
-    cam.data.type="ORTHO"
-    cam.data.ortho_scale=scale
+    if vertical_fov is None:
+        cam.data.type="ORTHO"
+        cam.data.ortho_scale=scale
+    else:
+        cam.data.type="PERSP"
+        cam.data.sensor_fit="VERTICAL"
+        cam.data.lens=cam.data.sensor_height/(2*tan(radians(vertical_fov)/2))
     cam.data.clip_end=max(1000,scale*8)
     scene.camera=cam
     scene.render.filepath=str(path)
     bpy.ops.render.render(write_still=True)
 
 
-def render_entrance(layout, bank, atlas, out):
-    scene,mat=setup_scene(atlas,(1440,880))
+def section_transform(item,section):
+    values=item["cframe"]
+    assert len(values)==12
+    rotation=Matrix((values[3:6],values[6:9],values[9:12])).to_4x4()
+    scale=Matrix.Diagonal([actual/authored for actual,authored in zip(item["size"],section["size"])]+[1])
+    return BASIS @ Matrix.Translation(values[:3]) @ rotation @ scale @ BASIS.inverted()
+
+
+def render_entrance(layout, bank, atlas, out, pond_view=None, frame=None):
+    resolution=frame["resolution"] if frame else (1440,880)
+    scene,mat=setup_scene(atlas,resolution)
     meshes={}
     corners=[]
     for item in layout:
@@ -131,13 +149,15 @@ def render_entrance(layout, bank, atlas, out):
         if key not in meshes:
             meshes[key]=decode_section(section,mat)
         # Preserve the section-local origin, scale and rigid transform used by the place.
-        values=item["cframe"]
-        assert len(values)==12
-        rotation=Matrix((values[3:6],values[6:9],values[9:12])).to_4x4()
-        scale=Matrix.Diagonal([actual/authored for actual,authored in zip(item["size"],section["size"])]+[1])
-        transform=BASIS @ Matrix.Translation(values[:3]) @ rotation @ scale @ BASIS.inverted()
+        transform=section_transform(item,section)
         obj=place_mesh(scene,item["name"],meshes[key],transform)
         corners.extend(transform @ Vector(p) for p in obj.bound_box)
+    if pond_view:
+        # The Lune placed-scene test exports the shipped camera module's pose.
+        photograph(scene,out/("Pond-"+pond_view+".png"),BASIS @ Vector(frame["focus"]),
+                   BASIS @ Vector(frame["offset"]),50,min(p.z for p in corners),
+                   light_scale=7,vertical_fov=frame["verticalFov"])
+        return
     direction=Vector((.39,-.92,.72)).normalized()
     view=(-direction).to_track_quat("-Z","Y")
     view_points=[view.inverted() @ p for p in corners]
@@ -154,8 +174,14 @@ def main():
     parser.add_argument("bank",type=Path)
     parser.add_argument("output",type=Path)
     parser.add_argument("assets",nargs="*")
-    parser.add_argument("--layout",type=Path)
+    inputs=parser.add_mutually_exclusive_group()
+    inputs.add_argument("--layout",type=Path)
+    inputs.add_argument("--poses",type=Path,help="Motor6D pose export from test_orchard_place")
+    parser.add_argument("--pond-view",choices=("portrait","landscape"))
+    parser.add_argument("--camera-frames",type=Path)
     args=parser.parse_args(sys.argv[sys.argv.index("--")+1:])
+    if args.pond_view and not (args.layout and args.camera_frames):
+        parser.error("--pond-view requires --layout and --camera-frames from the built-place test")
     bank={e["name"]:json.loads(e["properties"]["Value"]) for e in json.loads(args.bank.read_text())["children"]}
     out=args.output.resolve()
     out.mkdir(exist_ok=True,parents=True)
@@ -163,7 +189,27 @@ def main():
     w,h,rgba=bank["Pigments"]
     atlas.write_bytes(png(w,h,unpack(rgba)))
     if args.layout:
-        render_entrance(json.loads(args.layout.read_text()),bank,atlas,out)
+        frame=json.loads(args.camera_frames.read_text())[args.pond_view] if args.pond_view else None
+        render_entrance(json.loads(args.layout.read_text()),bank,atlas,out,args.pond_view,frame)
+        return
+    if args.poses:
+        shots={key:(focus,direction,scale) for key,focus,direction,scale in SHOTS}
+        for pose in json.loads(args.poses.read_text()):
+            asset=pose["asset"]
+            scene,mat=setup_scene(atlas,(480,400))
+            # Art.mount places the origin at the full bounding box center.
+            # Our fixed studio cameras frame the original authoring coordinates.
+            origin=Matrix.Translation(BASIS @ Vector(bank[asset]["center"]))
+            for section in bank[asset]["parts"]:
+                name=section["name"]
+                if pose["parts"][name].get("hidden"): continue
+                transform=origin @ section_transform(pose["parts"][name],section)
+                place_mesh(scene,name,decode_section(section,mat),transform)
+            for item in pose.get("scenery",[]):
+                section,=bank[item["asset"]]["parts"]
+                place_mesh(scene,item["asset"],decode_section(section,mat),origin @ section_transform(item,section))
+            floor_z=bank[asset]["center"][1]-bank[asset]["size"][1]/2
+            photograph(scene,out/(asset+"-"+pose["label"]+".png"),*shots[asset],floor_z)
         return
     for asset,focus,direction,scale in SHOTS:
         if args.assets and asset not in args.assets:

@@ -249,6 +249,7 @@ assert "SeedCache_" in explorer and "state.seedAlbum" in explorer and "TRACK" in
 assert "function Garden.weather(" in garden and "function Garden.assist(" in garden, "Missing growing and tending rules"
 assert 'PremiumProducts' in garden_cfg and all(v in garden_cfg for v in ('productId = 0', 'G.PLOT_COUNT = 9')), "Robux source must remain disabled"
 audio_names = [
+    "PuppyYip","BirdEcho","SleepyGrumble",
     "calm-garden-theme", "SeedFind", "RareDiscovery", "WeatherChime", "Boing", "MonsterWake",
     "Victory", "Festival", "SillyStorm", "HarvestPop", "MutationSparkle", "CatSwat",
     "tiny-violin-fail", "suspicious-meow", "cartoon-record-scratch", "comedy-drum-sting",
@@ -263,9 +264,9 @@ for name in audio_names:
         assert w.getframerate() >= 8000
         assert 0.5 <= w.getnframes() / w.getframerate() <= 30, "Audio duration out of bounds"
 assert "Audio.MusicAssetId = 0" in sounds, "Music must remain disabled until authorized asset upload"
-assert sounds.count(" = 0,") == 15, "Expected 15 muted SFX IDs"
+assert sounds.count(" = 0,") == 18, "Expected 18 muted SFX IDs"
 assert "playCue(" in soundscape and "MusicToggle" in soundscape and "EffectsToggle" in soundscape
-print("OK: 3 biomes, 9 seed caches, original music and ambience, 15 sound effects, pet tending")
+print("OK: 3 biomes, 9 seed caches, original music and ambience, 18 sound effects, pet tending")
 
 # Rotating free-coin seed merchant, no paid loot, real save integration.
 merchant = read("src/shared/SeedMerchant.luau")
@@ -342,7 +343,7 @@ for marker in ("ChibiFace","HairDaisyPetal","BlueOverallsBib",
                "ChibiR15Weld"):
     assert marker in native_avatar, f"Missing actual R15 character visual: {marker}"
 assert "NativeAvatar.apply(character)" in server, "No native avatar when mesh pack absent"
-assert 'local viewFov = 48' in camera_source and 'Vector3.new(-5.7, 3.3, -5.2)' in camera_source, "Reference garden camera regressed"
+assert "Frame.at(root.Position" in camera_source and 'WaitForChild("GardenCameraFrame")' in camera_source, "Garden camera framing module disconnected"
 assert 'OpenSeedExplorer' in read("src/client/SeedExplorer.client.luau")
 assert 'CottageQuickMenu' in quick_menu and 'control.Activated:Connect' in quick_menu
 assert project["tree"]["Workspace"]["$properties"]["StreamingEnabled"] is True, "Mobile island streaming disabled"
@@ -520,7 +521,7 @@ first_guide = read("src/client/FirstMinuteGuide.client.luau")
 for marker in ('event.type == "collection"', 'event.type == "garden"',
                'event.type == "state"', 'feedCount == 0',
                'elseif not planted and not harvested', 'elseif not harvested',
-               'phase == "AWAKE"', 'tutorialSeen', 'finished = true'):
+               'phase == "AWAKE"', 'lastReaction', 'finished = true'):
     assert marker in first_guide, f"Introductory playable objectives missing: {marker}"
 assert 'remote:FireServer(' not in first_guide, "Client onboarding must not award itself prizes"
 print("OK: unobtrusive mobile-first onboarding based on real game progress")
@@ -535,7 +536,7 @@ for marker in ('function ProfileStore.load(', 'function ProfileStore.save(',
 assert 'HttpService:GenerateGUID(false)' in server, "Every server must use a unique lease token"
 assert 'profile.dataSessionId = result._dwtmLease.token' in server, "Per-visit lease must be bound to active profile"
 assert 'persistence:release(player.UserId, profile)' in server
-assert 'if persistence:save(player.UserId, profile) then' in server
+assert 'persistence:finish(player.UserId, profile)' in server
 print("OK: atomic DataStore session lease and safe final-release integration")
 
 # Celebrations must not flood mobile scenes with large replicated neon spheres.

@@ -17,10 +17,49 @@ local participants: {[Player]: number} = {}
 
 local RESCUE_COINS = 8
 local TEAM_BONUS = 30
-local TOTAL_RUNAWAYS = 7
+local generation = 0
+local targets: {[number]: {name: string, position: Vector3, helper: number, expires: number}} = {}
+local SIGNAL_SECONDS = 8
+
+function Rescue.release(player: Player)
+    for _, target in pairs(targets) do
+        if target.helper == player.UserId then
+            target.helper = 0
+            target.expires = 0
+        end
+    end
+end
+
+function Rescue.signal(player: Player, round: any, id: any): boolean
+    if not active or completed or round ~= generation or typeof(id) ~= "number"
+        or not (id >= 1 and id <= goal and id % 1 == 0) then return false end
+    local target = targets[id]
+    local now = os.clock()
+    if not target or target.expires > now then return false end
+    local character = player.Character
+    local humanoid = if character then character:FindFirstChildOfClass("Humanoid") else nil
+    if not humanoid or humanoid.Health <= 0 then return false end
+    for _, other in pairs(targets) do
+        if other.helper == player.UserId and other.expires > now then return false end
+    end
+    target.helper = player.UserId
+    target.expires = now + SIGNAL_SECONDS
+    return true
+end
 
 function Rescue.status()
+    local remaining = {}
+    local now = os.clock()
+    for id = 1, goal do
+        local target = targets[id]
+        if target then
+            table.insert(remaining, {id = id, name = target.name, position = target.position,
+                helper = if target.expires > now then target.helper else 0})
+        end
+    end
     return {
+        round = generation,
+        targets = remaining,
         active = active,
         rescued = rescued,
         goal = goal,
@@ -42,7 +81,10 @@ function Rescue.start(onRescue: (Player, boolean, number) -> (), allowed: (Playe
         if model.Parent then model:Destroy() end
     end
     table.clear(models)
+    table.clear(targets)
     table.clear(participants)
+    generation += 1
+    local round = generation
     rescued = 0
     active = true
     completed = false
@@ -51,19 +93,21 @@ function Rescue.start(onRescue: (Player, boolean, number) -> (), allowed: (Playe
     goal = math.clamp(2 + math.floor(currentPlayers / 3), 2, 5)
     local phaseOffset = random:NextNumber(0, math.pi * 2)
 
-    for i = 1, TOTAL_RUNAWAYS do
+    for i = 1, goal do
         local variant = Config.Pets[random:NextInteger(1, #Config.Pets)]
-        local angle = phaseOffset + (i - 1) * math.pi * 2 / TOTAL_RUNAWAYS
+        local angle = phaseOffset + (i - 1) * math.pi * 2 / goal
         local radius = random:NextNumber(31, 62)
         -- Top of main island is approximately 7 studs; keep prompts reachable.
         local position = Vector3.new(math.cos(angle) * radius, 12.5, math.sin(angle) * radius)
         local pet = World.makePet(variant.name .. "_runaway_" .. i, variant.color, variant.ear == "pointy")
+        pet:SetAttribute("RescueRound", round)
         pet.Name = "RescueRunaway_" .. i
         pet:PivotTo(CFrame.new(position) * CFrame.Angles(0, angle, 0))
         table.insert(models, pet)
 
         local primary = pet.PrimaryPart
         if primary then
+            targets[i] = {name = variant.name, position = primary.Position, helper = 0, expires = 0}
             local prompt = Instance.new("ProximityPrompt")
             prompt.Name = "Rescue"
             prompt.ActionText = "SAVE ME!"
@@ -76,7 +120,7 @@ function Rescue.start(onRescue: (Player, boolean, number) -> (), allowed: (Playe
 
             local used = false
             prompt.Triggered:Connect(function(player: Player)
-                if not active or used or not allowed(player) then return end
+                if not active or round ~= generation or completed or used or not allowed(player) then return end
                 local character = player.Character
                 local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
                 if not root or not root:IsA("BasePart") then return end
@@ -85,12 +129,13 @@ function Rescue.start(onRescue: (Player, boolean, number) -> (), allowed: (Playe
                 if not humanoid or humanoid.Health <= 0 then return end
 
                 used = true
+                targets[i] = nil
                 prompt.Enabled = false
                 participants[player] = (participants[player] or 0) + 1
                 rescued += 1
-                World.burst(primary.Position, variant.color, 14, 11)
                 local justCompleted = rescued >= goal and not completed
                 if justCompleted then completed = true end
+                World.burst(primary.Position, variant.color, 14, 11)
                 if pet.Parent then pet:Destroy() end
                 onRescue(player, justCompleted, RESCUE_COINS)
             end)
@@ -104,6 +149,7 @@ function Rescue.finish()
         if model.Parent then model:Destroy() end
     end
     table.clear(models)
+    table.clear(targets)
     -- Keep participants until the next Rescue.start so reward resolution can run first.
 end
 

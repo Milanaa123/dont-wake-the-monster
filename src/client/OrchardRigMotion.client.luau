@@ -22,8 +22,11 @@ local function track(root: Instance)
     local removed=root.DescendantRemoving:Connect(function(item)
         if joints[item.Name]==item then joints[item.Name]=nil end
     end)
-    rigs[root] = {model=model,joints=joints,added=added,removed=removed,prev=root.Position,phase=seed*.37,
-        travel=0,rest=0,hold=0,stroke=0,wake=0,last=os.clock(),seed=seed}
+    local species = model:GetAttribute("PetSpecies")
+    local lamb = species=="Mochi" or species=="Tofu" or species=="Luma"
+    local boss=model.Name=="GigglesTheGiant"
+    rigs[root] = {boss=boss,model=model,joints=joints,added=added,removed=removed,prev=root.Position,phase=seed*.37,
+        lamb=lamb,travel=0,rest=0,hold=0,stroke=0,wake=if boss and model:GetAttribute("Awake") then 1 else 0,stir=0,last=os.clock(),seed=seed}
 end
 
 CollectionService:GetInstanceAddedSignal("OrchardRig"):Connect(track)
@@ -34,6 +37,13 @@ CollectionService:GetInstanceRemovedSignal("OrchardRig"):Connect(function(root)
 end)
 for _,root in ipairs(CollectionService:GetTagged("OrchardRig")) do track(root) end
 
+-- One ear lifts, then settles a little past its resting position.
+local function earFlick(age: number): number
+    if age<=0 or age>=.72 then return 0 end
+    local t=age/.72
+    return math.sin(math.pi*t)^2*math.sin(2*math.pi*t)
+end
+
 RunService.PreSimulation:Connect(function()
     local camera=workspace.CurrentCamera
     if not camera then return end
@@ -43,21 +53,23 @@ RunService.PreSimulation:Connect(function()
     for root,r in pairs(rigs) do
         local distance=(root.Position-camera.CFrame.Position).Magnitude
         local dt=now-r.last
-        if distance>(if low then 110 else 175) then
+        local distant=distance>(if low then 110 else 175)
+        if distant and not r.boss then
             r.prev=root.Position
             r.last=now
             continue
         end
-        if dt < (if low or distance>70 then 1/20 else 1/45) then continue end
+        if dt < (if distant then .25 elseif low or distance>70 then 1/20 else 1/45) then continue end
         local delta=root.Position-r.prev
         local speed=math.min(24,Vector2.new(delta.X,delta.Z).Magnitude/math.max(dt,.001))
         r.prev=root.Position
         r.last=now
+        local postureBlend=1-math.exp(-dt*4.5)
         dt=math.min(dt,.12)
         local blend=1-math.exp(-dt*7)
         local model=r.model
         local mode=model:GetAttribute("MotionMode")
-        local boss=model.Name=="GigglesTheGiant"
+        local boss=r.boss
         local function fade(value: number, target: number): number
             return value+(target-value)*blend
         end
@@ -65,15 +77,22 @@ RunService.PreSimulation:Connect(function()
         r.rest=fade(r.rest,if mode=="Nap" then 1 else 0)
         r.hold=fade(r.hold,if mode=="Carry" then 1 else 0)
         r.stroke=fade(r.stroke,if mode=="Pet" then 1 else 0)
-        r.wake=fade(r.wake,if model:GetAttribute("Awake") then 1 else 0)
+        local awake=if model:GetAttribute("Awake") then 1 else 0
+        r.wake+=(awake-r.wake)*postureBlend
+        if boss then r.stir=fade(r.stir,if model:GetAttribute("Stirring") and not model:GetAttribute("Awake") then 1 else 0) end
         r.phase+=dt*(2.2+math.min(speed,17)*.61)
         local beat=math.sin(r.phase)
         local breath=math.sin(now*(if boss then 1.13 else 1.92)+r.seed)
         local nibble=0
+        local firstEar,secondEar=0,0
         local fedAt=model:GetAttribute("FedAt")
         if type(fedAt)=="number" then
             local age=workspace:GetServerTimeNow()-fedAt
             if age>=0 and age<1.2 then
+                if r.lamb then
+                    firstEar=earFlick(age)*(1-r.rest)
+                    secondEar=earFlick(age-.14)*(1-r.rest)
+                end
                 nibble=math.sin(math.pi*age/1.2)^2 * (.60+.40*math.sin(age*16))
             end
         end
@@ -85,34 +104,73 @@ RunService.PreSimulation:Connect(function()
                 if t>=0 and t<1.3 then attack=math.sin(math.pi*t/1.3)^2 end
             end
         end
+        local prone=if boss then (1-r.wake)*(1-.44*r.stir) else 0
+        local spine=r.joints.Spine
+        local unit=if spine then spine:GetAttribute("PoseScale") or 1 else 1
+        local pitch=-1.02*prone
+        local height=(.02+.009*breath)*prone
+        local up=if prone>0 then Vector3.new(0,math.cos(pitch),-math.sin(pitch)) else Vector3.yAxis
         for name,joint in pairs(r.joints) do
             if not joint.Part1 then continue end
             local side=if name:sub(-1)=="L" then -1 else 1
             local x,y,z=0,0,0
-            if name=="Head" then
+            local offset=Vector3.zero
+            if name=="Spine" then
+                x=pitch
+                offset=Vector3.new(0,height,.77*prone)*unit
+            elseif name=="Head" then
                 x=.055*breath+.09*r.travel*math.cos(r.phase*2)+.45*r.rest-.17*r.stroke+.22*nibble
                 y=.10*math.sin(now*.94+r.seed)*(1-r.travel)+.28*r.stroke
                 z=.08*r.hold
-                if boss then x=.26*(1-r.wake)+.045*breath-.31*attack end
+                if r.lamb then z+=.20*r.stroke-.09*(firstEar-secondEar) end
+                if boss then
+                    x=.90*prone+.035*breath-.31*attack+.28*r.stir
+                    offset=Vector3.new(0,-.10,-.27)*prone*unit
+                    offset-=up*(.16*prone*unit)
+                    z-=.13*prone
+                    local scenario=model:GetAttribute("WakeMode")
+                    if scenario=="Listen" then
+                        y=.31*math.sin(now*1.45)*r.wake
+                        z=.11*math.cos(now*1.45)*r.wake
+                    elseif scenario=="Garden" then
+                        x+=.12*math.sin(now*2.4)*r.wake
+                    end
+                    y+=.22*math.sin(now*1.9)*r.stir+.14*prone
+                end
             elseif name:match("^Ear") then
                 x=.035*breath+.09*math.cos(r.phase*2-.48)*r.travel+.38*r.rest-.16*r.stroke
                 z=side*(.035*breath+.12*nibble+.09*r.hold)
+                if r.lamb then
+                    local flick=if side<0 then firstEar else secondEar
+                    z+=side*(.46*flick+.15*r.stroke)
+                    y+=side*(.13*flick+.12*r.stroke)
+                end
             elseif name:match("^Fore") or name:match("^Hind") then
                 local pair=if name:match("^Fore") then 1 else -1
                 x=beat*side*pair*r.travel*.67+pair*(r.rest*.60+r.hold*.37)
                 if pair==1 then x-=.17*nibble end
             elseif name=="Tail" then
                 y=math.sin(now*(2.1+1.8*r.stroke)+r.seed)*(.17+.25*r.stroke)+.12*beat*r.travel+.24*nibble
-                x=.13*r.hold-.25*r.rest
+                x=.13*r.hold-.25*r.rest+(if boss then 1.55*prone else 0)
             elseif name:match("^Wing") or name:match("^Gill") or name:match("^Claw") then
                 z=side*(.13*breath+(.22+.38*r.travel)*beat*(1-r.rest)-.28*r.hold+.18*nibble)
             elseif name:match("^Tendril") then
                 x=.15*math.sin(r.phase+(tonumber(name:sub(8)) or 0)*.82)
             elseif name:match("^Arm") then
-                x=.13*breath-.30*r.wake-.87*attack
-                z=side*(.08*breath+.10*r.wake+.18*attack)
+                offset=up*(.35*prone*(1-.8*r.stir)*unit)
+                x=1.34*prone+.065*breath-.30*r.wake-.87*attack+(if side<0 then 1.12 else .19)*r.stir
+                z=side*(.08*breath+.10*r.wake+.18*attack-.32*r.stir+.12*prone)
             elseif name:match("^Leg") then
-                x=-.18*(1-r.wake)+side*.15*attack
+                -- Project the lower rings of the sculpted foot onto the
+                -- dais. Both hind feet fold back as the torso tips forward.
+                local legPitch=pitch-.55*prone
+                local c,s=math.cos(legPitch),math.sin(legPitch)
+                local sole=math.min(-.745*c+1.04*s,-.66*c+1.17*s,-.46*c+1.09*s)
+                if spine and prone>0 then
+                    local hip=spine:GetAttribute("FloorClearance")+height*unit+joint.C0.Position:Dot(up)
+                    offset=up*(-hip-sole*unit)
+                end
+                x=-.55*prone+side*.15*attack
                 if model:GetAttribute("Walking") then x+=side*.26*math.sin(now*3.4) end
             elseif name=="Blink" then
                 local eyes=joint.Part1
@@ -130,7 +188,7 @@ RunService.PreSimulation:Connect(function()
             elseif name:match("^Lid") then
                 joint.Part1.LocalTransparencyModifier=r.wake
             end
-            joint.Transform=CFrame.Angles(x,y,z)
+            joint.Transform=CFrame.new(offset)*CFrame.Angles(x,y,z)
         end
     end
 end)

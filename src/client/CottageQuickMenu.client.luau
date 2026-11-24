@@ -33,6 +33,7 @@ local watched: {[GuiButton]: boolean} = {}
 local expanded = false
 local chasing = false
 local compact = false
+local introductory = true
 
 local root = Instance.new("ScreenGui")
 root.Name = "CottageQuickMenu"
@@ -73,7 +74,7 @@ end
 
 local function refresh()
     local frame = viewport()
-    compact = UserInputService.TouchEnabled or frame.X < 760
+    compact = introductory or UserInputService.TouchEnabled or frame.X < 760
     local top=math.clamp(math.floor(frame.Y*.24),75,191)
     local firstRow=top+48
     local rows=math.max(1,math.floor((frame.Y-firstRow-54)/40))
@@ -112,7 +113,7 @@ local function refresh()
                 control.AnchorPoint = original.anchor
                 control.Position = original.pos
                 control.Size = original.size
-                control.Visible = true
+                control.Visible = not chasing
             end
         end
     end
@@ -125,7 +126,12 @@ button.Activated:Connect(function()
 end)
 
 remote.OnClientEvent:Connect(function(payload: any)
-    if type(payload) ~= "table" or payload.type ~= "state" then return end
+    if type(payload) ~= "table" then return end
+    if payload.type=="collection" then
+        local first=(payload.survivalCount or 0)==0
+        if first~=introductory then introductory=first refresh() end
+    end
+    if payload.type ~= "state" then return end
     local newChasing = payload.phase == "AWAKE"
     if newChasing ~= chasing then
         chasing = newChasing

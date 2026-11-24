@@ -130,7 +130,8 @@ function World.build()
     platform(scenery, "MainIsland", Vector3.new(0, 0, 0), 118, 14, Color3.fromRGB(151, 197, 124))
     platform(scenery, "MainEdge", Vector3.new(0, -8, 0), 113, 8, Color3.fromRGB(194, 156, 119))
     platform(scenery, "UpperEarth", Vector3.new(0, -16, 0), 88, 9, Color3.fromRGB(154, 130, 114))
-    platform(scenery, "MonsterPlatform", Vector3.new(0, 8, 0), 30, 4, Color3.fromRGB(217, 196, 149))
+    local dais=platform(scenery, "MonsterPlatform", Vector3.new(0, 8, 0), 30, 4, Color3.fromRGB(157, 181, 114))
+    ReferenceMeshLibrary.decorateDen(dais)
 
     local spawn = Instance.new("SpawnLocation")
     spawn.Name = "SafeSpawn"
@@ -279,9 +280,9 @@ function World.build()
     halo.CanCollide = false
 
     importedSleepingMonster = ReferenceMeshLibrary.applySleepingMonster(monster)
-    if not importedSleepingMonster then
-        ReferenceMeshLibrary.prepare(monster,"World",{"Environment_SleepingMonster"},function()
-            importedSleepingMonster = ReferenceMeshLibrary.applySleepingMonster(monster)
+    if not importedSleepingMonster or not importedSleepingMonster:HasTag("OrchardRig") then
+        ReferenceMeshLibrary.prepareGiant(monster,function(mesh)
+            importedSleepingMonster = mesh
         end)
     end
     -- The spawn is on the southern side (+Z); face the garden entrance.
@@ -313,6 +314,14 @@ function World.followMonster(target: Vector3?, dt: number)
     if current~=desired then monster:PivotTo(desired) end
     local walking=(nextFoot-foot).Magnitude>.03
     if monster:GetAttribute("Walking")~=walking then monster:SetAttribute("Walking",walking) end
+end
+
+function World.setStirring(stirring: boolean)
+    if monster:GetAttribute("Stirring") ~= stirring then monster:SetAttribute("Stirring",stirring) end
+end
+
+function World.setWakeMode(mode: string)
+    monster:SetAttribute("WakeMode",mode)
 end
 
 function World.monsterGesture()
@@ -521,6 +530,7 @@ function World.makePet(name: string, color: Color3, pointy: boolean): Model
     body.CanCollide = false
     pet.PrimaryPart = body
     local species = (string.match(name, "^[^_]+") or name):gsub("^Wild", "")
+    pet:SetAttribute("PetSpecies",species)
     pet:SetAttribute("Airborne",species=="Echo" or species=="Twinkle" or species=="Doodle" or species=="Swoop")
     local tag = Instance.new("BillboardGui")
     tag.Name = "PetNameTag"
@@ -610,6 +620,10 @@ function World.burst(position: Vector3, color: Color3, count: number, reach: num
         }):Play()
         Debris:AddItem(leaf, 1.3)
     end
+end
+
+function World.markDanger(center: Vector3, radius: number, tint: Color3, seconds: number)
+    MonsterWakeVFX.markDanger(scenery,center,radius,tint,seconds)
 end
 
 function World.wave(position: Vector3, radius: number, _color: Color3)
@@ -722,6 +736,18 @@ function World.createGarden(userId: number, ownerName: string, slot: number): bo
     return true
 end
 
+function World.showGarland(userId: number)
+    local farm=farmModels[userId]
+    if not farm or farm:FindFirstChild("MoonflowerGarland") then return end
+    local garland=Instance.new("Folder")
+    garland.Name="MoonflowerGarland"
+    garland.Parent=farm
+    local frame=farmCenters[userId]
+    for _,side in {-1,1} do
+        ReferenceMeshLibrary.ground(garland,"Crop_MoonLotus_S3",frame*CFrame.new(side*8,.77,-13.6),2.5,nil)
+    end
+end
+
 function World.removeGarden(userId: number)
     if farmModels[userId] then farmModels[userId]:Destroy() end
     farmModels[userId] = nil
@@ -737,6 +763,7 @@ end
 function World.updateGarden(userId: number, garden: any, cropConfig: any)
     local model = farmModels[userId]
     if not model then return end
+    CottageStyle.styleEntrance(model,farmCenters[userId],garden.style)
     local now = os.time()
     for index = 1, cropConfig.PLOT_COUNT do
         local plot = model:FindFirstChild("Plot_" .. index)

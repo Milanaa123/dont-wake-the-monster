@@ -42,6 +42,24 @@ rules = rules.removesuffix("return Garden\n")
 
 suite = r"""
 local g = Garden.new()
+local guest={}
+local open=false
+local host={GetAttribute=function(_,key) return key=="GardenOpen" and open end}
+local slots={[guest]=1,[host]=2}
+local visitors={GetPlayerByUserId=function(_,id) return if id==42 then host else nil end}
+assert(Garden.visitOwner(guest,nil,visitors,slots)==guest)
+assert(not Garden.visitOwner(guest,42,visitors,slots))
+open=true
+assert(Garden.visitOwner(guest,42,visitors,slots)==host)
+assert(not Garden.visitOwner(guest,43,visitors,slots) and not Garden.visitOwner(guest,"42",visitors,slots))
+slots[host]=nil
+assert(not Garden.visitOwner(guest,42,visitors,slots))
+assert(g.style=="Meadow" and Garden.load({style="unknown"}).style=="Meadow")
+assert(not Garden.setStyle(g,{}))
+assert(Garden.setStyle(g,"Cottage") and not Garden.setStyle(g,"Cottage"))
+local styled=Garden.load(Garden.serialize(g))
+assert(styled.style=="Cottage" and Garden.snapshot(styled).style=="Cottage")
+assert(styled.seeds.Berry==g.seeds.Berry and not styled.plots[1])
 assert(g.seeds.Berry == 5 and g.seeds.Carrot == 3, "starter seeds")
 assert(G.PLOT_COUNT == 9, "nine beds")
 assert(#G.Order == 30 and #Catalog.Order == 26, "expanded catalogs")

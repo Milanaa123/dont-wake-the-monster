@@ -18,7 +18,9 @@ local elapsed = 0
 
 local function kindFor(mesh: MeshPart): string?
     if mesh.Name == "ImportedCharacterMesh" then return "pet" end
-    if mesh.Name == "ImportedSleepingMonster" then return "boss" end
+    if mesh.Name == "ImportedSleepingMonster" then
+        return if mesh:HasTag("OrchardRig") then nil else "boss"
+    end
     if mesh.Name == "ImportedGardenerToucan" then return "bird" end
     if string.find(mesh.Name, "ImportedOrangeTree_", 1, true) == 1 then return "tree" end
     if mesh:GetAttribute("DecorativeOnly") == true then return "plant" end
@@ -69,7 +71,7 @@ RunService.RenderStepped:Connect(function(dt: number)
     if not camera then return end
 
     for mesh, entry in pairs(animated) do
-        if not mesh.Parent then
+        if not mesh.Parent or (entry.kind=="boss" and mesh:HasTag("OrchardRig")) then
             animated[mesh] = nil
             continue
         end

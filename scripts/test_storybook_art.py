@@ -70,12 +70,15 @@ for creature in ("Pickle","Nugget","Swoop","Puffin"):
 # to joint() can leave a face or a toe behind when the character moves.
 from bake_orchard import GameSculpt
 for name,_,base,second in PET_SPECS:
-    if name in ("Swoop","Mochi","Tofu","Luma","Pebble"):
+    if name in ("Swoop","Mochi","Tofu","Luma","Pebble","Puffin","Nugget"):
         rig=sculpt_species(name,base,second,GameSculpt)
         assert rig.joints["Blink"][0]=="Head" and set(rig.parts["Blink"])=={"eye","shine"}
         assert "blush" in rig.parts["Head"]
-        if name=="Swoop":
+        if name in ("Swoop","Puffin","Nugget"):
             assert {"WingL","WingR","HindL","HindR"} <= rig.parts.keys()
+            if name in ("Puffin","Nugget"):
+                assert {"orange","ochre"} <= rig.parts["Head"].keys()
+                assert rig.joints["Tail"][0]=="Body" and "blush" not in rig.parts["Body"]
         elif name=="Pebble":
             assert {"leafdeep","sage","moss","straw"} <= rig.parts["Body"].keys()
         else:
@@ -107,16 +110,66 @@ for name,_,base,second in PET_SPECS:
 # Shoreline width sets the island placement scale. Keep a flat water surface
 # below the floating leaves, stones around the margin and reeds above it.
 from world_shapes_v2 import sculpt_world
+giant=sculpt_world("SleepingMonster",GameSculpt)
+finite_mesh(giant)
+for arm in ("ArmL","ArmR"):
+    palm=giant.parts[arm]
+    assert giant.joints[arm][0]=="Body" and "footfur" in palm
+    vertices=palm["ivory"][0]
+    # Each of the three nail beds has a continuous border shared with the digit.
+    edges={}
+    for i in range(0,len(vertices),3):
+        triangle=vertices[i:i+3]
+        for point in triangle:
+            edges.setdefault(point,set()).update(triangle)
+    skin=set(palm["fur"][0])
+    nails=0
+    while edges:
+        pending=[next(iter(edges))]
+        bed=set()
+        while pending:
+            point=pending.pop()
+            if point in bed: continue
+            bed.add(point)
+            pending.extend(edges.pop(point))
+        assert len(bed & skin)>=12
+        nails+=1
+    assert nails==3 and min(p[2] for p in vertices)<-1.45
+
+hedge=sculpt_world("BloomingHedge",GameSculpt)
+finite_mesh(hedge)
+# The paired pale and lilac flower heads rise above the basal foliage.
+leaf_top=max(v[1] for v in hedge.data["leafdeep"][0])
+for pigment in ("lilac","lavender","cream","ivory","gold"):
+    assert max(v[1] for v in hedge.data[pigment][0])>leaf_top+.5
+assert bounds(hedge)[0][1]-bounds(hedge)[0][0]>4
+
 pond=sculpt_world("WaterPond",GameSculpt)
 finite_mesh(pond)
 assert {"water","turquoise","moss","pink","leafvein","stone","slate"} <= pond.data.keys()
 waterline=max(v[1] for v in pond.data["water"][0] if v[0]**2+v[2]**2<1.0)
 assert waterline<.15 and max(v[1] for v in pond.data["brown"][0])>.90
 assert all(v[1]>.11 for v in pond.data["leafvein"][0])
+# The water sheet descends from the rock lip into the same horizontal basin.
+sheet=pond.data["turquoise"][0]
+assert max(v[1] for v in sheet)>.59 and min(v[1] for v in sheet)<.14
+assert any(.32<v[1]<.54 for v in sheet)
+ear_extents={}
 for name,_,base,second in PET_SPECS:
-    if SPECIES[name]=="lamb":
-        rig=sculpt_species(name,base,second,GameSculpt)
-        assert sum(len(buf[0])//3 for part in rig.parts.values() for buf in part.values())<5400
+    if SPECIES[name]!="lamb":
+        continue
+    rig=sculpt_species(name,base,second,GameSculpt)
+    assert sum(len(buf[0])//3 for part in rig.parts.values() for buf in part.values())<5400
+    head=rig.parts["Head"]
+    # Both pigments terminate on a single closed rim, so head motion cannot
+    # pull a separately modelled cap away from the cheeks.
+    rim=set(head[base][0]).intersection(head["cream"][0])
+    assert len(rim)>=30 and min(p[0] for p in rim)<-.65 and max(p[0] for p in rim)>.65
+    points=rig.parts["EarR"][base][0]
+    ear_extents[name]=(min(p[1] for p in points),max(p[0] for p in points))
+    assert {"rose","gold"}<=rig.parts["Body"].keys()
+for axis in (0,1):
+    assert ear_extents["Tofu"][axis]<ear_extents["Mochi"][axis]<ear_extents["Luma"][axis]
 
 crops={}
 for crop in CROP_NAMES:

@@ -88,7 +88,8 @@ function Bridge.prepare(owner: Instance, group: string, keys: {string}, ready: (
 end
 
 local function makeVisual(source: MeshPart, parent: Instance, name: string,
-    pivot: CFrame, height: number): MeshPart?
+    pivot: CFrame, height: number, bodyAnchor: BasePart?): MeshPart?
+    if not source.Archivable then return nil end
     local mesh = source:Clone()
     mesh.Name = name
     mesh.Anchored = true
@@ -108,7 +109,7 @@ local function makeVisual(source: MeshPart, parent: Instance, name: string,
         else full.Y
     local ratio = height / math.max(sourceSpan, 0.001)
     mesh.Size = mesh.Size * ratio
-    Geometry.mount(mesh,pivot,ratio)
+    Geometry.mount(mesh,pivot,ratio,bodyAnchor)
     mesh:SetAttribute("VisualOffset",(mesh:GetAttribute("PieceCenter") or Vector3.zero)*ratio)
     if mesh:FindFirstChildWhichIsA("Motor6D",true) then mesh:AddTag("OrchardRig") end
     mesh.Parent = parent
@@ -125,6 +126,22 @@ function Bridge.ground(owner: Instance, key: string, frame: CFrame, span: number
         local mesh=makeVisual(source,owner,key,frame*CFrame.new(0,height/2,0),height)
         if mesh and replaced and replaced.Parent then replaced:Destroy() end
     end)
+end
+
+-- Keep the planting on the dais when the giant leaves to chase players.
+function Bridge.decorateDen(dais: BasePart)
+    if dais:FindFirstChild("DenFlowers") then return end
+    local flowers=Instance.new("Folder")
+    flowers.Name="DenFlowers"
+    flowers.Parent=dais
+    local surface=dais.Position+Vector3.yAxis*(dais.Size.X*.5)
+    local function plant(asset: string,x: number,z: number,yaw: number,span: number)
+        Bridge.ground(flowers,"Environment_"..asset,CFrame.new(surface+Vector3.new(x,0,z))*CFrame.Angles(0,yaw,0),span,nil)
+    end
+    plant("BloomingHedge",1,20.5,.09,22)
+    plant("MeadowVerge",-21,12.5,-.82,13)
+    plant("MeadowVerge",21,11,1.08,13)
+    plant("BloomingHedge",-11,-18,-.38,10)
 end
 
 -- Two stretches of paving lead around the berry border to the cottage steps.
@@ -284,12 +301,29 @@ function Bridge.applyGardenerAvatar(character: Model): boolean
     return true
 end
 
+-- A static GLB import can stand in while the articulated model loads.
+function Bridge.prepareGiant(boss: Model, ready: (MeshPart) -> ())
+    task.defer(function()
+        if not boss.Parent then return end
+        Geometry.load("Environment_SleepingMonster")
+        if boss.Parent then
+            local mesh=Bridge.applySleepingMonster(boss)
+            if mesh then ready(mesh) end
+        end
+    end)
+end
+
 function Bridge.applySleepingMonster(boss: Model): MeshPart?
-    local source = findMesh("World", "Environment_SleepingMonster")
+    local existing=boss:FindFirstChild("ImportedSleepingMonster")
+    local packed=Geometry.cached("Environment_SleepingMonster")
+    if existing and existing:IsA("MeshPart") and (existing:HasTag("OrchardRig") or not packed) then
+        return existing
+    end
+    local source = packed or findMesh("World", "Environment_SleepingMonster")
     if not source then return nil end
     local height = 52
     local mesh = makeVisual(source, boss, "ImportedSleepingMonster",
-        boss:GetPivot() * CFrame.new(0,10+height/2-29,0), height)
+        boss:GetPivot() * CFrame.new(0,10+height/2-29,0), height, boss.PrimaryPart)
     if not mesh then return nil end
     mesh:SetAttribute("BossRest",boss:GetPivot():ToObjectSpace(mesh.CFrame))
     for _, obj in ipairs(boss:GetDescendants()) do
@@ -449,7 +483,6 @@ function Bridge.applySetDress(parent: Instance): number
             local done = environment:FindFirstChild("Imported" .. record[1])
             if done then applied += 1 continue end
             local previous = environment:FindFirstChild(record[2])
-            if previous then previous:Destroy() end
             local frame = CFrame.new(record[3])
             if record[1] == "WaterPond" then
                 local size = source:GetAttribute("ArtSize") or source.Size
@@ -457,6 +490,8 @@ function Bridge.applySetDress(parent: Instance): number
             end
             local mesh = makeVisual(source, environment, "Imported" .. record[1], frame, record[4])
             if mesh then
+                if previous then previous:Destroy() end
+                if record[1] == "WaterPond" then workspace:SetAttribute("GardenPondCenter",mesh.CFrame.Position) end
                 applied += 1
                 if record[1] == "GardenCottage" then
                     -- Decorative cottage is closed: players should not walk
@@ -489,13 +524,19 @@ function Bridge.applySetDress(parent: Instance): number
             }
             for index, ground in ipairs(orchard) do
                 local height = 17.2 + index * 0.8
-                makeVisual(citrus, environment, "ImportedHeroCitrus_" .. index,
+                local name = "ImportedHeroCitrus_" .. index
+                if environment:FindFirstChild(name) then continue end
+                local tree = makeVisual(citrus, environment, name,
                     CFrame.new(ground + Vector3.new(0, height / 2, 0))
                         * CFrame.Angles(0, math.rad(index * 59), 0), height)
+                if not tree then applied = 3 end
             end
             for _, x in ipairs({-33, -26, -19, 21, 28, 35}) do
-                makeVisual(fence, environment, "ImportedGardenFence_" .. tostring(x),
+                local name = "ImportedGardenFence_" .. tostring(x)
+                if environment:FindFirstChild(name) then continue end
+                local rail = makeVisual(fence, environment, name,
                     CFrame.new(x, 8.55, 62), 2.6)
+                if not rail then applied = 3 end
             end
         else
             -- Keep the native citrus/fence backdrop if the owner's

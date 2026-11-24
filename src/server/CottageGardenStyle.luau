@@ -270,6 +270,7 @@ local function orchardPond(parent: Instance)
     water.Material = Enum.Material.Glass
     water.Transparency = 0.20
     water.CastShadow = false
+    workspace:SetAttribute("GardenPondCenter",center)
     for i = 1, 9 do
         local a = i * 2 * math.pi / 9
         local pos = center + Vector3.new(math.cos(a) * 6.9, 0.12, math.sin(a) * 5.0)
@@ -376,6 +377,32 @@ function Cottage.decorateWorld(world: Instance)
         local a = rng:NextNumber(0, math.pi * 2)
         local r = rng:NextNumber(78, 110)
         pebble(folder, Vector3.new(math.cos(a) * r, 7.14, math.sin(a) * r), rng:NextNumber(0.8, 1.8))
+    end
+end
+
+function Cottage.styleEntrance(farm: Model, center: CFrame, style: string)
+    if farm:GetAttribute("GardenStyle")==style then return end
+    farm:SetAttribute("GardenStyle",style)
+    local previous=farm:FindFirstChild("EntranceDecor")
+    if previous then previous:Destroy() end
+    local paint=if style=="Blossom" then Color3.fromRGB(181,138,158)
+        elseif style=="Cottage" then Color3.fromRGB(136,157,132) else WOOD
+    for _,piece in farm:GetChildren() do
+        if piece:IsA("BasePart") and (piece.Name=="WarmWoodFence" or piece.Name=="BackFence" or piece.Name=="FencePost") then
+            piece.Color=paint
+        end
+    end
+    if style=="Meadow" then return end
+    local decor=Instance.new("Folder")
+    decor.Name="EntranceDecor"
+    decor.Parent=farm
+    if style=="Cottage" then
+        Art.ground(decor,"Environment_GardenCottage",center*CFrame.new(-5,.72,13.8),4.0,nil)
+        Art.ground(decor,"Environment_StonePath",center*CFrame.new(3.9,.73,13.8)*CFrame.Angles(0,math.pi/2,0),4.5,nil)
+    else
+        for _,side in {-1,1} do
+            Art.ground(decor,"Environment_BloomingHedge",center*CFrame.new(side*5,.72,13.8),4.0,nil)
+        end
     end
 end
 

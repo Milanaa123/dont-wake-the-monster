@@ -82,7 +82,12 @@ heading.Position = UDim2.fromOffset(6, 4)
 local carry = button(card, "🤲 PICK UP", GREEN)
 carry.Name = "Carry"
 carry.Position = UDim2.fromOffset(8, 32)
-carry.Size = UDim2.new(1, -16, 0, 39)
+carry.Size = UDim2.new(.5, -10, 0, 39)
+local soothe = button(card,"SOOTHE",PURPLE)
+soothe.Name = "Soothe"
+soothe.Position = UDim2.new(.5,2,0,32)
+soothe.Size = UDim2.new(.5,-10,0,39)
+soothe.Activated:Connect(function() remote:FireServer("PetInteract","Comfort") end)
 local stroke = button(card, "💗 HOLD TO PET", PINK)
 stroke.Name = "PetHold"
 stroke.Position = UDim2.fromOffset(8, 77)
